@@ -1,26 +1,42 @@
 {
-  "_comment": "Country groupings. Groups must not overlap: each country belongs to at most one group. Members come from an explicit ISO3 list, or from UN M49 region codes (m49_region / m49_subregion / m49_intermediate), minus `exclude`. Membership uses current composition for all years.",
+  "_comment": "Country groupings. A member is an entity id, or {\"id\", \"from\", \"to\"} with inclusive membership years. Members can also come from UN M49 codes (m49_region / m49_subregion / m49_intermediate) minus `exclude`; those apply to all years. In any given year a country may belong to at most one group.",
   "groups": [
     {
       "id": "EU",
-      "name": "European Union (EU-27)",
+      "name": "European Union",
       "short": "EU",
-      "color": "#2f5fb3",
-      "members": ["AUT","BEL","BGR","HRV","CYP","CZE","DNK","EST","FIN","FRA","DEU","GRC","HUN","IRL","ITA","LVA","LTU","LUX","MLT","NLD","POL","PRT","ROU","SVK","SVN","ESP","SWE"],
-      "note": "Current 27 member states (post-Brexit) applied to all years."
+      "members": [
+        "BEL", "FRA", "DEU", "ITA", "LUX", "NLD", "DNK", "IRL",
+        {"id": "GBR", "to": 2020},
+        "GRC", "ESP", "PRT",
+        {"id": "AUT", "from": 1995}, {"id": "FIN", "from": 1995}, {"id": "SWE", "from": 1995},
+        {"id": "CYP", "from": 2004}, {"id": "CZE", "from": 2004}, {"id": "EST", "from": 2004},
+        {"id": "HUN", "from": 2004}, {"id": "LVA", "from": 2004}, {"id": "LTU", "from": 2004},
+        {"id": "MLT", "from": 2004}, {"id": "POL", "from": 2004}, {"id": "SVK", "from": 2004},
+        {"id": "SVN", "from": 2004},
+        {"id": "BGR", "from": 2007}, {"id": "ROU", "from": 2007},
+        {"id": "HRV", "from": 2013}
+      ],
+      "note": "Membership as of each year (European Communities before 1993). The UK is counted as a member through 2020, the end of the Brexit transition period."
     },
     {
       "id": "ASEAN",
       "name": "ASEAN",
       "short": "ASEAN",
-      "members": ["BRN","KHM","IDN","LAO","MYS","MMR","PHL","SGP","THA","VNM","TLS"],
-      "note": "Ten founding/expansion members plus Timor-Leste (admitted October 2025), applied to all years."
+      "members": [
+        "IDN", "MYS", "PHL", "SGP", "THA", "BRN",
+        {"id": "VNM", "from": 1995},
+        {"id": "LAO", "from": 1997}, {"id": "MMR", "from": 1997},
+        {"id": "KHM", "from": 1999},
+        {"id": "TLS", "from": 2025}
+      ],
+      "note": "Membership as of each year. Timor-Leste was admitted in October 2025."
     },
     {
       "id": "GCC",
       "name": "Gulf Cooperation Council",
       "short": "GCC",
-      "members": ["SAU","ARE","KWT","QAT","BHR","OMN"]
+      "members": ["SAU", "ARE", "KWT", "QAT", "BHR", "OMN"]
     },
     {
       "id": "AFRICA",

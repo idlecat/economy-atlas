@@ -1,3 +1,6 @@
 data_raw/
 __pycache__/
 .DS_Store
+data_store/
+.venv/
+.pytest_cache/

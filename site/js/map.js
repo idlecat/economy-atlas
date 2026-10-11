@@ -1,6 +1,6 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import * as topojson from "https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/+esm";
-import { store, displayOf } from "./data.js";
+import { store, displayOf, groupOf, membersAt } from "./data.js";
 
 /** Centroid of the largest polygon(s): keeps France's centroid in Europe, not between it and Guiana. */
 function mainCentroid(geom) {
@@ -24,7 +24,8 @@ export function createMap(container, { onHover, onMove, onClick }) {
   for (const [id, gs] of geomsById) countryCentroid.set(id, mainCentroid(topojson.merge(topo, gs)));
   const groupCentroid = new Map();
   for (const g of store.groups) {
-    const gs = g.members.flatMap((m) => geomsById.get(m) ?? []);
+    // all-time members, so arc endpoints stay put while membership changes
+    const gs = g.members.flatMap((m) => geomsById.get(m.id) ?? []);
     if (gs.length) groupCentroid.set(g.id, mainCentroid(topojson.merge(topo, gs)));
   }
 
@@ -39,6 +40,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
   const arcLayer = root.append("g");
 
   let groupsOn = new Set();
+  let yi = 0;
   let hoverKey = null;
   let k = 1;
 
@@ -47,7 +49,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
     .join("path")
     .attr("class", "country nodata")
     .on("pointerenter", (ev, d) => {
-      hoverKey = d.id ? displayOf(d.id, groupsOn) : null;
+      hoverKey = d.id ? displayOf(d.id, groupsOn, yi) : null;
       drawHover();
       onHover(hoverKey, ev, d);
     })
@@ -58,7 +60,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
       onHover(null);
     })
     .on("click", (ev, d) => {
-      if (d.id) onClick(displayOf(d.id, groupsOn));
+      if (d.id) onClick(displayOf(d.id, groupsOn, yi));
     });
 
   const zoom = d3.zoom()
@@ -84,8 +86,8 @@ export function createMap(container, { onHover, onMove, onClick }) {
   }
 
   function drawOutlines() {
-    const active = (g) => g.id && groupsOn.has(store.entities[g.id]?.group);
-    const key = (g) => (g.id ? displayOf(g.id, groupsOn) : g.properties.name);
+    const active = (g) => g.id && groupsOn.has(groupOf(g.id, yi));
+    const key = (g) => (g.id ? displayOf(g.id, groupsOn, yi) : g.properties.name);
     outlines.attr("d", path(topojson.mesh(topo, obj, (a, b) =>
       (active(a) || active(b)) && (a === b || key(a) !== key(b)))));
   }
@@ -93,8 +95,8 @@ export function createMap(container, { onHover, onMove, onClick }) {
   function drawHover() {
     if (!hoverKey) return hoverOutline.attr("d", null);
     hoverOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => {
-      const ia = a.id && displayOf(a.id, groupsOn) === hoverKey;
-      const ib = b.id && displayOf(b.id, groupsOn) === hoverKey;
+      const ia = a.id && displayOf(a.id, groupsOn, yi) === hoverKey;
+      const ib = b.id && displayOf(b.id, groupsOn, yi) === hoverKey;
       return a === b ? ia : ia !== ib;
     })));
   }
@@ -135,14 +137,16 @@ export function createMap(container, { onHover, onMove, onClick }) {
 
   function render(view) {
     lastView = view;
-    const gk = [...view.groupsOn].sort().join(",");
     groupsOn = view.groupsOn;
+    yi = view.yi;
+    // outlines depend on which groups are merged and on their membership that year
+    const gk = [...groupsOn].sort().map((g) => `${g}:${membersAt(g, yi).join(".")}`).join("|");
     if (gk !== lastGroupsKey) {
       lastGroupsKey = gk;
       drawOutlines();
     }
     paths.each(function (d) {
-      const key = d.id ? displayOf(d.id, groupsOn) : null;
+      const key = d.id ? displayOf(d.id, groupsOn, yi) : null;
       const isFocus = key && (key === view.focus || d.id === view.focus);
       const color = key && !isFocus ? view.colorOf(key) : null;
       const el = d3.select(this)

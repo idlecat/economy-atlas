@@ -112,7 +112,7 @@ async function update() {
     return v == null ? null : current.scale.color(v);
   };
 
-  map.render({ focus, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [] });
+  map.render({ focus, yi, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [] });
   renderLegend();
   renderTitle();
   renderSpark();
@@ -363,7 +363,7 @@ function setupControls() {
     b.className = "chip";
     b.dataset.g = g.id;
     b.textContent = g.short;
-    b.title = `${g.name}: ${g.members.length} members`;
+    b.title = g.name;
     b.addEventListener("click", () => {
       if (state.groupsOn.has(g.id)) {
         state.groupsOn.delete(g.id);
@@ -416,10 +416,18 @@ function setupControls() {
 // ------------------------------------------------------------------ sources
 
 function renderSources() {
-  const [imf, m49, ne] = store.meta.sources;
+  const src = Object.fromEntries(store.meta.sources.map((s) => [s.id, s]));
+  const { imf_imts: imf, un_m49: m49, natural_earth: ne } = src;
   $("#source-line").innerHTML = `Source: <a href="${imf.url}" target="_blank" rel="noopener">IMF, International Trade in Goods by partner country (IMTS)</a>, accessed ${imf.accessed}.
     Regions: <a href="${m49.url}" target="_blank" rel="noopener">UN M49</a>. Boundaries: <a href="${ne.url}" target="_blank" rel="noopener">Natural Earth</a>.`;
-  const groups = store.groups.map((g) => `<li><b>${esc(g.name)}</b> (${g.members.length}): ${esc(g.members.map((c) => store.entities[c]?.name ?? c).join(", "))}${g.note ? `. <i>${esc(g.note)}</i>` : ""}</li>`).join("");
+  const memberLabel = (m) => {
+    const name = store.entities[m.id]?.name ?? m.id;
+    if (m.from && m.to) return `${name} (${m.from}–${m.to})`;
+    if (m.from) return `${name} (from ${m.from})`;
+    if (m.to) return `${name} (until ${m.to})`;
+    return name;
+  };
+  const groups = store.groups.map((g) => `<li><b>${esc(g.name)}</b>: ${esc(g.members.map(memberLabel).join(", "))}${g.note ? `. <i>${esc(g.note)}</i>` : ""}</li>`).join("");
   $("#about-body").innerHTML = `
     <h2>About the data</h2>
     <h3>Trade values</h3>
@@ -430,7 +438,7 @@ function renderSources() {
     </ul>
     <p>Each country's figures are <b>as reported by that country</b> (the selected focus). Because exports are valued FOB and imports CIF, and because of timing, re-exports and confidentiality, A's reported exports to B rarely equal B's reported imports from A. The IMF fills gaps for non-reporting economies with estimates derived from partner data. Taiwan is not published as a reporter by the IMF, so its figures here are built from partners' reports ("mirror" data). The latest years may be revised.</p>
     <h3>Groupings</h3>
-    <p>When a grouping is “treated as one”, its members' flows are summed and trade <i>between</i> members is excluded, so the group is shown trading only with the outside world. Membership is today's composition applied to all years. Groups are defined from <a href="${m49.url}" target="_blank" rel="noopener">UN M49 regions</a> or explicit member lists:</p>
+    <p>When a grouping is “treated as one”, its members' flows are summed and trade <i>between</i> members is excluded, so the group is shown trading only with the outside world. Membership is applied as of each year: for example, the UK is part of the EU through 2020 and Croatia from 2013. Groups are defined from <a href="${m49.url}" target="_blank" rel="noopener">UN M49 regions</a> or explicit member lists:</p>
     <ul>${groups}</ul>
     <h3>Change modes</h3>
     <p>Δ 1/5/10 yr colors each partner by the ratio between the selected year and the earlier year (shown as % change, log scale from −75% to +300%). For the balance metric, change is the difference in US dollars.</p>
@@ -456,6 +464,7 @@ function writeHash() {
 }
 
 function readHash() {
+  Object.assign(state, { focus: null, yi: defaultYearIndex(), metric: "total", back: 0, groupsOn: new Set(["EU"]), pair: null });
   const p = new URLSearchParams(location.hash.slice(1));
   const yr = store.years.indexOf(+p.get("year"));
   if (yr >= 0) state.yi = yr;
@@ -482,7 +491,6 @@ async function boot() {
     $("#loading").textContent = "Could not load data files. If you opened index.html directly, serve the site folder over HTTP instead.";
     throw e;
   }
-  state.yi = defaultYearIndex();
   readHash();
   map = createMap($("#map"), {
     onHover: showTip,
@@ -492,6 +500,8 @@ async function boot() {
   setupControls();
   renderSources();
   syncControls();
+  // Links pasted into the address bar or back/forward (writeHash uses replaceState, which doesn't fire this).
+  addEventListener("hashchange", () => { readHash(); syncControls(); update(); });
   await update();
 }
 

@@ -21,11 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Test pipeline
+        run: uv run pytest -q
       - name: Build data files
-        run: python3 scripts/build_data.py --refresh
+        run: uv run python -m pipeline build --refresh
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

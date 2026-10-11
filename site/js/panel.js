@@ -1,5 +1,5 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import { store, nameOf, isGroup, metricAt, changeAt } from "./data.js";
+import { store, nameOf, isGroup, metricAt, changeAt, groupOf, membersAt } from "./data.js";
 import { money, ratioPct, share, escapeHTML as esc } from "./format.js";
 
 const METRIC_LABEL = { total: "total trade", exports: "exports", imports: "imports", balance: "trade balance" };
@@ -65,10 +65,10 @@ function topRows(seriesMap, yi, metric, n = 15) {
     .slice(0, n);
 }
 
-function groupBlurb(code) {
+function groupBlurb(code, yi) {
   const g = store.groupById.get(code);
-  const names = g.members.map((c) => store.entities[c]?.name ?? c);
-  return `<div class="members">${names.length} members: ${esc(names.join(", "))}</div>
+  const names = membersAt(code, yi).map((c) => store.entities[c]?.name ?? c);
+  return `<div class="members">${names.length} members in ${store.years[yi]}: ${esc(names.join(", "))}</div>
     ${g.note ? `<p class="note">${esc(g.note)}</p>` : ""}
     <p class="note">Figures are trade with countries outside the group. Dashed line: exports between members.</p>`;
 }
@@ -120,13 +120,14 @@ export function renderPanel(el, ctx) {
     : "";
   const noData = !ctx.hasData
     ? `<p class="note">No reported trade data for this economy.</p>` : "";
-  const memberNote = !group && ent?.group && ctx.groupsOn.has(ent.group)
-    ? `<p class="note">${esc(nameOf(ent.group))} is merged on the map, so its other members appear as one partner.</p>` : "";
+  const inGroup = !group && groupOf(focus, yi);
+  const memberNote = inGroup && ctx.groupsOn.has(inGroup)
+    ? `<p class="note">${esc(nameOf(inGroup))} is merged on the map, so its other members appear as one partner.</p>` : "";
 
   el.innerHTML = `
     <div class="kicker">${group ? "Group" : esc(ent?.subregion ?? "Economy")} · ${year}</div>
     <h2>${esc(nameOf(focus))}</h2>
-    ${group ? groupBlurb(focus) : ""}${mirrorNote}${noData}${memberNote}
+    ${group ? groupBlurb(focus, yi) : ""}${mirrorNote}${noData}${memberNote}
     ${stats(fs, yi, back)}
     <h3>Trade with the world${group ? " (extra-group)" : ""}</h3>
     <div class="chart" id="p-chart"></div>

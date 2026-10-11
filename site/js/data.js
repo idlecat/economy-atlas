@@ -53,16 +53,41 @@ export function isGroup(code) {
   return store.groupById.has(code);
 }
 
-/** The entity a country is shown as, given which groups are aggregated. */
-export function displayOf(code, groupsOn) {
-  const g = store.entities[code]?.group;
+/** Group a country belongs to in year index `yi` (membership is dated), or undefined. */
+export function groupOf(code, yi) {
+  const spans = store.entities[code]?.groups;
+  if (!spans) return undefined;
+  const y = store.years[yi];
+  return spans.find((s) => (s.from ?? -Infinity) <= y && y <= (s.to ?? Infinity))?.g;
+}
+
+/** Members of a group in year index `yi`. */
+export function membersAt(groupId, yi) {
+  const y = store.years[yi];
+  return store.groupById.get(groupId).members
+    .filter((m) => (m.from ?? -Infinity) <= y && y <= (m.to ?? Infinity))
+    .map((m) => m.id);
+}
+
+/** The entity a country is shown as in year index `yi`, given which groups are merged. */
+export function displayOf(code, groupsOn, yi) {
+  const g = groupOf(code, yi);
   return g && groupsOn.has(g) ? g : code;
 }
 
-function addSeries(acc, s) {
+/** Display key of `code` for every year, or a single string when it never changes. */
+function displayKeys(code, groupsOn) {
+  const spans = store.entities[code]?.groups;
+  if (!spans || !spans.some((s) => groupsOn.has(s.g))) return code;
+  const keys = store.years.map((_, i) => displayOf(code, groupsOn, i));
+  return keys.every((k) => k === keys[0]) ? keys[0] : keys;
+}
+
+function addSeries(acc, s, onlyYear = -1) {
   for (let k = 0; k < 2; k++) {
     const a = acc[k], b = s[k];
-    for (let i = 0; i < b.length; i++) {
+    const [lo, hi] = onlyYear < 0 ? [0, b.length] : [onlyYear, onlyYear + 1];
+    for (let i = lo; i < hi; i++) {
       if (b[i] != null) a[i] = (a[i] ?? 0) + b[i];
     }
   }
@@ -73,26 +98,37 @@ export function emptySeries() {
   return [new Array(n).fill(null), new Array(n).fill(null)];
 }
 
-/** Partner series for a focus, with partners folded into aggregated groups. */
+/** Partner series for a focus, folded into merged groups using each year's membership. */
 export function partnerSeries(flows, focus, groupsOn) {
   const out = new Map();
-  for (const [p, s] of Object.entries(flows.p)) {
-    const key = displayOf(p, groupsOn);
-    if (key === focus) continue;
+  const add = (key, s, i) => {
+    if (key === focus) return;
     if (!out.has(key)) out.set(key, emptySeries());
-    addSeries(out.get(key), s);
+    addSeries(out.get(key), s, i);
+  };
+  for (const [p, s] of Object.entries(flows.p)) {
+    const keys = displayKeys(p, groupsOn);
+    if (typeof keys === "string") add(keys, s);
+    else keys.forEach((k, i) => add(k, s, i));
   }
   return out;
 }
 
-/** World-level series for each displayed entity (groups = extra-group trade). */
+/** World-level series for each displayed entity (groups = extra-group trade).
+ *  A country's own series only covers the years it is not merged into a group. */
 export function displayTotals(groupsOn) {
   const out = new Map();
   for (const [code, s] of Object.entries(store.totals)) {
     if (isGroup(code)) {
       if (groupsOn.has(code)) out.set(code, s);
-    } else if (displayOf(code, groupsOn) === code) {
-      out.set(code, s);
+      continue;
+    }
+    const keys = displayKeys(code, groupsOn);
+    if (keys === code) out.set(code, s);
+    else if (typeof keys !== "string") {
+      const own = emptySeries();
+      keys.forEach((k, i) => { if (k === code) addSeries(own, s, i); });
+      out.set(code, own);
     }
   }
   return out;

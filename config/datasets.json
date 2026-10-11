@@ -1,0 +1,10 @@
+{
+  "_comment": "Published datasets. `precedence` lists sources from most to least preferred: when several sources report the same (reporter, partner, flow, product, period), the first one wins.",
+  "goods_trade": {
+    "description": "Bilateral merchandise trade, total of all products",
+    "precedence": ["imf_imts"],
+    "freq": "A",
+    "product": "TOTAL",
+    "start": 1990
+  }
+}
