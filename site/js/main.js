@@ -2,13 +2,16 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import {
   store, loadBase, setSlice, availableFreqs, loadFlows, loadBreakdown, hasFlows, nameOf, shortNameOf,
   isGroup, partnerSeries, displayTotals, worldSeries, metricAt, changeAt, defaultPeriodIndex, emptySeries,
-  products, productName,
+  products, productName, loadIndicators, loadTotals,
 } from "./data.js";
+import { buildMetrics } from "./metrics.js";
+import { createScatter } from "./scatter.js";
+import { compareData, statsHTML, REGION_COLORS } from "./compare.js";
 import { createMap } from "./map.js";
 import { renderPanel, lineChart, METRIC_LABEL } from "./panel.js";
 import { initStories, activeStory, startStory, stopStory } from "./stories.js";
 import { FREQS, periodLabel, nearestIndex } from "./time.js";
-import { money, ratioPct, share, escapeHTML as esc } from "./format.js";
+import { money, ratioPct, share, fmtUnit, escapeHTML as esc } from "./format.js";
 
 const $ = (s) => document.querySelector(s);
 const dark = matchMedia("(prefers-color-scheme: dark)");
@@ -23,9 +26,15 @@ const state = {
   back: 0,        // change mode, in years (0 = levels)
   groupsOn: new Set(DEFAULT_GROUPS),
   pair: null,
+  view: "map",       // "map" or "compare" (scatter of two metrics)
+  sx: "gdp",         // Compare view axes: metric ids from metrics.js
+  sy: "exports",
+  mapBy: "trade",    // world-view map colors: "trade" or a metric id (e.g. gdp_pc)
 };
 
-let map, current = null, playTimer = null, updateToken = 0, markers = [];
+let map, scatter, current = null, playTimer = null, updateToken = 0, markers = [];
+let metricsCache = { key: null, metrics: null };
+const year = () => +period().slice(0, 4);
 
 const period = (i = state.pi) => store.periods[i];
 const label = (i = state.pi) => periodLabel(store.periods[i]);
@@ -48,7 +57,7 @@ function palettes() {
   };
 }
 
-function buildScale(allValues, metric, back) {
+function buildScale(allValues, metric, back, fmtV = null) {
   const pal = palettes();
   if (back && metric !== "balance") {
     // ratio v/v0 shown on a log2 scale from ¼× to 4×
@@ -64,7 +73,7 @@ function buildScale(allValues, metric, back) {
     const s = d3.scaleDivergingSymlog([-M, 0, M], d3.interpolateRgbBasis(pal.diverging)).constant(M / 300).clamp(true);
     const toUnit = s.copy().interpolator(d3.interpolateNumber(0, 1));
     return {
-      color: s, kind: "diverging", pos: (v) => toUnit(v), fmt: (v) => money(v, { sign: true }),
+      color: s, kind: "diverging", pos: (v) => toUnit(v), fmt: fmtV ? (v) => fmtV(v, true) : (v) => money(v, { sign: true }),
       ticks: [-M, -M / 20, 0, M / 20, M],
     };
   }
@@ -77,8 +86,29 @@ function buildScale(allValues, metric, back) {
   return {
     color: (v) => (v > 0 ? s(v) : null), kind: "sequential",
     pos: (v) => (Math.log(v) - Math.log(lo)) / (Math.log(max) - Math.log(lo)),
-    ticks, fmt: (v) => money(v),
+    ticks, fmt: fmtV ? (v) => fmtV(v) : (v) => money(v),
   };
+}
+
+/** Metrics for the Compare view and indicator map colors, built from annual data of the active product. */
+async function getMetrics() {
+  const ind = await loadIndicators();
+  const key = state.product;
+  if (metricsCache.key !== key) {
+    const annual = await loadTotals(state.product, "A");
+    const periods = state.product === "TOTAL" ? store.meta.periods.A : store.meta.products.periods.A;
+    metricsCache = { key, metrics: buildMetrics(ind, annual, periods, state.product), ind };
+  }
+  return metricsCache;
+}
+
+/** Map colors from an indicator (world view only), with a domain over all years. */
+function indicatorColors(metric, keys) {
+  const all = [];
+  for (const k of keys) for (let y = 1990; y <= 2030; y++) { const v = metric.value(k, y); if (v != null) all.push(v); }
+  const fmtV = (v, sign = false) => fmtUnit(v, metric.unit, { sign });
+  const scale = metric.log ? buildScale(all.filter((v) => v > 0), "total", 0, fmtV) : buildScale(all, "balance", 0, fmtV);
+  return scale;
 }
 
 function valueAt(s, i) {
@@ -118,19 +148,34 @@ async function update() {
     current = { scaleKey, scale: buildScale(all, metric, back) };
   }
   Object.assign(current, { seriesMap, focusSeries, intra, world: worldSeries() });
+  const { metrics, ind } = await getMetrics();
+  if (token !== updateToken) return;
+  current.metrics = metrics;
+  syncMetricSelects(metrics);
 
-  const values = new Map();
-  for (const [k, s] of seriesMap) values.set(k, valueAt(s, pi));
-  const colorOf = (k) => {
-    const v = values.get(k);
-    return v == null ? null : current.scale.color(v);
-  };
-
-  map.render({ focus, pi, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [] });
-  renderLegend();
-  renderTitle();
+  if (state.view === "compare") {
+    renderCompare(metrics, ind);
+  } else {
+    const byMetric = !focus && state.mapBy !== "trade" ? metrics.get(state.mapBy) : null;
+    let colorOf;
+    if (byMetric) {
+      const keys = [...seriesMap.keys(), ...Object.keys(ind?.values.gdp ?? {}).filter((k) => !isGroup(k) && !seriesMap.has(k))];
+      const ik = `ind|${state.mapBy}|${product}|${[...groupsOn].sort()}|${dark.matches}`;
+      if (current.indKey !== ik) Object.assign(current, { indKey: ik, indScale: indicatorColors(byMetric, keys) });
+      colorOf = (k) => { const v = byMetric.value(k, year()); return v == null || (byMetric.log && v <= 0) ? null : current.indScale.color(v); };
+    } else {
+      const values = new Map();
+      for (const [k, s] of seriesMap) values.set(k, valueAt(s, pi));
+      colorOf = (k) => { const v = values.get(k); return v == null ? null : current.scale.color(v); };
+    }
+    current.byMetric = byMetric;
+    map.render({ focus, pi, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [] });
+    renderLegend(byMetric ? current.indScale : current.scale);
+    renderTitle(byMetric);
+  }
   renderSpark();
   renderPanel($("#panel"), {
+    ind, metrics, year: year(),
     focus, pi, metric, compare: compareN(), label: label(), groupsOn, product,
     seriesMap, partners: seriesMap, focusSeries, intra, pair: state.pair, breakdown,
     world: current.world, hasData: !focus || hasFlows(focus),
@@ -139,6 +184,66 @@ async function update() {
     onPair: (k) => { state.pair = state.pair === k ? null : k; update(); },
   });
   writeHash();
+}
+
+// ------------------------------------------------------------------ compare view
+
+function renderCompare(metrics, ind) {
+  if (!metrics.has(state.sx)) state.sx = "gdp";
+  if (!metrics.has(state.sy)) state.sy = "exports";
+  const d = compareData({ metrics, xId: state.sx, yId: state.sy, year: year(), groupsOn: state.groupsOn, pi: state.pi, focus: state.focus, ind });
+  current.compare = d;
+  scatter.render({ points: d.points, x: d.x, y: d.y, fit: d.stats.fit, animate: true });
+  $("#map-title").innerHTML = `${esc(d.y.name)} vs. ${esc(d.x.name)}, ${year()}${statsHTML(d.stats, d.x, d.y, state.groupsOn)}`;
+  const regions = [...new Set(d.points.map((p) => p.region))];
+  $("#legend").innerHTML = `<div class="region-key">${Object.entries(REGION_COLORS).filter(([r]) => regions.includes(r))
+    .map(([r, c]) => `<span><i style="background:${c}"></i>${r}</span>`).join("")}${regions.includes("Group") ? `<span><i style="background:#5d6878"></i>Merged group</span>` : ""}</div>
+    <div>Dot size: population. Click a dot for details.</div>`;
+}
+
+function showDotTip(p, ev) {
+  if (!p) { tip.hidden = true; return; }
+  const { x, y } = current.compare;
+  const pop = current.metrics.get("pop")?.value(p.key, year());
+  tip.innerHTML = `<h4>${esc(nameOf(p.key))}</h4><div class="sub">${year()}</div>
+    <table>
+      <tr><td>${esc(y.name)}</td><td>${fmtUnit(p.y, y.unit)}</td></tr>
+      <tr><td>${esc(x.name)}</td><td>${fmtUnit(p.x, x.unit)}</td></tr>
+      ${pop ? `<tr><td>Population</td><td>${fmtUnit(pop, "people")}</td></tr>` : ""}
+    </table><div class="hint">Click for details</div>`;
+  tip.hidden = false;
+  moveTip(ev);
+}
+
+function syncMetricSelects(metrics) {
+  const sig = [...metrics.values()].map((m) => m.id + m.name).join("|");
+  for (const [sel, includeTrade] of [["#sx", true], ["#sy", true], ["#map-by", false]]) {
+    const el = $(sel);
+    if (el.dataset.sig !== sig) {
+      const groups = {};
+      for (const m of metrics.values()) {
+        if (!includeTrade && m.group === "Trade") continue;
+        (groups[m.group] ??= []).push(m);
+      }
+      el.innerHTML = (sel === "#map-by" ? `<option value="trade">Trade (map metric)</option>` : "") +
+        Object.entries(groups).map(([g, ms]) => `<optgroup label="${esc(g)}">${ms.map((m) =>
+          `<option value="${m.id}">${esc(m.name)}</option>`).join("")}</optgroup>`).join("");
+      el.dataset.sig = sig;
+    }
+  }
+  $("#sx").value = state.sx;
+  $("#sy").value = state.sy;
+  $("#map-by").value = metrics.has(state.mapBy) ? state.mapBy : "trade";
+}
+
+async function setView(view) {
+  stopPlay();
+  state.view = view;
+  tip.hidden = true;
+  // the Compare view uses annual data
+  if (view === "compare" && state.freq !== "A") await changeSlice(state.product, "A");
+  syncControls();
+  update();
 }
 
 function buildArcs(partners) {
@@ -162,7 +267,11 @@ function buildArcs(partners) {
 
 // ------------------------------------------------------------------ decorations
 
-function renderTitle() {
+function renderTitle(byMetric = null) {
+  if (byMetric) {
+    $("#map-title").innerHTML = `${esc(byMetric.name)}, ${year()}<small>${esc(byMetric.description ?? "")}${byMetric.group === "Economy" ? " · World Bank WDI" : ""}</small>`;
+    return;
+  }
   const { focus, metric, back, product } = state;
   const prod = product === "TOTAL" ? "" : `${productName(product).toLowerCase()} `;
   const what = prod && metric === "total" ? "trade" : METRIC_LABEL[metric];
@@ -179,8 +288,7 @@ function renderTitle() {
   $("#map-title").innerHTML = `${head}<small>${sub}</small>`;
 }
 
-function renderLegend() {
-  const sc = current.scale;
+function renderLegend(sc = current.scale) {
   const W = 250, H = 10;
   const el = $("#legend");
   el.innerHTML = "";
@@ -200,7 +308,7 @@ function renderLegend() {
     .attr("y", H + 13)
     .attr("text-anchor", (t) => (sc.pos(t) < 0.05 ? "start" : sc.pos(t) > 0.95 ? "end" : "middle"))
     .text((t) => sc.fmt(t));
-  const legendNote = state.focus
+  const legendNote = state.focus && !current.byMetric
     ? `<div class="arc-key">${state.metric === "total"
       ? `<span style="color:var(--accent)">Top 10 partners</span>`
       : `<span class="x">${state.metric === "balance" ? "Surplus with" : "Exports to"}</span><span class="m">${state.metric === "balance" ? "Deficit with" : "Imports from"}</span>`}</div>`
@@ -289,6 +397,7 @@ function showTip(key, ev, feature) {
           <tr><td>Imports</td><td>${money(metricAt(s, pi, "imports"))}</td></tr>
           <tr><td>Balance</td><td>${money(metricAt(s, pi, "balance"), { sign: true })}</td></tr>
           ${changeRow(s)}
+          ${current.byMetric ? `<tr><td>${esc(current.byMetric.name)}</td><td>${fmtUnit(current.byMetric.value(key, year()), current.byMetric.unit)}</td></tr>` : ""}
         </table>
         <div class="chart" id="tip-chart"></div>
         <div class="hint">Click to see trading partners</div>`;
@@ -402,6 +511,17 @@ function syncControls() {
     b.title = b.disabled ? "Monthly data is available for all goods only" : "";
   }
   $("#product").value = state.product;
+  const compare = state.view === "compare";
+  $(".map-wrap").classList.toggle("compare", compare);
+  for (const b of document.querySelectorAll("#view button")) b.setAttribute("aria-checked", b.dataset.v === state.view);
+  $("#metric").hidden = compare;
+  $("#mode").hidden = compare;
+  $("#compare-controls").hidden = !compare;
+  $("#map-by-wrap").hidden = compare || !!state.focus;
+  $("#map").hidden = compare;
+  $("#compare").hidden = !compare;
+  $(".zoom").hidden = compare;
+  if (compare) for (const b of document.querySelectorAll("#freq button")) if (b.dataset.v !== "A") b.disabled = true;
   for (const b of document.querySelectorAll("#metric button")) b.setAttribute("aria-checked", b.dataset.v === state.metric);
   for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-checked", +b.dataset.v === state.back);
   for (const b of document.querySelectorAll("#group-chips .chip")) b.setAttribute("aria-pressed", state.groupsOn.has(b.dataset.g));
@@ -436,6 +556,14 @@ function setupControls() {
     const v = e.target.closest("button")?.dataset.v;
     if (v) { stopPlay(); changeFreq(v); }
   });
+  $("#view").addEventListener("click", (e) => {
+    const v = e.target.closest("button")?.dataset.v;
+    if (v && v !== state.view) setView(v);
+  });
+  $("#sx").addEventListener("change", (e) => { state.sx = e.target.value; update(); });
+  $("#sy").addEventListener("change", (e) => { state.sy = e.target.value; update(); });
+  $("#swap-axes").addEventListener("click", () => { [state.sx, state.sy] = [state.sy, state.sx]; update(); });
+  $("#map-by").addEventListener("change", (e) => { state.mapBy = e.target.value; update(); });
   $("#metric").addEventListener("click", (e) => {
     const v = e.target.closest("button")?.dataset.v;
     if (v) { state.metric = v; syncControls(); update(); }
@@ -508,9 +636,11 @@ function renderSources() {
   const src = Object.fromEntries(store.meta.sources.map((s) => [s.id, s]));
   const { imf_imts: imf, un_m49: m49, natural_earth: ne } = src;
   const baci = store.meta.products ? src.cepii_baci : null;
+  const wb = src.worldbank_wdi;
   const span = (f) => `${periodLabel(store.meta.periods[f][0])}–${periodLabel(store.meta.periods[f].at(-1))}`;
   const coverage = availableFreqs().map((f) => `${FREQS[f]?.label.toLowerCase() ?? f} ${span(f)}`).join("; ");
   $("#source-line").innerHTML = `Sources: <a href="${imf.url}" target="_blank" rel="noopener">IMF, International Trade in Goods by partner country (IMTS)</a>, accessed ${imf.accessed}${baci ? `; by product: <a href="${baci.url}" target="_blank" rel="noopener">CEPII BACI</a> (${esc(baci.terms)})` : ""}.
+    ${wb ? ` Economic indicators: <a href="${wb.url}" target="_blank" rel="noopener">World Bank WDI</a> (${esc(wb.terms)}).` : ""}
     Regions: <a href="${m49.url}" target="_blank" rel="noopener">UN M49</a>. Boundaries: <a href="${ne.url}" target="_blank" rel="noopener">Natural Earth</a>.`;
   const memberLabel = (m) => {
     const name = store.entities[m.id]?.name ?? m.id;
@@ -531,6 +661,7 @@ function renderSources() {
     <p>Each country's figures are <b>as reported by that country</b> (the selected focus). Because exports are valued FOB and imports CIF, and because of timing, re-exports and confidentiality, A's reported exports to B rarely equal B's reported imports from A. The IMF fills gaps for non-reporting economies with estimates derived from partner data. Taiwan is not published as a reporter by the IMF, so its figures here are built from partners' reports ("mirror" data). Recent periods are shown only once most countries have reported them, and may still be revised.</p>
     <p>Monthly values are not seasonally adjusted. The Δ 1 yr mode compares each month with the same month a year earlier, which removes most of the seasonal pattern.</p>
     ${baci ? productsAbout(baci) : ""}
+    ${wb ? indicatorsAbout(wb) : ""}
     <h3>Groupings</h3>
     <p>When a grouping is “treated as one”, its members' flows are summed and trade <i>between</i> members is excluded, so the group is shown trading only with the outside world. Membership is applied as of each year: for example, the UK is part of the EU through 2020 and Croatia from 2013. Groups are defined from <a href="${m49.url}" target="_blank" rel="noopener">UN M49 regions</a> or explicit member lists:</p>
     <ul>${groups}</ul>
@@ -543,8 +674,17 @@ function renderSources() {
     <h3>Citation</h3>
     <p>${esc(imf.citation)}</p>
     <p>Terms of use for IMF data: <a href="${imf.terms}" target="_blank" rel="noopener">${imf.terms}</a>.</p>
+    ${wb ? `<p>${esc(wb.citation)} Licence: <a href="${wb.terms_url}" target="_blank" rel="noopener">${esc(wb.terms)}</a>.</p>` : ""}
     ${baci ? `<p>${esc(baci.citation)} Licence: <a href="${baci.terms_url}" target="_blank" rel="noopener">${esc(baci.terms)}</a>.</p>` : ""}
     <p class="note">Data files generated ${store.meta.generated} by the pipeline in <code>pipeline/</code>.</p>`;
+}
+
+function indicatorsAbout(wb) {
+  return `
+    <h3>Economic indicators and correlations</h3>
+    <p>GDP, population, inflation, unemployment, foreign direct investment, the current account and trade as a share of GDP come from the <a href="${wb.url}" target="_blank" rel="noopener">${esc(wb.name)}</a> (annual). GDP per capita is GDP divided by population; real GDP growth is the change in GDP at constant prices. The World Bank does not cover Taiwan.</p>
+    <p>For merged groups, GDP, population, FDI and the current account are summed over the members of each year, and only shown when members with data hold at least 95% of the group's population. Group growth compares the same members in both years. Unlike group trade, these sums include flows between members (for example, investment from one EU country into another counts as EU FDI inflow). Inflation, unemployment and trade % of GDP are not computed for groups.</p>
+    <p><b>Compare</b> plots one dot per economy for the selected year. Pearson's r is computed on the plotted scale (log10 for log axes, which suits values spanning many orders of magnitude); Spearman's ρ uses ranks, so it does not depend on the scale and is less sensitive to outliers. The dashed line is a least-squares fit on the plotted scale. A country panel's "Do exports move with GDP?" chart correlates year-on-year % changes rather than levels, because any two series that grow over time look correlated. Correlation does not show cause and effect.</p>`;
 }
 
 function productsAbout(baci) {
@@ -564,7 +704,7 @@ function productsAbout(baci) {
 async function applyView(view) {
   stopPlay();
   const product = view.product && products().some((p) => p.id === view.product) ? view.product : "TOTAL";
-  const freq = availableFreqs(product).includes(view.freq) ? view.freq : "A";
+  const freq = view.view !== "compare" && availableFreqs(product).includes(view.freq) ? view.freq : "A";
   if (product !== state.product || freq !== state.freq || !store.periods.length) {
     await setSlice(product, freq);
     Object.assign(state, { product, freq });
@@ -581,6 +721,10 @@ async function applyView(view) {
   state.focus = view.focus && (store.entities[view.focus] || isGroup(view.focus)) ? view.focus : null;
   if (state.focus && isGroup(state.focus)) state.groupsOn.add(state.focus);
   state.pair = state.focus && view.with ? view.with : null;
+  state.view = view.view === "compare" ? "compare" : "map";
+  state.sx = view.x || "gdp";
+  state.sy = view.y || "exports";
+  state.mapBy = view.mapby || "trade";
   syncControls();
   await update();
 }
@@ -593,6 +737,8 @@ function currentView() {
   if (state.metric !== "total") v.metric = state.metric;
   if (state.back) v.change = String(state.back);
   if (state.pair) v.with = state.pair;
+  if (state.view === "compare") Object.assign(v, { view: "compare", x: state.sx, y: state.sy });
+  else if (state.mapBy !== "trade") v.mapby = state.mapBy;
   return v;
 }
 
@@ -622,6 +768,11 @@ async function boot() {
   }
   map = createMap($("#map"), {
     onHover: showTip,
+    onMove: moveTip,
+    onClick: (key) => setFocus(key),
+  });
+  scatter = createScatter($("#compare"), {
+    onHover: showDotTip,
     onMove: moveTip,
     onClick: (key) => setFocus(key),
   });

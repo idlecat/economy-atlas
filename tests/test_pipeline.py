@@ -188,3 +188,34 @@ def test_code_map_accepts_several_codes_per_entity():
     reg.entities["BBB"].codes["baci"] = "280"
     with pytest.raises(ValueError, match="used by both"):
         reg.code_map("baci")
+
+
+# --------------------------------------------------------------------------- indicators
+
+from pipeline import indicators as ind  # noqa: E402
+
+
+def test_group_sum_needs_population_coverage():
+    pop = {"AAA": {2000: 90}, "BBB": {2000: 10}}
+    gdp = {"AAA": {2000: 5.0}, "BBB": {2000: 1.0}}
+    assert ind.group_sum(gdp, ["AAA", "BBB"], pop, 2000) == 6.0
+    # BBB has no data but only 10% of the population: still below the 95% rule
+    assert ind.group_sum({"AAA": {2000: 5.0}}, ["AAA", "BBB"], pop, 2000) is None
+    # a tiny missing member is fine
+    pop2 = {"AAA": {2000: 99}, "BBB": {2000: 1}}
+    assert ind.group_sum({"AAA": {2000: 5.0}}, ["AAA", "BBB"], pop2, 2000) == 5.0
+
+
+def test_group_growth_uses_constant_membership():
+    reg = make_registry([{"id": "G", "name": "G", "members": ["AAA", {"id": "BBB", "from": 2001}]}])
+    raw = {
+        "pop": {"AAA": {2000: 50, 2001: 50}, "BBB": {2000: 50, 2001: 50}},
+        "gdp_real": {"AAA": {2000: 100.0, 2001: 110.0}, "BBB": {2000: 100.0, 2001: 100.0}},
+        "gdp": {"AAA": {2000: 100.0, 2001: 110.0}, "BBB": {2000: 100.0, 2001: 100.0}},
+    }
+    cfg = {"indicators": [{"id": "gdp", "group": "sum"}, {"id": "gdp_real", "group": "sum"}, {"id": "pop", "group": "sum"}]}
+    out = ind.compute(raw, reg, [2000, 2001], cfg)
+    # 2001: members AAA+BBB, compared with the same two in 2000: 210 / 200 -> +5%, not +110%
+    assert round(out["gdp_growth"]["G"][2001], 6) == 5.0
+    assert out["gdp"]["G"] == {2000: 100.0, 2001: 210.0}
+    assert out["gdp_pc"]["AAA"][2001] == 110.0 / 50

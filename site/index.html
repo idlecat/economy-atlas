@@ -28,6 +28,10 @@
   </header>
 
   <section class="toolbar" aria-label="Map options">
+    <div class="seg" id="view" role="radiogroup" aria-label="View">
+      <button data-v="map" role="radio" title="Trade on a world map">Map</button>
+      <button data-v="compare" role="radio" title="Plot two metrics against each other, e.g. trade vs GDP">Compare</button>
+    </div>
     <label class="product-pick">
       <span class="sr-only">Product</span>
       <select id="product" aria-label="Product"></select>
@@ -39,6 +43,12 @@
       <button data-v="imports" role="radio">Imports</button>
       <button data-v="balance" role="radio">Balance</button>
     </div>
+    <div id="compare-controls" class="compare-controls" hidden>
+      <label>Y <select id="sy" aria-label="Vertical axis"></select></label>
+      <button id="swap-axes" class="btn" type="button" title="Swap axes" aria-label="Swap axes">⇅</button>
+      <label>X <select id="sx" aria-label="Horizontal axis"></select></label>
+    </div>
+    <label id="map-by-wrap" class="map-by">Color map by <select id="map-by" aria-label="Color the map by"></select></label>
     <div class="seg" id="mode" role="radiogroup" aria-label="Show">
       <button data-v="0" role="radio" title="Show values for the selected period">Level</button>
       <button data-v="1" role="radio" title="Change vs. the same period one year earlier">Δ 1 yr</button>
@@ -54,6 +64,7 @@
   <main class="layout">
     <section class="map-wrap" aria-label="World map">
       <div id="map"></div>
+      <div id="compare" hidden></div>
       <div id="map-title" class="map-title"></div>
       <div id="legend" class="legend"></div>
       <div class="zoom">

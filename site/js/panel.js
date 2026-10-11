@@ -1,7 +1,8 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import { store, nameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName } from "./data.js";
 import { periodLabel, yearOf, yearTicks } from "./time.js";
-import { money, ratioPct, share, escapeHTML as esc } from "./format.js";
+import { money, ratioPct, share, fmtUnit, escapeHTML as esc } from "./format.js";
+import { pearson, describe } from "./stats.js";
 
 const METRIC_LABEL = { total: "total trade", exports: "exports", imports: "imports", balance: "trade balance" };
 
@@ -137,6 +138,62 @@ function productShare(ctx, yi) {
   return `<p class="note"><b>${esc(productName(ctx.product))}</b> made up ${share(v, total)} of ${esc(nameOf(ctx.focus))}'s goods ${metric} in ${at.year}.</p>`;
 }
 
+const ECON_ROWS = ["gdp", "gdp_pc", "gdp_growth", "pop", "inflation", "unemployment", "fdi_in", "current_account", "trade_gs_gdp", "exports_gdp"];
+
+/** Year-on-year % changes of exports and of nominal GDP (both current US$), over all years with both. */
+function growthPairs(ctx) {
+  const ex = ctx.metrics.get("exports"), gdp = ctx.metrics.get("gdp");
+  if (!ex || !gdp) return [];
+  const out = [];
+  for (let y = 1991; y <= ctx.year; y++) {
+    const e1 = ex.value(ctx.focus, y), e0 = ex.value(ctx.focus, y - 1);
+    const g1 = gdp.value(ctx.focus, y), g0 = gdp.value(ctx.focus, y - 1);
+    if (e1 > 0 && e0 > 0 && g1 > 0 && g0 > 0) out.push({ y, e: (e1 / e0 - 1) * 100, g: (g1 / g0 - 1) * 100 });
+  }
+  return out;
+}
+
+function growthChart(el, pairs, year) {
+  const W = 320, H = 140, m = { t: 8, r: 8, b: 20, l: 36 };
+  const svg = d3.select(el).append("svg").attr("viewBox", [0, 0, W, H]);
+  const x = d3.scaleLinear(d3.extent(pairs, (p) => p.y), [m.l, W - m.r]);
+  const ext = d3.extent(pairs.flatMap((p) => [p.e, p.g]));
+  const y = d3.scaleLinear([Math.min(0, ext[0]), Math.max(0, ext[1])], [H - m.b, m.t]).nice();
+  svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.b})`)
+    .call(d3.axisBottom(x).ticks(6, "d").tickSizeOuter(0));
+  svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
+    .call(d3.axisLeft(y).ticks(4).tickFormat((v) => `${v}%`).tickSizeOuter(0)).call((g) => g.select(".domain").remove());
+  svg.append("line").attr("class", "zero").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0));
+  const line = (k) => d3.line().x((p) => x(p.y)).y((p) => y(p[k]))(pairs);
+  svg.append("path").attr("class", "line x").attr("d", line("e"));
+  svg.append("path").attr("class", "line g").attr("d", line("g"));
+  if (year >= pairs[0].y && year <= pairs.at(-1).y) {
+    svg.append("line").attr("class", "yr").attr("x1", x(year)).attr("x2", x(year)).attr("y1", m.t).attr("y2", H - m.b);
+  }
+}
+
+function economySection(ctx) {
+  if (!ctx.ind || !ctx.metrics) return "";
+  const rows = ECON_ROWS.map((id) => ctx.metrics.get(id)).filter(Boolean)
+    .map((m) => ({ m, v: m.value(ctx.focus, ctx.year) }));
+  if (!rows.some((r) => r.v != null)) {
+    return `<h3>Economy</h3><p class="note">No World Bank indicators for ${esc(nameOf(ctx.focus))}.</p>`;
+  }
+  const pairs = growthPairs(ctx);
+  const r = pearson(pairs.map((p) => p.e), pairs.map((p) => p.g));
+  const goods = ctx.product === "TOTAL" ? "goods exports" : `${productName(ctx.product).toLowerCase()} exports`;
+  return `
+    <h3>Economy, ${ctx.year}</h3>
+    <table class="econ">${rows.filter((r) => r.v != null).map(({ m, v }) =>
+      `<tr><td title="${esc(m.description ?? "")}">${esc(m.name)}</td><td>${fmtUnit(v, m.unit)}</td></tr>`).join("")}</table>
+    <p class="note">Source: World Bank WDI${isGroup(ctx.focus) ? "; group values sum the members of each year" : ""}. Use “Compare” to plot any two of these across countries.</p>
+    ${pairs.length >= 5 ? `
+      <h3>Do exports move with GDP?</h3>
+      <div class="chart" id="growth-chart"></div>
+      <div class="chart-key"><span class="x">${esc(goods[0].toUpperCase() + goods.slice(1))}, % change</span><span class="g">GDP, % change</span></div>
+      <p class="note">Year-on-year changes, both in current US$, ${pairs[0].y}–${pairs.at(-1).y}: r = ${r?.toFixed(2) ?? "—"} (n = ${pairs.length}), ${describe(r)}. Growth rates are compared rather than levels, because two series that both rise over time always look correlated.</p>` : ""}`;
+}
+
 export function renderPanel(el, ctx) {
   const { focus, pi: yi, metric, compare, label: year } = ctx;
   el.innerHTML = "";
@@ -201,6 +258,7 @@ export function renderPanel(el, ctx) {
     <h3>Top partners by ${METRIC_LABEL[metric]}, ${year}</h3>
     ${rows.length ? rankList(rows, focusTotal, metric, ctx.pair) : `<p class="note">No partner data for ${year}.</p>`}
     <p class="note">Click a partner to compare over time.</p>
+    ${economySection(ctx)}
     ${productsSection(ctx, yi)}`;
 
   lineChart(el.querySelector("#p-chart"), fs, yi, { intra: group ? ctx.intra : null });
@@ -210,6 +268,8 @@ export function renderPanel(el, ctx) {
     el.querySelector("#pair-focus").onclick = () => ctx.onFocus(ctx.pair);
   }
   bindList(el, ctx.onPair);
+  const gc = el.querySelector("#growth-chart");
+  if (gc) growthChart(gc, growthPairs(ctx), ctx.year);
   el.querySelectorAll(".products-list li[data-product]").forEach((li) => {
     const pick = () => ctx.onProduct(li.dataset.product);
     li.addEventListener("click", pick);

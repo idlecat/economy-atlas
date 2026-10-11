@@ -39,3 +39,18 @@ export function share(v, total) {
 export function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
+
+/** Format an indicator value by unit: usd (USD millions), usd_pc, people, pct. */
+export function fmtUnit(v, unit, { sign = false } = {}) {
+  if (v == null || Number.isNaN(v)) return "—";
+  switch (unit) {
+    case "usd": return money(v, { sign });
+    case "usd_pc": return `${v < 0 ? "−" : ""}$${Math.round(Math.abs(v)).toLocaleString("en-US")}`;
+    case "people": {
+      const a = Math.abs(v);
+      return a >= 1e9 ? `${trim(a / 1e9, 2)}B` : a >= 1e6 ? `${trim(a / 1e6, a >= 1e8 ? 0 : 1)}M` : a >= 1e3 ? `${trim(a / 1e3, 0)}K` : String(Math.round(a));
+    }
+    case "pct": return `${sign && v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 0 : 1)}%`;
+    default: return String(v);
+  }
+}

@@ -93,6 +93,39 @@ a { color: var(--accent); }
 }
 .product-pick select:focus { outline: 2px solid var(--accent); }
 .seg button[disabled] { opacity: .4; cursor: not-allowed; }
+.compare-controls, .map-by { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.compare-controls[hidden], .map-by[hidden], .seg[hidden], .zoom[hidden] { display: none; }
+.compare-controls label, .map-by { display: flex; align-items: center; gap: 6px; }
+.compare-controls select, .map-by select {
+  font: inherit; color: var(--text); background: var(--surface-2); border: 0; border-radius: 8px;
+  padding: 7px 10px; max-width: 240px;
+}
+.compare-controls .btn { padding: 5px 9px; }
+#compare { position: absolute; inset: 0; }
+#compare[hidden] { display: none; }
+.scatter { display: block; width: 100%; height: 100%; }
+.scatter .axis text { fill: var(--muted); font-size: 11px; }
+.scatter .axis line, .scatter .axis path { stroke: var(--border); }
+.scatter .grid line { stroke: var(--border); stroke-opacity: .5; }
+.scatter .axis-title { fill: var(--muted); font-size: 12px; }
+.scatter .fit { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: .55; }
+.scatter .dot { fill-opacity: .72; stroke: var(--surface); stroke-width: 1; cursor: pointer; }
+.scatter .dot:hover { fill-opacity: 1; stroke: var(--text); }
+.scatter .dot.focus { fill-opacity: 1; stroke: var(--text); stroke-width: 2.5; }
+.scatter .labels text { fill: var(--text); font-size: 11px; pointer-events: none; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.scatter .labels text.focus { font-weight: 700; }
+.map-wrap.compare .legend { left: auto; right: 12px; top: 12px; bottom: auto; max-width: 300px; }
+.map-wrap.compare .map-title { max-width: calc(100% - 340px); }
+@media (max-width: 760px) { .map-wrap.compare .legend { display: none; } .map-wrap.compare .map-title { max-width: calc(100% - 28px); } }
+.econ { width: 100%; border-collapse: collapse; font-size: 13px; }
+.econ td { padding: 3px 0; border-bottom: 1px solid var(--surface-2); }
+.econ td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.chart .line.g { stroke: var(--accent); }
+.chart .zero { stroke: var(--border); }
+.chart-key .g::before { background: var(--accent); }
+.region-key { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 4px; }
+.region-key i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.map-title small b { color: var(--text); }
 .groups { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .groups .label { color: var(--muted); font-size: 13px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -131,7 +164,7 @@ a { color: var(--accent); }
 .node { fill: var(--surface); stroke: var(--focus); stroke-width: 1.5; vector-effect: non-scaling-stroke; pointer-events: none; }
 
 .map-title {
-  position: absolute; left: 14px; top: 12px; max-width: calc(100% - 80px);
+  position: absolute; left: 14px; top: 12px; max-width: calc(100% - 80px); z-index: 2;
   background: color-mix(in srgb, var(--surface) 88%, transparent); padding: 6px 10px; border-radius: 8px;
   font-weight: 600; font-size: 15px; pointer-events: none;
 }
@@ -298,6 +331,7 @@ dialog code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px
   .panel { margin: 6px 16px 0; }
   .story { margin: 0 16px; }
   .map-title { font-size: 13.5px; max-width: calc(100% - 64px); }
+  .map-wrap.compare { aspect-ratio: .78; }
   .seg button { padding: 5px 8px; font-size: 12.5px; }
   .legend { transform: scale(.88); transform-origin: left bottom; }
   .year-label { font-size: 20px; min-width: 48px; }

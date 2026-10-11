@@ -217,3 +217,20 @@ export function defaultPeriodIndex() {
   for (let i = counts.length - 1; i >= 0; i--) if (counts[i] >= max * 0.85) return i;
   return counts.length - 1;
 }
+
+// ------------------------------------------------------------------ indicators (World Bank, annual)
+
+let indicatorsPromise = null;
+
+/** {periods: ["1990", …], indicators: [{id, name, unit, description, source}], values: {id: {entity: [..]}}} */
+export function loadIndicators() {
+  indicatorsPromise ??= getJSON("data/indicators.json").catch(() => null);
+  return indicatorsPromise;
+}
+
+/** Annual totals of a slice regardless of the active one (e.g. annual exports while viewing monthly data). */
+export function loadTotals(product, freq) {
+  const key = `${product}/${freq}`;
+  if (!totalsCache.has(key)) totalsCache.set(key, getJSON(`${sliceDir(product, freq)}/totals.json`));
+  return totalsCache.get(key);
+}

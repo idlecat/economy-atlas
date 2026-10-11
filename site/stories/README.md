@@ -35,6 +35,9 @@ Guided replays shown by the "Stories" button. Each story is one JSON file listed
 | `change` | `1`, `5` or `10` (years); omit for levels |
 | `groups` | merged groups, comma-separated, or `none` |
 | `with` | a partner to compare with the focus |
+| `view` | `compare` for the scatter view; omit for the map |
+| `x`, `y` | Compare-view metrics, e.g. `gdp`, `gdp_pc`, `exports`, `exports_gdp` (see `site/js/metrics.js`) |
+| `mapby` | color the world map by a metric instead of trade, e.g. `gdp_pc` |
 
 Omitted keys take their defaults: annual data, the latest period, world view, total trade, levels, and the EU merged.
 

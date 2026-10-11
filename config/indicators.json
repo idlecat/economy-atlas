@@ -1,0 +1,26 @@
+{
+  "_comment": "Country-level economic indicators. `source_code` is the code in the source (World Bank WDI). `unit`: usd (published in USD millions), usd_pc (USD per person), people, pct. `group`: how a group's value is formed from its members (as of each year): sum = add members' values (only when members with data hold >= 95% of the group's population), none = not computed for groups. Derived indicators are computed at publish time from others. `hidden` indicators are inputs only.",
+  "start": 1990,
+  "indicators": [
+    {"id": "gdp", "name": "GDP", "unit": "usd", "source": "worldbank_wdi", "source_code": "NY.GDP.MKTP.CD", "group": "sum",
+     "description": "Gross domestic product, current US dollars"},
+    {"id": "gdp_real", "name": "GDP, constant prices", "unit": "usd", "source": "worldbank_wdi", "source_code": "NY.GDP.MKTP.KD", "group": "sum", "hidden": true,
+     "description": "Gross domestic product, constant 2015 US dollars (used for real growth)"},
+    {"id": "pop", "name": "Population", "unit": "people", "source": "worldbank_wdi", "source_code": "SP.POP.TOTL", "group": "sum",
+     "description": "Total population"},
+    {"id": "gdp_pc", "name": "GDP per capita", "unit": "usd_pc", "derived": "gdp / pop", "group": "derived",
+     "description": "GDP divided by population, current US dollars"},
+    {"id": "gdp_growth", "name": "Real GDP growth", "unit": "pct", "derived": "growth(gdp_real)", "group": "derived",
+     "description": "Annual change in GDP at constant prices"},
+    {"id": "inflation", "name": "Inflation", "unit": "pct", "source": "worldbank_wdi", "source_code": "FP.CPI.TOTL.ZG", "group": "none",
+     "description": "Consumer prices, annual % change"},
+    {"id": "unemployment", "name": "Unemployment", "unit": "pct", "source": "worldbank_wdi", "source_code": "SL.UEM.TOTL.ZS", "group": "none",
+     "description": "Unemployment, % of labour force (ILO modelled estimate)"},
+    {"id": "fdi_in", "name": "FDI inflows", "unit": "usd", "source": "worldbank_wdi", "source_code": "BX.KLT.DINV.CD.WD", "group": "sum",
+     "description": "Foreign direct investment, net inflows, current US dollars"},
+    {"id": "current_account", "name": "Current account balance", "unit": "usd", "source": "worldbank_wdi", "source_code": "BN.CAB.XOKA.CD", "group": "sum",
+     "description": "Current account balance, current US dollars"},
+    {"id": "trade_gs_gdp", "name": "Trade in goods & services, % of GDP", "unit": "pct", "source": "worldbank_wdi", "source_code": "NE.TRD.GNFS.ZS", "group": "none",
+     "description": "Exports plus imports of goods and services as a share of GDP (national accounts)"}
+  ]
+}

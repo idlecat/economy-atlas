@@ -9,7 +9,7 @@ Trade Atlas: a public, static website showing bilateral goods trade between coun
 - `pipeline/`: a Python data pipeline (uv + DuckDB) that turns source data into JSON in `site/data/`.
 - `site/`: a no-build frontend made of plain ES modules. D3 and topojson-client are imported from jsDelivr at pinned versions.
 
-Data: all-goods trade from the IMF (annual + monthly), trade by product from CEPII BACI (annual, sectors and commodities from `config/products.json`), and stories (guided replays) in `site/stories/`.
+Data: all-goods trade from the IMF (annual + monthly), trade by product from CEPII BACI (annual, sectors and commodities from `config/products.json`), country-level economic indicators from the World Bank WDI (`config/indicators.json`), and stories (guided replays) in `site/stories/`.
 
 ## Commands
 
@@ -47,6 +47,8 @@ There are three stages, and each reads only the previous stage's output:
    - `covered_periods`: drops trailing periods that fewer than `min_coverage` of reporters have published, so incomplete recent months don't look like a collapse.
    - `goods_trade` runs once per frequency in `datasets.json` `freqs` (A, M), writing `site/data/<freq>/`. `goods_by_product` runs per product and frequency, writing `site/data/products/<product>/<freq>/`, plus `site/data/products/breakdown/<id>.json` (each entity's world trade by product). A dataset with no observations is skipped with a warning.
    - Then it writes `meta.json` (including `products`: periods, sectors, commodities with their HS codes), `world.json` and `data_store/reports/publish.json`. `publish` always writes every dataset because they share `meta.json`.
+
+Indicators (`pipeline/indicators.py`): sources of `KIND = "indicators"` write `data_store/indicators/<source>.parquet` (schema `IND_COLUMNS`: entity-level, no partner). `publish_indicators` derives `gdp_pc` and `gdp_growth`, and builds group values with dated membership: `sum` indicators only when members with data hold ≥95% of the group population (`group_sum`); group growth uses a constant member set across the two years (`growth`). USD indicators are published in USD millions like trade. Output: `site/data/indicators.json` `{periods, indicators, values: {id: {entity: [...]}}}`. World Bank codes are ISO3 = entity ids; WB aggregates are dropped. No Taiwan.
 
 BACI specifics (`sources/cepii_baci.py`): values are reconciled exporter→importer flows (FOB, thousand USD in the source). Each flow becomes two observations (X for the exporter, M for the importer), plus WLD rows summed per reporter. HS6 codes are mapped to products at normalize time (`classify`, longest prefix wins; `validate_taxonomy` rejects overlapping sectors or commodities). Country codes map through the `baci` column of `entities.csv` (BACI numeric codes; Taiwan is 490 "Other Asia, nes"). BACI code 711 (Southern African Customs Union, reported as one unit until 1999) is deliberately unmapped, so South Africa and its SACU neighbours have no product data for 1995–99.
 
@@ -95,7 +97,7 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
 - **`main.js`:** owns `state` (`product`, `freq`, `pi` = period index, `focus`, `metric`, `back` = change-mode **years**, `groupsOn`, `pair`).
   - `backN()` converts change-mode years to periods (×12 for monthly), so "Δ 1 yr" is year-on-year for the same month.
   - `update()` loads flows (with an `updateToken` race guard), builds a color scale whose domain covers **all periods** (cached by `scaleKey`), renders everything, and writes the URL hash with `replaceState`.
-  - Views: `applyView(view)` sets the whole state from an object with the URL-hash keys (`product`, `freq`, `t`, `focus`, `metric`, `change`, `groups`, `with`). It is used by `readHash` and by stories. `playTo(index, ms)` animates the timeline and resolves when done or stopped.
+  - Views: `applyView(view)` sets the whole state from an object with the URL-hash keys (`product`, `freq`, `t`, `focus`, `metric`, `change`, `groups`, `with`, `view`, `x`, `y`, `mapby`). It is used by `readHash` and by stories. `playTo(index, ms)` animates the timeline and resolves when done or stopped.
   - A `hashchange` listener re-reads the hash for pasted links and back/forward. Old `year=` links still work.
 - **`stories.js`:** the story player.
   - Loads `stories/index.json` and `stories/<id>.json`. Each step calls `applyView`, then optionally `playTo`. Step changes bump a `token`, so a replay that is still running can't overwrite a later step.
@@ -104,7 +106,8 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
 - **`map.js`:** `render({focus, pi, groupsOn, colorOf, arcs})`.
   - Group outlines come from `topojson.mesh` and are recomputed when merged groups or that year's membership change.
   - Arc endpoints use the centroids of the largest polygons. Group centroids use all-time members, so arcs don't jump between years.
-- **`panel.js`:** the side panel and `lineChart`, which is reused in tooltips.
+- **`panel.js`:** the side panel and `lineChart`, which is reused in tooltips. The Economy section shows indicators for the focus and correlates year-on-year % changes of exports and nominal GDP (`growthPairs`); levels are deliberately not correlated.
+- **Compare view:** `metrics.js` `buildMetrics` defines every plottable metric (`value(key, year)`): trade from the active product's **annual** totals, World Bank indicators, and trade/GDP ratios. `compare.js` picks the dots (same display keys as the map, respecting merged groups) and computes Pearson r on the plotted scale (log10 on log axes), Spearman ρ and a least-squares fit (`stats.js`). `scatter.js` draws it. Entering Compare forces annual data. State keys: `view`, `sx`, `sy`; the map's world view can be colored by a metric via `mapBy`.
 
 Theming uses CSS variables with a `prefers-color-scheme` dark mode, and the JS palettes in `palettes()` follow it. On screens ≤980px, `.layout` uses `display: contents` so blocks can be reordered with `order`.
 
@@ -118,3 +121,4 @@ Theming uses CSS variables with a `prefers-color-scheme` dark mode, and the JS p
   - Group membership is applied as of each year.
   - Monthly data is not seasonally adjusted.
   - Product figures (BACI, reconciled, FOB) don't add up exactly to the IMF all-goods figures.
+  - Correlations are across economies (Compare) or of growth rates (panel), never of trending levels; group indicator sums include flows between members.

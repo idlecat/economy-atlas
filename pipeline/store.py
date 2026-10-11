@@ -22,7 +22,19 @@ OBS_COLUMNS = {
     "flag": "VARCHAR",       # e.g. mirror, estimated; empty if none
 }
 
+# Country-level indicators (GDP, population, ...): one Parquet file per source in data_store/indicators/.
+IND_COLUMNS = {
+    "source": "VARCHAR",
+    "indicator": "VARCHAR",  # id from config/indicators.json
+    "entity": "VARCHAR",
+    "freq": "VARCHAR",
+    "period": "VARCHAR",
+    "value": "DOUBLE",
+    "unit": "VARCHAR",       # usd, usd_pc, people, pct (raw source units; usd is not scaled here)
+}
+
 OBS_DIR = STORE / "observations"
+IND_DIR = STORE / "indicators"
 REF_DIR = STORE / "reference"
 REPORT_DIR = STORE / "reports"
 
@@ -64,3 +76,22 @@ def read_reference(con, name: str) -> list[dict]:
     cur = con.execute(f"SELECT * FROM read_parquet('{path}')")
     cols = [d[0] for d in cur.description]
     return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
+def write_indicators(con, source_id: str, rows: list[tuple]) -> int:
+    """rows: tuples in IND_COLUMNS order."""
+    con.execute(f"CREATE OR REPLACE TEMP TABLE _ind ({', '.join(f'{c} {t}' for c, t in IND_COLUMNS.items())})")
+    if rows:
+        con.executemany(f"INSERT INTO _ind VALUES ({', '.join('?' * len(IND_COLUMNS))})", rows)
+    IND_DIR.mkdir(parents=True, exist_ok=True)
+    con.execute(f"COPY _ind TO '{IND_DIR / (source_id + '.parquet')}' (FORMAT parquet)")
+    con.execute("DROP TABLE _ind")
+    return len(rows)
+
+
+def create_indicator_view(con) -> bool:
+    files = list(IND_DIR.glob("*.parquet")) if IND_DIR.exists() else []
+    if not files:
+        return False
+    con.execute(f"CREATE OR REPLACE VIEW ind AS SELECT * FROM read_parquet('{IND_DIR / '*.parquet'}', union_by_name = true)")
+    return True

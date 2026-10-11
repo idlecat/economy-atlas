@@ -303,6 +303,14 @@ def publish():
         prod_results, products_meta = publish_products(con, registry, datasets["goods_by_product"])
         results.update({("goods_by_product",) + k: v for k, v in prod_results.items()})
 
+    from .indicators import publish_indicators
+    log("Publishing indicators")
+    indicators = publish_indicators(con, registry)
+    if indicators:
+        used_extra = ["worldbank_wdi"]
+    else:
+        used_extra = []
+
     topo, unmatched_shapes = world_topology(registry)
     dump(SITE_DATA / "world.json", topo)
 
@@ -328,6 +336,7 @@ def publish():
     used_sources = []
     for cfg in datasets.values():
         used_sources += [s for s in cfg["precedence"] if s not in used_sources]
+    used_sources += [s for s in used_extra if s not in used_sources]
     meta = {
         "periods": {freq: r["periods"] for freq, r in trade.items()},
         "products": products_meta,

@@ -32,7 +32,7 @@ def normalize(only=None):
         log(f"normalize {mod.ID}: {mod.normalize(con)}")
     registry = Registry.load(read_reference(con, "un_m49"))
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    for mod in [m for m in mods if m.KIND == "observations"]:
+    for mod in [m for m in mods if m.KIND in ("observations", "indicators")]:
         report = mod.normalize(con, registry)
         (REPORT_DIR / f"{mod.ID}.json").write_text(json.dumps(report, indent=2))
         log(f"normalize {mod.ID}: {report['rows']} rows")
