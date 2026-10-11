@@ -1,11 +1,13 @@
 // Data loading and aggregation. All values are USD millions; every series is
-// a pair of arrays [exports[], imports[]] aligned to store.periods, the periods of
-// the active frequency (store.freq). Each frequency has its own files under data/<freq>/.
+// a pair of arrays [exports[], imports[]] aligned to store.periods, the periods of the
+// active slice: a frequency (store.freq) of all goods (data/<freq>/) or of one product
+// (store.product, data/products/<product>/<freq>/).
 import { yearOf } from "./time.js";
 
 export const store = {
   meta: null,
   freq: "A",
+  product: "TOTAL",
   periods: [],
   totals: {},
   topo: null,
@@ -16,6 +18,11 @@ export const store = {
 
 const flowsCache = new Map();
 const totalsCache = new Map();
+const breakdownCache = new Map();
+
+function sliceDir(product, freq) {
+  return product === "TOTAL" ? `data/${freq}` : `data/products/${product}/${freq}`;
+}
 
 async function getJSON(url) {
   const r = await fetch(url);
@@ -30,25 +37,52 @@ export async function loadBase() {
   return store;
 }
 
-export function availableFreqs() {
-  return Object.keys(store.meta.periods);
+/** Frequencies available for a product ("TOTAL" = all goods). */
+export function availableFreqs(product = "TOTAL") {
+  return Object.keys(periodsOf(product));
 }
 
-/** Switch the active frequency, loading its totals on first use. */
-export async function setFreq(freq) {
-  if (!totalsCache.has(freq)) totalsCache.set(freq, getJSON(`data/${freq}/totals.json`));
-  const totals = await totalsCache.get(freq);
-  Object.assign(store, { freq, totals, periods: store.meta.periods[freq] });
+function periodsOf(product) {
+  return product === "TOTAL" ? store.meta.periods : store.meta.products?.periods ?? {};
+}
+
+/** Switch the active slice (product + frequency), loading its totals on first use. */
+export async function setSlice(product, freq) {
+  const key = `${product}/${freq}`;
+  if (!totalsCache.has(key)) totalsCache.set(key, getJSON(`${sliceDir(product, freq)}/totals.json`));
+  const totals = await totalsCache.get(key);
+  Object.assign(store, { product, freq, totals, periods: periodsOf(product)[freq] });
+}
+
+export function products() {
+  const p = store.meta.products;
+  return p ? [...p.sectors.map((s) => ({ ...s, kind: "sector" })), ...p.commodities.map((c) => ({ ...c, kind: "commodity" }))] : [];
+}
+
+export function productName(id) {
+  return id === "TOTAL" ? "All goods" : products().find((p) => p.id === id)?.name ?? id;
+}
+
+/** {product: series} of an entity's annual trade with the world, by product (CEPII BACI). */
+export function loadBreakdown(code) {
+  if (!store.meta.products) return Promise.resolve(null);
+  if (!breakdownCache.has(code)) {
+    breakdownCache.set(code, getJSON(`data/products/breakdown/${code}.json`).catch(() => null));
+  }
+  return breakdownCache.get(code);
 }
 
 export function hasFlows(code) {
   return store.groupById.has(code) || !!store.entities[code]?.reporter;
 }
 
-export function loadFlows(code, freq = store.freq) {
-  const key = `${freq}/${code}`;
+export function loadFlows(code, freq = store.freq, product = store.product) {
+  const key = `${product}/${freq}/${code}`;
   if (!flowsCache.has(key)) {
-    flowsCache.set(key, hasFlows(code) ? getJSON(`data/${freq}/flows/${code}.json`) : Promise.resolve({ p: {} }));
+    // A product slice may lack a file for an entity that has no trade in it.
+    flowsCache.set(key, hasFlows(code)
+      ? getJSON(`${sliceDir(product, freq)}/flows/${code}.json`).catch(() => ({ p: {} }))
+      : Promise.resolve({ p: {} }));
   }
   return flowsCache.get(key);
 }

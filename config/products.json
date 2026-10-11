@@ -1,0 +1,33 @@
+{
+  "_comment": "Product taxonomy for goods_by_product, defined by HS 1992 code prefixes (2 = chapter, 4 = heading, 6 = subheading). Sectors must not overlap; HS codes matching no sector go to OTHER, so sectors always add up to all goods. Commodities are highlighted subsets of a sector (`sector`); one HS code may belong to at most one commodity. Changing this file requires `normalize --only cepii_baci` and `publish`.",
+  "sectors": [
+    {"id": "AGRI", "name": "Agriculture & food", "hs": ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"]},
+    {"id": "ENERGY", "name": "Energy (fuels)", "hs": ["27"]},
+    {"id": "ORES", "name": "Ores & minerals", "hs": ["25", "26"]},
+    {"id": "CHEM", "name": "Chemicals & plastics", "hs": ["28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40"]},
+    {"id": "WOOD", "name": "Wood, paper & leather", "hs": ["41", "42", "43", "44", "45", "46", "47", "48", "49"]},
+    {"id": "TEXTILES", "name": "Textiles, clothing & footwear", "hs": ["50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67"]},
+    {"id": "STONE", "name": "Stone, ceramics & glass", "hs": ["68", "69", "70"]},
+    {"id": "PRECIOUS", "name": "Gold, gems & jewellery", "hs": ["71"]},
+    {"id": "METALS", "name": "Base metals", "hs": ["72", "73", "74", "75", "76", "78", "79", "80", "81", "82", "83"]},
+    {"id": "MACHINERY", "name": "Machinery & electronics", "hs": ["84", "85"]},
+    {"id": "VEHICLES", "name": "Vehicles, ships & aircraft", "hs": ["86", "87", "88", "89"]},
+    {"id": "INSTRUMENTS", "name": "Instruments, furniture & other manufactures", "hs": ["90", "91", "92", "93", "94", "95", "96", "97"]},
+    {"id": "OTHER", "name": "Other / unclassified", "hs": []}
+  ],
+  "commodities": [
+    {"id": "CRUDE", "name": "Crude oil", "sector": "ENERGY", "hs": ["2709"]},
+    {"id": "REFINED", "name": "Refined petroleum products", "sector": "ENERGY", "hs": ["2710"]},
+    {"id": "GAS", "name": "Natural gas (incl. LNG)", "sector": "ENERGY", "hs": ["271111", "271121"]},
+    {"id": "COAL", "name": "Coal", "sector": "ENERGY", "hs": ["2701"]},
+    {"id": "IRONORE", "name": "Iron ore", "sector": "ORES", "hs": ["2601"]},
+    {"id": "COPPER", "name": "Copper ores", "sector": "ORES", "hs": ["2603"]},
+    {"id": "GOLD", "name": "Gold", "sector": "PRECIOUS", "hs": ["7108"]},
+    {"id": "SOYBEANS", "name": "Soybeans", "sector": "AGRI", "hs": ["1201"]},
+    {"id": "WHEAT", "name": "Wheat", "sector": "AGRI", "hs": ["1001"]},
+    {"id": "MAIZE", "name": "Maize (corn)", "sector": "AGRI", "hs": ["1005"]},
+    {"id": "PHARMA", "name": "Pharmaceuticals", "sector": "CHEM", "hs": ["30"]},
+    {"id": "CHIPS", "name": "Semiconductors & integrated circuits", "sector": "MACHINERY", "hs": ["8541", "8542"]},
+    {"id": "CARS", "name": "Passenger cars", "sector": "VEHICLES", "hs": ["8703"]}
+  ]
+}

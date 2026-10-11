@@ -30,17 +30,24 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Test pipeline
         run: uv run pytest -q
-      # Raw downloads (~1.5 GB, mostly monthly IMF data) are cached so pushes don't re-download.
+      # Raw downloads are cached so pushes don't re-download (IMF ~1.5 GB, BACI 2.4 GB).
       # The monthly scheduled run (or a manual run with refresh) fetches everything again.
       - id: month
         run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
-          path: data_raw
+          path: |
+            data_raw
+            !data_raw/cepii_baci
           key: data-raw-${{ steps.month.outputs.month }}-${{ github.run_id }}
           restore-keys: |
             data-raw-${{ steps.month.outputs.month }}-
             data-raw-
+      # BACI (2.4 GB) is a fixed release: cached until the source module (and its VERSION) changes.
+      - uses: actions/cache@v4
+        with:
+          path: data_raw/cepii_baci
+          key: baci-${{ hashFiles('pipeline/sources/cepii_baci.py') }}
       - name: Build data files
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.refresh }}" = "true" ]; then

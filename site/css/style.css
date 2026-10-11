@@ -87,6 +87,12 @@ a { color: var(--accent); }
   color: var(--muted); font-weight: 500; white-space: nowrap;
 }
 .seg button[aria-checked="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.product-pick select {
+  font: inherit; font-weight: 500; color: var(--text); background: var(--surface-2);
+  border: 0; border-radius: 8px; padding: 7px 10px; max-width: 260px; cursor: pointer;
+}
+.product-pick select:focus { outline: 2px solid var(--accent); }
+.seg button[disabled] { opacity: .4; cursor: not-allowed; }
 .groups { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .groups .label { color: var(--muted); font-size: 13px; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -234,6 +240,8 @@ a { color: var(--accent); }
 .partners .bar i { display: block; height: 100%; background: var(--accent); }
 .partners .val { font-variant-numeric: tabular-nums; font-size: 12.5px; }
 .partners .share { color: var(--muted); font-size: 11px; margin-left: 4px; }
+.products-list li.current { background: var(--accent-soft); }
+.products-list li.kind { display: block; cursor: default; background: none; padding-left: 4px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin: 10px 0 2px; }
 .pair-box { background: var(--surface-2); border-radius: 8px; padding: 10px; margin-top: 8px; }
 .pair-box .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .pair-box button { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12px; }

@@ -1,4 +1,6 @@
-"""Command line: python -m pipeline {fetch,normalize,publish,build} [--only SOURCE ...] [--refresh]"""
+"""Command line: python -m pipeline {fetch,normalize,publish,build} [--only SOURCE ...] [--refresh]
+
+publish always writes every dataset in config/datasets.json, since they share meta.json."""
 import argparse
 import json
 
@@ -43,7 +45,6 @@ def main(argv=None):
     ap.add_argument("command", choices=["fetch", "normalize", "publish", "build"])
     ap.add_argument("--only", nargs="+", metavar="SOURCE", help=f"limit fetch/normalize to these sources: {', '.join(SOURCES)}")
     ap.add_argument("--refresh", action="store_true", help="re-download even if cached")
-    ap.add_argument("--dataset", default="goods_trade")
     args = ap.parse_args(argv)
 
     if args.command in ("fetch", "build"):
@@ -51,4 +52,4 @@ def main(argv=None):
     if args.command in ("normalize", "build"):
         normalize(args.only)
     if args.command in ("publish", "build"):
-        publish(args.dataset)
+        publish()

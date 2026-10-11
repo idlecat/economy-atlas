@@ -1,0 +1,99 @@
+{
+  "title": "Russian oil turns east",
+  "markers": [
+    {
+      "t": "2022",
+      "label": "Russia invades Ukraine; EU embargo on seaborne Russian crude from 5 December"
+    }
+  ],
+  "sources": [
+    {
+      "name": "EEAS: UN General Assembly demands Russian Federation withdraw all military forces from the territory of Ukraine (2 March 2022)",
+      "url": "https://www.eeas.europa.eu/eeas/un-general-assembly-demands-russian-federation-withdraw-all-military-forces-territory-ukraine_und_da"
+    },
+    {
+      "name": "CSIS: Progress Report on the EU Embargo and Russian Oil Price Cap",
+      "url": "https://www.csis.org/analysis/progress-report-eu-embargo-and-russian-oil-price-cap"
+    },
+    {
+      "name": "CEPII BACI (trade by product)",
+      "url": "https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2021: Europe was Russia's main oil customer",
+      "text": [
+        "In 2021 Russia exported about **$115 billion** of crude oil. The European Union bought **46%** of it, China 31%, and India barely 1%.",
+        "The map shows the value of Russia's crude oil exports to each partner. These figures come from CEPII BACI, which reconciles what exporters and importers report."
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2021",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2022: war and sanctions",
+      "text": [
+        "Russia invaded Ukraine in early 2022. The EU banned imports of Russian crude oil by sea from **5 December 2022**; oil delivered by pipeline was exempted, and the G7, EU and Australia set a price cap of $60 a barrel.",
+        "With oil prices high, Russia's crude exports actually rose to about **$148 billion** in 2022. The EU still took 38%, and India's share had already jumped to 17%."
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2022",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2023–24: the oil flows east",
+      "text": [
+        "Once the embargo took effect, the EU's share of Russia's crude exports collapsed to **5%** by 2024 (about $7 billion).",
+        "China (**50%**, $63 billion) and India (**42%**, $53 billion) now take almost all of it. Watch the arcs swing from Europe to Asia."
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2021",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 1600
+      }
+    },
+    {
+      "title": "India's new top supplier",
+      "text": [
+        "Seen from India, Russia went from supplying **1%** of its crude oil imports in 2021 to **37%** in 2024, overtaking Iraq and Saudi Arabia.",
+        "The panel compares India's crude imports from Russia over time."
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2024",
+        "focus": "IND",
+        "metric": "imports",
+        "groups": "EU",
+        "with": "RUS"
+      }
+    },
+    {
+      "title": "Explore further",
+      "text": [
+        "Switch the product to **Refined petroleum products** or **Natural gas** to see how other energy flows changed, or pick any country to see what it trades."
+      ],
+      "view": {
+        "product": "ENERGY",
+        "t": "2024",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      }
+    }
+  ]
+}

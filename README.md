@@ -4,7 +4,8 @@ An interactive world map of bilateral goods trade, built as a static website.
 
 - **Choropleth + flow arcs.** Shows total trade, exports, imports or trade balance for each country, or for each partner of a selected focus.
 - **Time.** Annual data from 1990 and monthly data from 2000, with a time slider and a play button. The Δ 1/5/10-year modes color partners by growth instead of size; on monthly data, Δ 1 yr compares each month with the same month a year earlier.
-- **Stories.** Guided replays of past events (starting with the 2008–09 trade collapse) step through saved views with captions and replay the timeline. Stories are JSON files in `site/stories/` (format in its README).
+- **Products.** Pick a sector (energy, ores, machinery, …) or a commodity (crude oil, gas, coal, iron ore, soybeans, chips, …) to see who trades it with whom, 1995–2024. A country's panel shows what it trades, by product.
+- **Stories.** Guided replays of past events (the 2008–09 trade collapse, and Russian oil turning east after 2022) step through saved views with captions and replay the timeline. Stories are JSON files in `site/stories/` (format in its README).
 - **Focus.** Click a country or bloc to see its partners, its trend over time, and its top-partner ranking. Click a partner to compare the pair over time.
 - **Groupings.** Each bloc can be treated as one entity or split into its countries: EU, ASEAN, GCC, Africa, South America, Central America & Caribbean, and Central Asia. When a bloc is merged, trade between its members is excluded, and membership follows each year (the UK is in the EU through 2020).
 - **Shareable state.** The URL hash keeps the current view, e.g. `#focus=CHN&year=2025&metric=exports&groups=EU,ASEAN`.
@@ -15,6 +16,7 @@ An interactive world map of bilateral goods trade, built as a static website.
 | What | Source |
 |---|---|
 | Bilateral exports (FOB) and imports (CIF) of goods, annual and monthly, USD | IMF, [International Trade in Goods (by partner country), IMTS](https://data.imf.org/en/datasets/IMF.STA:IMTS), formerly DOTS, via the IMF SDMX API |
+| Bilateral trade by product (HS 1992), annual 1995–2024 | CEPII, [BACI](https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37) version 202601, Etalab Open Licence 2.0 |
 | Regions used to define groups | UN Statistics Division, [M49 standard](https://unstats.un.org/unsd/methodology/m49/overview/) |
 | Country shapes | [Natural Earth](https://www.naturalearthdata.com/) 1:50m via `world-atlas@2.0.2` |
 
@@ -31,7 +33,8 @@ publish     site/data/                   JSON for the website; data_store/report
 
 - **Entities** (`config/entities.csv`) are the list of countries, keyed by ISO3, including retired codes such as `SUN` for the USSR. The file has one column per source's code scheme (`imf`, `ne`, …) and start/end years for historical states.
 - **Groups** (`config/groups.json`) list members with optional `from`/`to` years, or use UN M49 region codes. In any year, a country can belong to at most one group.
-- **Datasets** (`config/datasets.json`) set the source precedence: when two sources report the same value, the first source in the list wins.
+- **Datasets** (`config/datasets.json`) set the source precedence: when two sources report the same value, the first source in the list wins. `goods_trade` (all goods, IMF) and `goods_by_product` (CEPII BACI) are published side by side.
+- **Products** (`config/products.json`) are sectors (which together cover all goods) and commodities, each a list of HS 1992 code prefixes. BACI's ~5,000 HS6 codes are summed into these during `normalize`, so after editing the file run `python -m pipeline normalize --only cepii_baci` and `publish`.
 
 To add a source:
 1. Add a module in `pipeline/sources/` (see its `__init__.py`).
@@ -67,7 +70,7 @@ Other commands:
 
 The page must be served over HTTP; opening `index.html` as a file won't work.
 
-`site/data/` is generated and not committed (about 200 MB with monthly data). The first `build` downloads about 1.5 GB from the IMF into `data_raw/`, which takes 10–15 minutes; later builds reuse that cache.
+`site/data/` is generated and not committed (a few hundred MB with monthly and product data). The first `build` downloads about 1.5 GB from the IMF and the 2.4 GB BACI release into `data_raw/`, which can take 30+ minutes depending on CEPII's server; later builds reuse that cache. Large files are downloaded in resumable chunks, so an interrupted run picks up where it stopped.
 
 ## Deploy
 

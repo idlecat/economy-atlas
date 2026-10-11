@@ -27,6 +27,7 @@ Guided replays shown by the "Stories" button. Each story is one JSON file listed
 
 | Key | Values |
 |---|---|
+| `product` | a sector or commodity id from `config/products.json` (annual only); omit for all goods |
 | `freq` | `A` or `M` |
 | `t` | a period, e.g. `2008` or `2008-09` |
 | `focus` | an entity or group id |

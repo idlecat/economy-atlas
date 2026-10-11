@@ -26,8 +26,8 @@ FAR_PAST, FAR_FUTURE = -9999, 9999
 
 # --------------------------------------------------------------------------- transformations
 
-def select_observations(con, dataset: str, cfg: dict, freq: str, start: int):
-    """TEMP TABLE chosen: one row per (reporter, partner, flow, product, period) of `freq`, highest-precedence source wins."""
+def select_observations(con, dataset: str, cfg: dict, freq: str, start: int, product: str = "TOTAL"):
+    """TEMP TABLE chosen: one row per (reporter, partner, flow, period) of `freq` and `product`, highest-precedence source wins."""
     con.execute("CREATE OR REPLACE TEMP TABLE prec (source VARCHAR, rank INTEGER)")
     con.executemany("INSERT INTO prec VALUES (?, ?)", [(s, i) for i, s in enumerate(cfg["precedence"])])
     con.execute("""
@@ -39,7 +39,7 @@ def select_observations(con, dataset: str, cfg: dict, freq: str, start: int):
             WHERE o.dataset = ? AND o.product = ? AND o.freq = ?
               AND CAST(left(o.period, 4) AS INTEGER) >= ?
         ) WHERE rk = 1
-    """, [dataset, cfg["product"], freq, start])
+    """, [dataset, product, freq, start])
 
 
 def derive_mirrors(con, registry: Registry) -> list[str]:
@@ -120,7 +120,7 @@ def covered_periods(con, min_coverage: float) -> list[str]:
     would otherwise look like a collapse in trade."""
     counts = con.execute(f"""
         SELECT period, count(DISTINCT reporter) FROM pairs
-        WHERE partner = '{WORLD}' AND x IS NOT NULL GROUP BY period ORDER BY period
+        WHERE partner = '{WORLD}' AND (x IS NOT NULL OR m IS NOT NULL) GROUP BY period ORDER BY period
     """).fetchall()
     if not counts:
         return []
@@ -193,13 +193,19 @@ def source_meta(source_id):
 
 # --------------------------------------------------------------------------- main
 
-def publish_freq(con, registry, dataset, cfg, freq, start, out_dir):
-    """Write <out_dir>/totals.json and <out_dir>/flows/<id>.json for one frequency."""
-    select_observations(con, dataset, cfg, freq, start)
+def publish_freq(con, registry, dataset, cfg, freq, start, out_dir, product="TOTAL", periods=None):
+    """Write <out_dir>/totals.json and <out_dir>/flows/<id>.json for one frequency and product.
+    `periods` fixes the time axis (products share one); otherwise it comes from covered_periods."""
+    select_observations(con, dataset, cfg, freq, start, product)
     mirrored = derive_mirrors(con, registry)
     build_pairs(con)
     build_groups(con, registry)
-    periods = covered_periods(con, cfg.get("min_coverage", 0))
+    if periods is None:
+        periods = covered_periods(con, cfg.get("min_coverage", 0))
+    has_data = con.execute("SELECT count(*) FROM pairs").fetchone()[0] > 0
+    if not periods or not has_data:
+        log(f"  {product if product != 'TOTAL' else dataset} {freq}: no data; skipped")
+        return None
 
     reporters = [r[0] for r in con.execute("SELECT DISTINCT reporter FROM pairs ORDER BY 1").fetchall()]
     partners = {r[0] for r in con.execute(f"SELECT DISTINCT partner FROM pairs WHERE partner <> '{WORLD}'").fetchall()}
@@ -225,30 +231,86 @@ def publish_freq(con, registry, dataset, cfg, freq, start, out_dir):
     dump(out_dir / "totals.json", totals)
 
     size = sum(f.stat().st_size for f in flows_dir.glob("*.json"))
-    log(f"  {freq}: {periods[0]}–{periods[-1]} ({len(periods)} periods), {len(reporters)} reporters, "
+    log(f"  {product if product != 'TOTAL' else dataset} {freq}: {periods[0]}–{periods[-1]} ({len(periods)} periods), {len(reporters)} reporters, "
         f"flows {size / 1e6:.1f} MB; mirrored {mirrored}")
     return {"periods": periods, "reporters": reporters, "partners": partners, "mirrored": mirrored,
-            "has_totals": set(totals), "rows_by_source": dict(con.execute(
+            "has_totals": set(totals), "totals": totals, "rows_by_source": dict(con.execute(
                 "SELECT source, count(*) FROM chosen GROUP BY 1 ORDER BY 1").fetchall())}
 
 
-def publish(dataset="goods_trade"):
-    cfg = json.loads((CONFIG / "datasets.json").read_text())[dataset]
+def publish_products(con, registry, cfg):
+    """goods_by_product: one folder per sector/commodity, plus a per-entity breakdown by product."""
+    from .sources.cepii_baci import load_taxonomy
+
+    taxonomy = load_taxonomy()
+    out = SITE_DATA / "products"
+    import shutil
+    shutil.rmtree(out, ignore_errors=True)  # products removed from the taxonomy must not linger
+    if not con.execute("SELECT count(*) FROM obs WHERE dataset = 'goods_by_product'").fetchone()[0]:
+        log("  no goods_by_product observations (run fetch + normalize for its sources); skipped")
+        return {}, None
+    results, breakdown = {}, {}
+    # One time axis for all products, so the frontend can switch products without realigning.
+    axis = {freq: [r[0] for r in con.execute("""
+        SELECT DISTINCT period FROM obs WHERE dataset = 'goods_by_product' AND freq = ?
+          AND CAST(left(period, 4) AS INTEGER) >= ? ORDER BY 1""", [freq, fc["start"]]).fetchall()]
+        for freq, fc in cfg["freqs"].items()}
+    for item in taxonomy["sectors"] + taxonomy["commodities"]:
+        pid = item["id"]
+        for freq, fc in cfg["freqs"].items():
+            r = publish_freq(con, registry, "goods_by_product", cfg, freq, fc["start"], out / pid / freq,
+                             product=pid, periods=axis[freq])
+            if r is None:
+                continue
+            results[(pid, freq)] = r
+            if freq == "A":
+                for eid, series in r["totals"].items():
+                    breakdown.setdefault(eid, {})[pid] = series
+    if not results:
+        return {}, None
+    periods = axis["A"]
+    # breakdown/<id>.json: {product: series} of trade with the world, for the panel's "what it trades" list
+    bd_dir = out / "breakdown"
+    for old in bd_dir.glob("*.json"):
+        old.unlink()
+    for eid, by_product in breakdown.items():
+        dump(bd_dir / f"{eid}.json", by_product)
+    published = {pid for pid, _ in results}
+    meta = {
+        "periods": {"A": periods},
+        "sectors": [it for it in taxonomy["sectors"] if it["id"] in published],
+        "commodities": [it for it in taxonomy["commodities"] if it["id"] in published],
+    }
+    return results, meta
+
+
+def publish():
+    """Publish every dataset in config/datasets.json."""
+    datasets = json.loads((CONFIG / "datasets.json").read_text())
+    datasets = {k: v for k, v in datasets.items() if not k.startswith("_")}
     con = connect()
     registry = Registry.load(read_reference(con, "un_m49"))
     create_obs_view(con)
 
-    log(f"Publishing {dataset}")
-    results = {freq: publish_freq(con, registry, dataset, cfg, freq, fc["start"], SITE_DATA / freq)
-               for freq, fc in cfg["freqs"].items()}
+    results, products_meta = {}, None
+    if "goods_trade" in datasets:
+        log("Publishing goods_trade")
+        cfg = datasets["goods_trade"]
+        for freq, fc in cfg["freqs"].items():
+            results[("goods_trade", freq)] = publish_freq(con, registry, "goods_trade", cfg, freq, fc["start"], SITE_DATA / freq)
+    if "goods_by_product" in datasets:
+        log("Publishing goods_by_product")
+        prod_results, products_meta = publish_products(con, registry, datasets["goods_by_product"])
+        results.update({("goods_by_product",) + k: v for k, v in prod_results.items()})
 
     topo, unmatched_shapes = world_topology(registry)
     dump(SITE_DATA / "world.json", topo)
 
+    trade = {f: r for (d, *rest), r in results.items() if d == "goods_trade" for f in rest}
     reporters = set().union(*(r["reporters"] for r in results.values()))
     partners = set().union(*(r["partners"] for r in results.values()))
     mirrored = set().union(*(r["mirrored"] for r in results.values()))
-    has_totals = set().union(*(r["has_totals"] for r in results.values()))
+    has_totals = set().union(*(r["has_totals"] for r in trade.values()))
     member_ids = {m.entity for m in registry.memberships()}
     listed = (reporters | partners | member_ids) & set(registry.entities)
     memberships = {}
@@ -263,24 +325,26 @@ def publish(dataset="goods_trade"):
             ents[eid]["mirror"] = True
         if eid in memberships:
             ents[eid]["groups"] = memberships[eid]
+    used_sources = []
+    for cfg in datasets.values():
+        used_sources += [s for s in cfg["precedence"] if s not in used_sources]
     meta = {
-        "dataset": dataset,
-        "periods": {freq: r["periods"] for freq, r in results.items()},
+        "periods": {freq: r["periods"] for freq, r in trade.items()},
+        "products": products_meta,
         "units": "USD millions (current prices)",
         "generated": dt.date.today().isoformat(),
         "entities": ents,
         "groups": [{"id": g.id, "name": g.name, "short": g.short, "note": g.note,
                     "members": [_span({"id": m.entity}, m) for m in g.members if m.entity in listed]}
                    for g in registry.groups],
-        "sources": [source_meta(s) for s in cfg["precedence"]] + [source_meta("un_m49"), source_meta("natural_earth")],
+        "sources": [source_meta(s) for s in used_sources] + [source_meta("un_m49"), source_meta("natural_earth")],
     }
     dump(SITE_DATA / "meta.json", meta)
 
     shaped = {g.get("id") for g in topo["objects"]["countries"]["geometries"]}
     report = {
-        "dataset": dataset,
-        "freqs": {f: {"periods": [r["periods"][0], r["periods"][-1]], "reporters": len(r["reporters"]),
-                      "rows_by_source": r["rows_by_source"]} for f, r in results.items()},
+        "slices": {"/".join(k): {"periods": [r["periods"][0], r["periods"][-1]], "reporters": len(r["reporters"]),
+                                 "rows_by_source": r["rows_by_source"]} for k, r in results.items()},
         "entities": len(ents), "mirrored": sorted(mirrored),
         "reporters_without_shape": sorted(r for r in reporters if r not in shaped),
         "shapes_without_entity": sorted(unmatched_shapes),

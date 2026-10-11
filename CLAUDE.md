@@ -9,7 +9,7 @@ Trade Atlas: a public, static website showing bilateral goods trade between coun
 - `pipeline/`: a Python data pipeline (uv + DuckDB) that turns source data into JSON in `site/data/`.
 - `site/`: a no-build frontend made of plain ES modules. D3 and topojson-client are imported from jsDelivr at pinned versions.
 
-Planned direction: more sources and product breakdowns (e.g. HS chapters). The pipeline schema already has a `product` column. Annual and monthly data are published, and stories (guided replays) live in `site/stories/`.
+Data: all-goods trade from the IMF (annual + monthly), trade by product from CEPII BACI (annual, sectors and commodities from `config/products.json`), and stories (guided replays) in `site/stories/`.
 
 ## Commands
 
@@ -23,6 +23,8 @@ python3 -m http.server -d site 8000                # serve the site; must be HTT
 ```
 
 Run `publish` after any change to `config/` or `pipeline/publish.py`. Run `normalize` too if entity code mappings changed.
+
+`net.download_large` fetches big files (BACI, 2.4 GB) as resumable parallel range requests with a per-chunk deadline; CEPII's server is often slow, so expect 30+ minutes. BACI releases are immutable: `--refresh` does not re-download them; bump `VERSION` in `sources/cepii_baci.py` for a new release.
 
 The first monthly fetch is about 250 IMF requests of 1–10 MB each. HTTPS uses `certifi`, because uv-managed Pythons don't see the macOS system certificate store. Failed requests are reported and make `fetch` exit non-zero; rerunning retries only the missing files.
 
@@ -43,7 +45,10 @@ There are three stages, and each reads only the previous stage's output:
    - `derive_mirrors`: rebuilds flows from partner reports, swapping exports and imports, for entities with `derive=mirror` that report nothing (currently Taiwan).
    - `build_pairs`, then `build_groups`.
    - `covered_periods`: drops trailing periods that fewer than `min_coverage` of reporters have published, so incomplete recent months don't look like a collapse.
-   - This runs once per frequency in `datasets.json` `freqs` (A, M), writing `site/data/<freq>/`. Then it writes `meta.json`, `world.json` and `data_store/reports/publish.json`.
+   - `goods_trade` runs once per frequency in `datasets.json` `freqs` (A, M), writing `site/data/<freq>/`. `goods_by_product` runs per product and frequency, writing `site/data/products/<product>/<freq>/`, plus `site/data/products/breakdown/<id>.json` (each entity's world trade by product). A dataset with no observations is skipped with a warning.
+   - Then it writes `meta.json` (including `products`: periods, sectors, commodities with their HS codes), `world.json` and `data_store/reports/publish.json`. `publish` always writes every dataset because they share `meta.json`.
+
+BACI specifics (`sources/cepii_baci.py`): values are reconciled exporter→importer flows (FOB, thousand USD in the source). Each flow becomes two observations (X for the exporter, M for the importer), plus WLD rows summed per reporter. HS6 codes are mapped to products at normalize time (`classify`, longest prefix wins; `validate_taxonomy` rejects overlapping sectors or commodities). Country codes map through the `baci` column of `entities.csv` (BACI numeric codes; Taiwan is 490 "Other Asia, nes"). BACI code 711 (Southern African Customs Union, reported as one unit until 1999) is deliberately unmapped, so South Africa and its SACU neighbours have no product data for 1995–99.
 
 Each step only needs a connection with an `obs` table, so the tests build synthetic `obs` tables directly.
 
@@ -81,15 +86,16 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
 ## Frontend architecture (`site/js/`)
 
 - **`data.js`:** the `store`, plus membership-aware aggregation.
-  - `setFreq(freq)` switches `store.periods` and `store.totals`, loading `data/<freq>/totals.json` lazily. Flows are cached per frequency.
+  - `setSlice(product, freq)` switches `store.product`, `store.periods` and `store.totals`, loading the slice's `totals.json` lazily (`product` "TOTAL" = all goods from `data/<freq>/`). Flows are cached per product and frequency. Product slices are annual only, so the Monthly button is disabled while a product is selected.
+  - `loadBreakdown(code)` loads an entity's trade by product for the panel's "What X trades" list.
   - `groupOf(code, pi)` and `displayOf(code, groupsOn, pi)` give the key a country is drawn as at a given period index: itself, or its merged group. Everything in the UI is keyed by this display key.
   - `partnerSeries` and `displayTotals` fold or mask series **per period**, because membership changes over time.
 - **`time.js`:** period parsing and labels. `nearestIndex` maps a period across frequencies (e.g. `2008` → `2008-12`). `yearTicks` gives axis ticks.
   - `metricAt` and `changeAt` derive total, exports, imports and balance. Change is a ratio for flows and a USD difference for balance.
-- **`main.js`:** owns `state` (`freq`, `pi` = period index, `focus`, `metric`, `back` = change-mode **years**, `groupsOn`, `pair`).
+- **`main.js`:** owns `state` (`product`, `freq`, `pi` = period index, `focus`, `metric`, `back` = change-mode **years**, `groupsOn`, `pair`).
   - `backN()` converts change-mode years to periods (×12 for monthly), so "Δ 1 yr" is year-on-year for the same month.
   - `update()` loads flows (with an `updateToken` race guard), builds a color scale whose domain covers **all periods** (cached by `scaleKey`), renders everything, and writes the URL hash with `replaceState`.
-  - Views: `applyView(view)` sets the whole state from an object with the URL-hash keys (`freq`, `t`, `focus`, `metric`, `change`, `groups`, `with`). It is used by `readHash` and by stories. `playTo(index, ms)` animates the timeline and resolves when done or stopped.
+  - Views: `applyView(view)` sets the whole state from an object with the URL-hash keys (`product`, `freq`, `t`, `focus`, `metric`, `change`, `groups`, `with`). It is used by `readHash` and by stories. `playTo(index, ms)` animates the timeline and resolves when done or stopped.
   - A `hashchange` listener re-reads the hash for pasted links and back/forward. Old `year=` links still work.
 - **`stories.js`:** the story player.
   - Loads `stories/index.json` and `stories/<id>.json`. Each step calls `applyView`, then optionally `playTo`. Step changes bump a `token`, so a replay that is still running can't overwrite a later step.
@@ -111,3 +117,4 @@ Theming uses CSS variables with a `prefers-color-scheme` dark mode, and the JS p
   - Mirror data for Taiwan.
   - Group membership is applied as of each year.
   - Monthly data is not seasonally adjusted.
+  - Product figures (BACI, reconciled, FOB) don't add up exactly to the IMF all-goods figures.

@@ -15,9 +15,10 @@ def make_con(rows, freq="A"):
     """rows: (source, reporter, partner, flow, period, value) for goods_trade totals."""
     con = connect()
     con.execute(f"CREATE TABLE obs ({', '.join(f'{c} {t}' for c, t in OBS_COLUMNS.items())})")
-    con.executemany(f"INSERT INTO obs VALUES ({', '.join('?' * len(OBS_COLUMNS))})", [
-        (src, "goods_trade", r, p, f, "TOTAL", freq, str(per), v, "USD", "", "")
-        for src, r, p, f, per, v in rows])
+    if rows:
+        con.executemany(f"INSERT INTO obs VALUES ({', '.join('?' * len(OBS_COLUMNS))})", [
+            (src, "goods_trade", r, p, f, "TOTAL", freq, str(per), v, "USD", "", "")
+            for src, r, p, f, per, v in rows])
     return con
 
 
@@ -149,3 +150,41 @@ def test_sig_rounds_to_millions():
 
 def test_collect_aligns_to_years():
     assert pub.collect([("AAA", "2001", 2e6, None)], ["2000", "2001"]) == {"AAA": [[None, 2], [None, None]]}
+
+
+# --------------------------------------------------------------------------- products
+
+from pipeline.sources import cepii_baci  # noqa: E402
+
+
+def test_hs_classification_uses_longest_prefix():
+    tax = cepii_baci.load_taxonomy()
+    assert cepii_baci.classify("270900", tax) == ("ENERGY", "CRUDE")
+    assert cepii_baci.classify("271111", tax) == ("ENERGY", "GAS")
+    assert cepii_baci.classify("271119", tax) == ("ENERGY", None)
+    assert cepii_baci.classify("300490", tax) == ("CHEM", "PHARMA")
+    assert cepii_baci.classify("999999", tax) == ("OTHER", None)
+
+
+def test_overlapping_sectors_are_rejected():
+    tax = {"sectors": [{"id": "A", "hs": ["27"]}, {"id": "B", "hs": ["2709"]}], "commodities": []}
+    with pytest.raises(ValueError, match="overlaps"):
+        cepii_baci.validate_taxonomy(tax)
+
+
+def test_publish_selects_one_product():
+    con = make_con([])
+    con.executemany(f"INSERT INTO obs VALUES ({', '.join('?' * len(OBS_COLUMNS))})", [
+        ("a", "goods_trade", "AAA", "BBB", "X", prod, "A", "2000", v, "USD", "", "")
+        for prod, v in [("CRUDE", 1.0), ("COAL", 2.0)]])
+    pub.select_observations(con, "goods_trade", CFG, "A", 2000, product="COAL")
+    assert q(con, "SELECT product, value FROM chosen") == [("COAL", 2.0)]
+
+
+def test_code_map_accepts_several_codes_per_entity():
+    reg = make_registry([])
+    reg.entities["AAA"].codes["baci"] = "276|280"
+    assert reg.code_map("baci") == {"276": "AAA", "280": "AAA"}
+    reg.entities["BBB"].codes["baci"] = "280"
+    with pytest.raises(ValueError, match="used by both"):
+        reg.code_map("baci")

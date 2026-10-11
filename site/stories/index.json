@@ -4,6 +4,11 @@
       "id": "crisis-2008",
       "title": "The great trade collapse, 2008–09",
       "summary": "How the global financial crisis cut world goods trade by a third in a few months, month by month."
+    },
+    {
+      "id": "russia-oil",
+      "title": "Russian oil turns east, 2021–24",
+      "summary": "How sanctions redirected Russia's crude oil exports from Europe to China and India, using trade-by-product data."
     }
   ]
 }

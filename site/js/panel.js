@@ -1,5 +1,5 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import { store, nameOf, isGroup, metricAt, changeAt, groupOf, membersAt } from "./data.js";
+import { store, nameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName } from "./data.js";
 import { periodLabel, yearOf, yearTicks } from "./time.js";
 import { money, ratioPct, share, escapeHTML as esc } from "./format.js";
 
@@ -74,11 +74,67 @@ function groupBlurb(code, yi) {
 }
 
 function bindList(el, onPick) {
-  el.querySelectorAll(".partners li").forEach((li) => {
+  el.querySelectorAll(".partners li[data-key]").forEach((li) => {
     const pick = () => onPick(li.dataset.key);
     li.addEventListener("click", pick);
     li.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
   });
+}
+
+/** Annual product breakdown: index into the product periods for the selected period's year,
+ *  falling back to the latest earlier year (product data ends before the all-goods data). */
+function breakdownIndex(yi) {
+  const years = store.meta.products?.periods.A ?? [];
+  const y = yearOf(store.periods[yi]);
+  let i = years.indexOf(String(y));
+  if (i < 0 && years.length && y > +years.at(-1)) i = years.length - 1;
+  return i < 0 ? null : { i, year: years[i], exact: years[i] === String(y) };
+}
+
+function productsSection(ctx, yi) {
+  const bd = ctx.breakdown;
+  const at = breakdownIndex(yi);
+  if (!bd || !at) return "";
+  const metric = ctx.metric === "balance" ? "total" : ctx.metric;
+  const value = (pid) => metricAt(bd[pid], at.i, metric);
+  const all = products();
+  const total = all.filter((p) => p.kind === "sector").reduce((sum, p) => sum + (value(p.id) ?? 0), 0);
+  if (!total) return "";
+  const list = (kind) => {
+    const rows = all.filter((p) => p.kind === kind)
+      .map((p) => ({ id: p.id, v: value(p.id) }))
+      .filter((r) => r.v)
+      .sort((a, b) => b.v - a.v);
+    const max = d3.max(rows, (r) => r.v) || 1;
+    return rows.map((r) => `
+      <li data-product="${r.id}" class="${r.id === ctx.product ? "current" : ""}" tabindex="0">
+        <span class="rank"></span>
+        <span class="nm">${esc(productName(r.id))}</span>
+        <span class="val">${money(r.v)}<span class="share">${share(r.v, total)}</span></span>
+        <span class="bar"><i style="width:${(r.v / max) * 100}%"></i></span>
+      </li>`).join("");
+  };
+  const word = { exports: "exports", imports: "imports" }[metric] ?? "trade";
+  return `
+    <h3>What ${esc(nameOf(ctx.focus))} trades, by product</h3>
+    <p class="note">Share of ${word} in ${at.year}${at.exact ? "" : " (latest year with product data)"}. Click to map a product.</p>
+    <ul class="partners products-list">
+      ${ctx.product !== "TOTAL" ? `<li data-product="TOTAL" tabindex="0"><span class="rank"></span><span class="nm">← All goods</span><span class="val"></span></li>` : ""}
+      <li class="kind">Sectors</li>${list("sector")}
+      <li class="kind">Commodities</li>${list("commodity")}
+    </ul>`;
+}
+
+/** "Crude oil is 41% of Saudi Arabia's exports (2024)" for a selected product. */
+function productShare(ctx, yi) {
+  const bd = ctx.breakdown;
+  const at = breakdownIndex(yi);
+  if (ctx.product === "TOTAL" || !bd || !at) return "";
+  const metric = ctx.metric === "imports" ? "imports" : "exports";
+  const total = products().filter((p) => p.kind === "sector").reduce((s, p) => s + (metricAt(bd[p.id], at.i, metric) ?? 0), 0);
+  const v = metricAt(bd[ctx.product], at.i, metric);
+  if (!total || v == null) return "";
+  return `<p class="note"><b>${esc(productName(ctx.product))}</b> made up ${share(v, total)} of ${esc(nameOf(ctx.focus))}'s goods ${metric} in ${at.year}.</p>`;
 }
 
 export function renderPanel(el, ctx) {
@@ -90,7 +146,7 @@ export function renderPanel(el, ctx) {
     const worldTotal = metricAt(ctx.world, yi, metric === "balance" ? "total" : metric);
     el.innerHTML = `
       <div class="kicker">World overview · ${year}</div>
-      <h2>Global goods trade</h2>
+      <h2>${ctx.product === "TOTAL" ? "Global goods trade" : esc(productName(ctx.product))}</h2>
       <div class="intro">
         <p>Click a country or region on the map (or search above) to see who it trades with and how that changed over time.</p>
         <ul>
@@ -127,7 +183,8 @@ export function renderPanel(el, ctx) {
   el.innerHTML = `
     <div class="kicker">${group ? "Group" : esc(ent?.subregion ?? "Economy")} · ${year}</div>
     <h2>${esc(nameOf(focus))}</h2>
-    ${group ? groupBlurb(focus, yi) : ""}${mirrorNote}${noData}${memberNote}
+    ${group ? groupBlurb(focus, yi) : ""}${ctx.product === "TOTAL" ? mirrorNote : ""}${noData}${memberNote}
+    ${productShare(ctx, yi)}
     ${stats(fs, yi, compare)}
     ${pair ? `
       <h3>With ${esc(nameOf(ctx.pair))}</h3>
@@ -143,7 +200,8 @@ export function renderPanel(el, ctx) {
     <div class="chart-key"><span class="x">Exports</span><span class="m">Imports</span></div>
     <h3>Top partners by ${METRIC_LABEL[metric]}, ${year}</h3>
     ${rows.length ? rankList(rows, focusTotal, metric, ctx.pair) : `<p class="note">No partner data for ${year}.</p>`}
-    <p class="note">Click a partner to compare over time.</p>`;
+    <p class="note">Click a partner to compare over time.</p>
+    ${productsSection(ctx, yi)}`;
 
   lineChart(el.querySelector("#p-chart"), fs, yi, { intra: group ? ctx.intra : null });
   if (pair) {
@@ -152,6 +210,11 @@ export function renderPanel(el, ctx) {
     el.querySelector("#pair-focus").onclick = () => ctx.onFocus(ctx.pair);
   }
   bindList(el, ctx.onPair);
+  el.querySelectorAll(".products-list li[data-product]").forEach((li) => {
+    const pick = () => ctx.onProduct(li.dataset.product);
+    li.addEventListener("click", pick);
+    li.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
+  });
 }
 
 export { METRIC_LABEL };

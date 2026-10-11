@@ -120,8 +120,16 @@ class Registry:
         return cls(entities, cfg)
 
     def code_map(self, scheme: str) -> dict[str, str]:
-        """source code -> entity id for one code scheme."""
-        return {e.codes[scheme]: e.id for e in self.entities.values() if scheme in e.codes}
+        """source code -> entity id for one code scheme. A cell may hold several codes
+        separated by "|" (e.g. a country's current and historical codes in that source)."""
+        out = {}
+        for e in self.entities.values():
+            for code in e.codes.get(scheme, "").split("|"):
+                if code:
+                    if code in out:
+                        raise ValueError(f"{scheme} code {code} is used by both {out[code]} and {e.id}")
+                    out[code] = e.id
+        return out
 
     def memberships(self) -> list[Membership]:
         return [m for g in self.groups for m in g.members]
