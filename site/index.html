@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trade Atlas</title>
+  <meta name="description" content="Interactive world map of bilateral goods trade between countries and regional groupings, over time. Data: IMF International Trade in Goods (IMTS).">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='none' stroke='%232f5fb3' stroke-width='3'/><path d='M5 16h22M16 3c4 4 4 22 0 26M16 3c-4 4-4 22 0 26' fill='none' stroke='%232f5fb3' stroke-width='2'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Trade Atlas</h1>
+      <p>Who trades with whom: goods exports and imports, by year</p>
+    </div>
+    <div class="controls">
+      <label class="search">
+        <span class="sr-only">Focus on a country or group</span>
+        <input id="search" type="search" list="entity-list" placeholder="Search a country or group…" autocomplete="off">
+        <datalist id="entity-list"></datalist>
+      </label>
+      <button id="world-btn" class="btn ghost" type="button" title="Back to the world overview">World view</button>
+    </div>
+  </header>
+
+  <section class="toolbar" aria-label="Map options">
+    <div class="seg" id="metric" role="radiogroup" aria-label="Metric">
+      <button data-v="total" role="radio">Total trade</button>
+      <button data-v="exports" role="radio">Exports</button>
+      <button data-v="imports" role="radio">Imports</button>
+      <button data-v="balance" role="radio">Balance</button>
+    </div>
+    <div class="seg" id="mode" role="radiogroup" aria-label="Show">
+      <button data-v="0" role="radio" title="Show values for the selected year">Level</button>
+      <button data-v="1" role="radio" title="Change vs. one year earlier">Δ 1 yr</button>
+      <button data-v="5" role="radio" title="Change vs. five years earlier">Δ 5 yr</button>
+      <button data-v="10" role="radio" title="Change vs. ten years earlier">Δ 10 yr</button>
+    </div>
+    <div class="groups">
+      <span class="label">Treat as one:</span>
+      <div id="group-chips" class="chips"></div>
+    </div>
+  </section>
+
+  <main class="layout">
+    <section class="map-wrap" aria-label="World map">
+      <div id="map"></div>
+      <div id="map-title" class="map-title"></div>
+      <div id="legend" class="legend"></div>
+      <div class="zoom">
+        <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
+        <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+        <button id="zoom-reset" type="button" aria-label="Reset zoom">⟲</button>
+      </div>
+      <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+      <div id="loading" class="loading">Loading data…</div>
+    </section>
+
+    <aside id="panel" class="panel" aria-live="polite"></aside>
+  </main>
+
+  <section class="timeline" aria-label="Year">
+    <button id="play" class="btn play" type="button" aria-label="Play through years">▶</button>
+    <div class="slider-wrap">
+      <div id="spark" class="spark"></div>
+      <input id="year" type="range" min="1990" max="2025" step="1" aria-label="Year">
+    </div>
+    <output id="year-label" class="year-label" for="year"></output>
+  </section>
+
+  <footer class="footer">
+    <div id="source-line"></div>
+    <button id="about-btn" class="linklike" type="button">About the data &amp; methodology</button>
+  </footer>
+
+  <dialog id="about">
+    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <div id="about-body"></div>
+  </dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

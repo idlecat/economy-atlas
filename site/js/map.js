@@ -1,0 +1,163 @@
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
+import * as topojson from "https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/+esm";
+import { store, displayOf } from "./data.js";
+
+/** Centroid of the largest polygon(s): keeps France's centroid in Europe, not between it and Guiana. */
+function mainCentroid(geom) {
+  if (!geom) return null;
+  const polys = geom.type === "MultiPolygon"
+    ? geom.coordinates.map((c) => ({ type: "Polygon", coordinates: c }))
+    : [geom];
+  const areas = polys.map((p) => d3.geoArea(p));
+  const max = Math.max(...areas);
+  const keep = polys.filter((_, i) => areas[i] >= max * 0.25);
+  return d3.geoCentroid({ type: "MultiPolygon", coordinates: keep.map((p) => p.coordinates) });
+}
+
+export function createMap(container, { onHover, onMove, onClick }) {
+  const topo = store.topo;
+  const obj = topo.objects.countries;
+  const features = topojson.feature(topo, obj).features;
+  const geomsById = d3.group(obj.geometries.filter((g) => g.id), (g) => g.id);
+
+  const countryCentroid = new Map();
+  for (const [id, gs] of geomsById) countryCentroid.set(id, mainCentroid(topojson.merge(topo, gs)));
+  const groupCentroid = new Map();
+  for (const g of store.groups) {
+    const gs = g.members.flatMap((m) => geomsById.get(m) ?? []);
+    if (gs.length) groupCentroid.set(g.id, mainCentroid(topojson.merge(topo, gs)));
+  }
+
+  const svg = d3.select(container).append("svg").attr("role", "img").attr("aria-label", "World trade map");
+  const projection = d3.geoEqualEarth();
+  const path = d3.geoPath(projection);
+  const root = svg.append("g");
+  const ocean = root.append("path").attr("class", "ocean").datum({ type: "Sphere" });
+  const countries = root.append("g");
+  const outlines = root.append("path").attr("class", "group-outline");
+  const hoverOutline = root.append("path").attr("class", "hover-outline");
+  const arcLayer = root.append("g");
+
+  let groupsOn = new Set();
+  let hoverKey = null;
+  let k = 1;
+
+  const paths = countries.selectAll("path")
+    .data(features)
+    .join("path")
+    .attr("class", "country nodata")
+    .on("pointerenter", (ev, d) => {
+      hoverKey = d.id ? displayOf(d.id, groupsOn) : null;
+      drawHover();
+      onHover(hoverKey, ev, d);
+    })
+    .on("pointermove", (ev) => onMove(ev))
+    .on("pointerleave", () => {
+      hoverKey = null;
+      drawHover();
+      onHover(null);
+    })
+    .on("click", (ev, d) => {
+      if (d.id) onClick(displayOf(d.id, groupsOn));
+    });
+
+  const zoom = d3.zoom()
+    .scaleExtent([1, 12])
+    .on("zoom", (ev) => {
+      k = ev.transform.k;
+      root.attr("transform", ev.transform);
+      arcLayer.selectAll(".node").attr("r", 3.5 / k);
+    });
+  svg.call(zoom).on("dblclick.zoom", null);
+
+  function resize() {
+    const { width, height } = container.getBoundingClientRect();
+    if (!width || !height) return;
+    svg.attr("viewBox", [0, 0, width, height]);
+    projection.fitExtent([[8, 8], [width - 8, height - 8]], { type: "Sphere" });
+    zoom.translateExtent([[0, 0], [width, height]]).extent([[0, 0], [width, height]]);
+    ocean.attr("d", path);
+    paths.attr("d", path);
+    drawOutlines();
+    drawHover();
+    if (lastView) drawArcs(lastView.arcs);
+  }
+
+  function drawOutlines() {
+    const active = (g) => g.id && groupsOn.has(store.entities[g.id]?.group);
+    const key = (g) => (g.id ? displayOf(g.id, groupsOn) : g.properties.name);
+    outlines.attr("d", path(topojson.mesh(topo, obj, (a, b) =>
+      (active(a) || active(b)) && (a === b || key(a) !== key(b)))));
+  }
+
+  function drawHover() {
+    if (!hoverKey) return hoverOutline.attr("d", null);
+    hoverOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => {
+      const ia = a.id && displayOf(a.id, groupsOn) === hoverKey;
+      const ib = b.id && displayOf(b.id, groupsOn) === hoverKey;
+      return a === b ? ia : ia !== ib;
+    })));
+  }
+
+  function centroidOf(key) {
+    return groupCentroid.get(key) ?? countryCentroid.get(key) ?? null;
+  }
+
+  function arcPath(a, b) {
+    const [x0, y0] = projection(a), [x1, y1] = projection(b);
+    const dx = x1 - x0, dy = y1 - y0, dist = Math.hypot(dx, dy);
+    const bend = Math.min(0.3, 40 / Math.max(dist, 1) + 0.15);
+    const cx = (x0 + x1) / 2 - dy * bend, cy = (y0 + y1) / 2 + dx * bend;
+    return `M${x0},${y0}Q${cx},${cy} ${x1},${y1}`;
+  }
+
+  function drawArcs(arcs) {
+    const usable = arcs.filter((a) => centroidOf(a.from) && centroidOf(a.to));
+    const max = d3.max(usable, (a) => a.value) || 1;
+    const width = d3.scaleSqrt().domain([0, max]).range([0.8, 7]);
+    arcLayer.selectAll(".arc")
+      .data(usable, (a) => `${a.from}>${a.to}`)
+      .join("path")
+      .attr("class", (a) => `arc ${a.kind} ${a.animate ? "flowing" : ""}`)
+      .attr("d", (a) => arcPath(centroidOf(a.from), centroidOf(a.to)))
+      .attr("stroke-width", (a) => width(a.value));
+    const nodes = [...new Set(usable.flatMap((a) => [a.from, a.to]))];
+    arcLayer.selectAll(".node")
+      .data(nodes, (d) => d)
+      .join("circle")
+      .attr("class", "node")
+      .attr("r", 3.5 / k)
+      .attr("transform", (d) => `translate(${projection(centroidOf(d))})`);
+  }
+
+  let lastView = null;
+  let lastGroupsKey = "";
+
+  function render(view) {
+    lastView = view;
+    const gk = [...view.groupsOn].sort().join(",");
+    groupsOn = view.groupsOn;
+    if (gk !== lastGroupsKey) {
+      lastGroupsKey = gk;
+      drawOutlines();
+    }
+    paths.each(function (d) {
+      const key = d.id ? displayOf(d.id, groupsOn) : null;
+      const isFocus = key && (key === view.focus || d.id === view.focus);
+      const color = key && !isFocus ? view.colorOf(key) : null;
+      const el = d3.select(this)
+        .classed("focus", !!isFocus)
+        .classed("nodata", !isFocus && !color);
+      el.style("fill", color);
+    });
+    drawArcs(view.arcs);
+  }
+
+  function zoomBy(f) { svg.transition().duration(300).call(zoom.scaleBy, f); }
+  function reset() { svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity); }
+
+  new ResizeObserver(() => resize()).observe(container);
+  resize();
+
+  return { render, zoomBy, reset, hasShape: (key) => !!centroidOf(key) };
+}
