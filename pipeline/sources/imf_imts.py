@@ -29,15 +29,15 @@ META = {
 FOLDER = RAW / ID
 INDICATORS = {"XG_FOB_USD": ("X", "FOB"), "MG_CIF_USD": ("M", "CIF")}
 IMF_WORLD = "G001"
-FREQS = ["A"]
+FREQS = ["A", "M"]
 CSV = "application/vnd.sdmx.data+csv;version=1.0.0"
 
 
-def _start_year():
-    return json.loads((CONFIG / "datasets.json").read_text())["goods_trade"]["start"]
+def _start_years():
+    return {f: c["start"] for f, c in json.loads((CONFIG / "datasets.json").read_text())["goods_trade"]["freqs"].items()}
 
 
-def fetch(refresh=False, workers=6):
+def fetch(refresh=False, workers=3):
     from ..registry import Registry  # lazy: registry needs M49 reference data only for groups
 
     codelist = download(FOLDER / "_codelist_country.xml", f"{API}/codelist/IMF/CL_COUNTRY", refresh).decode()
@@ -47,25 +47,32 @@ def fetch(refresh=False, workers=6):
     if missing:
         log(f"  note: IMF country codes not in config/entities.csv (skipped): {missing}")
     reporters = sorted(imf_codes & set(known))
-    start = _start_year()
+    starts = _start_years()
     keys = "+".join(INDICATORS)
 
     def one(freq, code):
         path = FOLDER / freq / f"{code}.csv"
         if path.exists() and not refresh:
             return
-        text = http_get(f"{API}/data/IMF.STA,IMTS/{code}.{keys}..{freq}?startPeriod={start}&detail=dataonly", CSV)
+        text = http_get(f"{API}/data/IMF.STA,IMTS/{code}.{keys}..{freq}?startPeriod={starts[freq]}&detail=dataonly", CSV)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(text)
 
-    jobs = [(f, c) for f in FREQS for c in reporters]
+    jobs = [(f, c) for f in FREQS if f in starts for c in reporters]
     log(f"  {len(jobs)} reporter requests ({'refresh' if refresh else 'cached where possible'})")
+    failed = []
     with cf.ThreadPoolExecutor(workers) as pool:
-        for i, _ in enumerate(cf.as_completed([pool.submit(one, f, c) for f, c in jobs]), 1):
+        futs = {pool.submit(one, f, c): (f, c) for f, c in jobs}
+        for i, fut in enumerate(cf.as_completed(futs), 1):
+            if fut.exception():
+                failed.append(futs[fut])
+                log(f"  failed {futs[fut]}: {fut.exception()}")
             if i % 50 == 0:
                 log(f"  {i}/{len(jobs)}")
-    if refresh or not read_manifest(FOLDER):
-        write_manifest(FOLDER, url=META["api"], start=start, freqs=FREQS)
+    if failed:
+        raise RuntimeError(f"{len(failed)} IMF requests failed; rerun fetch to retry only those (cached files are kept)")
+    if refresh or read_manifest(FOLDER).get("starts") != starts:
+        write_manifest(FOLDER, url=META["api"], starts=starts)
 
 
 def normalize(con, registry):

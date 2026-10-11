@@ -1,13 +1,18 @@
 """HTTP download helpers and per-source fetch manifests."""
 import datetime as dt
 import json
+import ssl
 import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
+import certifi
+
 USER_AGENT = "eco-map-pipeline/1.0 (+https://github.com/)"
+# Bundled CA certificates: uv-managed Pythons don't see the macOS system store.
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 def log(*a):
@@ -22,7 +27,8 @@ def http_get(url, accept=None, retries=4, timeout=120):
     err = None
     for attempt in range(retries):
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=timeout) as r:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=timeout, context=SSL_CONTEXT) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
             if e.code == 404:

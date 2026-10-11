@@ -9,7 +9,7 @@ Trade Atlas: a public, static website showing bilateral goods trade between coun
 - `pipeline/`: a Python data pipeline (uv + DuckDB) that turns source data into JSON in `site/data/`.
 - `site/`: a no-build frontend made of plain ES modules. D3 and topojson-client are imported from jsDelivr at pinned versions.
 
-Planned direction: more sources, monthly data for replaying events (e.g. 2008), and product breakdowns (e.g. HS chapters). The pipeline schema already has `freq` and `product` columns for these. The frontend still assumes annual totals.
+Planned direction: more sources and product breakdowns (e.g. HS chapters). The pipeline schema already has a `product` column. Annual and monthly data are published, and stories (guided replays) live in `site/stories/`.
 
 ## Commands
 
@@ -24,9 +24,11 @@ python3 -m http.server -d site 8000                # serve the site; must be HTT
 
 Run `publish` after any change to `config/` or `pipeline/publish.py`. Run `normalize` too if entity code mappings changed.
 
+The first monthly fetch is about 250 IMF requests of 1–10 MB each. HTTPS uses `certifi`, because uv-managed Pythons don't see the macOS system certificate store. Failed requests are reported and make `fetch` exit non-zero; rerunning retries only the missing files.
+
 There is no frontend test suite. Verify UI changes in a browser. There is also no JS linter.
 
-Deploy: `.github/workflows/deploy.yml` runs the tests and `build --refresh` (on push to `main`, monthly, or manually), then publishes `site/` to GitHub Pages.
+Deploy: `.github/workflows/deploy.yml` runs the tests and `build` (on push to `main`, monthly, or manually), then publishes `site/` to GitHub Pages. `data_raw/` is kept in the Actions cache; the monthly schedule and manual runs with `refresh` re-download everything. `site/data/` is generated and git-ignored.
 
 ## Pipeline architecture
 
@@ -40,7 +42,8 @@ There are three stages, and each reads only the previous stage's output:
    - `select_observations`: applies source precedence from `config/datasets.json`.
    - `derive_mirrors`: rebuilds flows from partner reports, swapping exports and imports, for entities with `derive=mirror` that report nothing (currently Taiwan).
    - `build_pairs`, then `build_groups`.
-   - After those steps, it writes `site/data/` and `data_store/reports/publish.json`.
+   - `covered_periods`: drops trailing periods that fewer than `min_coverage` of reporters have published, so incomplete recent months don't look like a collapse.
+   - This runs once per frequency in `datasets.json` `freqs` (A, M), writing `site/data/<freq>/`. Then it writes `meta.json`, `world.json` and `data_store/reports/publish.json`.
 
 Each step only needs a connection with an `obs` table, so the tests build synthetic `obs` tables directly.
 
@@ -63,28 +66,36 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
 ## Site data contract (`site/data/`)
 
 - **Values:** USD millions, rounded to 4 significant figures (`sig()`).
-- **Series:** every series is `[exports[], imports[]]` aligned to `meta.years`. `null` means not reported, which is different from `0`.
+- **Periods:** strings `2008` (A), `2008-Q4` (Q), `2008-09` (M). `meta.periods[freq]` lists each frequency's periods.
+- **Series:** every series is `[exports[], imports[]]` aligned to `meta.periods[freq]`. `null` means not reported, which is different from `0`. Group membership is by the period's year.
 - **`meta.json`:**
   - `entities[id]` = `{name, region, subregion, reporter, mirror?, groups?: [{g, from?, to?}]}`
   - `groups[]` = `{id, name, short, note, members: [{id, from?, to?}]}`
   - `sources[]`, which carry `accessed` and `citation`.
 - **Other files:**
-  - `totals.json`: trade with the World per entity; for groups, extra-group trade.
-  - `flows/<id>.json`: `{p: {partner: series}, intra?}`, loaded on demand.
+  - `<freq>/totals.json`: trade with the World per entity; for groups, extra-group trade.
+  - `<freq>/flows/<id>.json`: `{p: {partner: series}, intra?}`, loaded on demand.
   - `world.json`: TopoJSON with geometry ids set to entity ids.
 - Output keys are sorted, so a data refresh produces a minimal diff.
 
 ## Frontend architecture (`site/js/`)
 
 - **`data.js`:** the `store`, plus membership-aware aggregation.
-  - `groupOf(code, yi)` and `displayOf(code, groupsOn, yi)` give the key a country is drawn as in a given year index: itself, or its merged group. Everything in the UI is keyed by this display key.
-  - `partnerSeries` and `displayTotals` fold or mask series **per year**, because membership changes over time.
+  - `setFreq(freq)` switches `store.periods` and `store.totals`, loading `data/<freq>/totals.json` lazily. Flows are cached per frequency.
+  - `groupOf(code, pi)` and `displayOf(code, groupsOn, pi)` give the key a country is drawn as at a given period index: itself, or its merged group. Everything in the UI is keyed by this display key.
+  - `partnerSeries` and `displayTotals` fold or mask series **per period**, because membership changes over time.
+- **`time.js`:** period parsing and labels. `nearestIndex` maps a period across frequencies (e.g. `2008` → `2008-12`). `yearTicks` gives axis ticks.
   - `metricAt` and `changeAt` derive total, exports, imports and balance. Change is a ratio for flows and a USD difference for balance.
-- **`main.js`:** owns `state` (`focus`, `yi`, `metric`, `back` = change-mode years, `groupsOn`, `pair`).
-  - `update()` loads flows (with an `updateToken` race guard), builds a color scale whose domain covers **all years** (cached by `scaleKey`), renders everything, and writes the URL hash with `replaceState`.
-  - A `hashchange` listener re-reads the hash for pasted links and back/forward.
+- **`main.js`:** owns `state` (`freq`, `pi` = period index, `focus`, `metric`, `back` = change-mode **years**, `groupsOn`, `pair`).
+  - `backN()` converts change-mode years to periods (×12 for monthly), so "Δ 1 yr" is year-on-year for the same month.
+  - `update()` loads flows (with an `updateToken` race guard), builds a color scale whose domain covers **all periods** (cached by `scaleKey`), renders everything, and writes the URL hash with `replaceState`.
+  - Views: `applyView(view)` sets the whole state from an object with the URL-hash keys (`freq`, `t`, `focus`, `metric`, `change`, `groups`, `with`). It is used by `readHash` and by stories. `playTo(index, ms)` animates the timeline and resolves when done or stopped.
+  - A `hashchange` listener re-reads the hash for pasted links and back/forward. Old `year=` links still work.
+- **`stories.js`:** the story player.
+  - Loads `stories/index.json` and `stories/<id>.json`. Each step calls `applyView`, then optionally `playTo`. Step changes bump a `token`, so a replay that is still running can't overwrite a later step.
+  - While a story is active, the URL is `#story=<id>&step=<n>`. The format is in `site/stories/README.md`. Numbers quoted in stories must come from site data, and other facts must be cited in the story's `sources`.
   - It also owns the tooltip, the controls and the About dialog.
-- **`map.js`:** `render({focus, yi, groupsOn, colorOf, arcs})`.
+- **`map.js`:** `render({focus, pi, groupsOn, colorOf, arcs})`.
   - Group outlines come from `topojson.mesh` and are recomputed when merged groups or that year's membership change.
   - Arc endpoints use the centroids of the largest polygons. Group centroids use all-time members, so arcs don't jump between years.
 - **`panel.js`:** the side panel and `lineChart`, which is reused in tooltips.
@@ -99,3 +110,4 @@ Theming uses CSS variables with a `prefers-color-scheme` dark mode, and the JS p
   - Exports are valued FOB and imports CIF.
   - Mirror data for Taiwan.
   - Group membership is applied as of each year.
+  - Monthly data is not seasonally adjusted.

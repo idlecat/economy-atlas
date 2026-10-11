@@ -14,7 +14,7 @@
   <header class="topbar">
     <div class="brand">
       <h1>Trade Atlas</h1>
-      <p>Who trades with whom: goods exports and imports, by year</p>
+      <p>Who trades with whom: goods exports and imports over time</p>
     </div>
     <div class="controls">
       <label class="search">
@@ -22,11 +22,13 @@
         <input id="search" type="search" list="entity-list" placeholder="Search a country or group…" autocomplete="off">
         <datalist id="entity-list"></datalist>
       </label>
+      <button id="stories-btn" class="btn" type="button" title="Guided replays of past events">Stories</button>
       <button id="world-btn" class="btn ghost" type="button" title="Back to the world overview">World view</button>
     </div>
   </header>
 
   <section class="toolbar" aria-label="Map options">
+    <div class="seg" id="freq" role="radiogroup" aria-label="Frequency"></div>
     <div class="seg" id="metric" role="radiogroup" aria-label="Metric">
       <button data-v="total" role="radio">Total trade</button>
       <button data-v="exports" role="radio">Exports</button>
@@ -34,10 +36,10 @@
       <button data-v="balance" role="radio">Balance</button>
     </div>
     <div class="seg" id="mode" role="radiogroup" aria-label="Show">
-      <button data-v="0" role="radio" title="Show values for the selected year">Level</button>
-      <button data-v="1" role="radio" title="Change vs. one year earlier">Δ 1 yr</button>
-      <button data-v="5" role="radio" title="Change vs. five years earlier">Δ 5 yr</button>
-      <button data-v="10" role="radio" title="Change vs. ten years earlier">Δ 10 yr</button>
+      <button data-v="0" role="radio" title="Show values for the selected period">Level</button>
+      <button data-v="1" role="radio" title="Change vs. the same period one year earlier">Δ 1 yr</button>
+      <button data-v="5" role="radio" title="Change vs. the same period five years earlier">Δ 5 yr</button>
+      <button data-v="10" role="radio" title="Change vs. the same period ten years earlier">Δ 10 yr</button>
     </div>
     <div class="groups">
       <span class="label">Treat as one:</span>
@@ -59,14 +61,17 @@
       <div id="loading" class="loading">Loading data…</div>
     </section>
 
-    <aside id="panel" class="panel" aria-live="polite"></aside>
+    <div class="side">
+      <section id="story" class="story" aria-live="polite" hidden></section>
+      <aside id="panel" class="panel" aria-live="polite"></aside>
+    </div>
   </main>
 
-  <section class="timeline" aria-label="Year">
-    <button id="play" class="btn play" type="button" aria-label="Play through years">▶</button>
+  <section class="timeline" aria-label="Time">
+    <button id="play" class="btn play" type="button" aria-label="Play through time">▶</button>
     <div class="slider-wrap">
       <div id="spark" class="spark"></div>
-      <input id="year" type="range" min="1990" max="2025" step="1" aria-label="Year">
+      <input id="year" type="range" min="0" max="0" step="1" aria-label="Time period">
     </div>
     <output id="year-label" class="year-label" for="year"></output>
   </section>
@@ -75,6 +80,13 @@
     <div id="source-line"></div>
     <button id="about-btn" class="linklike" type="button">About the data &amp; methodology</button>
   </footer>
+
+  <dialog id="stories-dialog" aria-labelledby="stories-title">
+    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <h2 id="stories-title">Stories</h2>
+    <p class="note">Guided replays of moments that reshaped world trade.</p>
+    <ul id="stories-list" class="stories-list"></ul>
+  </dialog>
 
   <dialog id="about">
     <form method="dialog"><button class="close" aria-label="Close">×</button></form>

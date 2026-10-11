@@ -11,21 +11,21 @@ def make_registry(groups, extra_entities=(), **entity_kw):
     return Registry(entities, {"groups": groups})
 
 
-def make_con(rows):
-    """rows: (source, reporter, partner, flow, year, value) for annual goods_trade totals."""
+def make_con(rows, freq="A"):
+    """rows: (source, reporter, partner, flow, period, value) for goods_trade totals."""
     con = connect()
     con.execute(f"CREATE TABLE obs ({', '.join(f'{c} {t}' for c, t in OBS_COLUMNS.items())})")
     con.executemany(f"INSERT INTO obs VALUES ({', '.join('?' * len(OBS_COLUMNS))})", [
-        (src, "goods_trade", r, p, f, "TOTAL", "A", str(y), v, "USD", "", "")
-        for src, r, p, f, y, v in rows])
+        (src, "goods_trade", r, p, f, "TOTAL", freq, str(per), v, "USD", "", "")
+        for src, r, p, f, per, v in rows])
     return con
 
 
-CFG = {"precedence": ["a", "b"], "product": "TOTAL", "freq": "A", "start": 2000}
+CFG = {"precedence": ["a", "b"], "product": "TOTAL"}
 
 
-def run(con, registry):
-    pub.select_observations(con, "goods_trade", CFG)
+def run(con, registry, freq="A"):
+    pub.select_observations(con, "goods_trade", CFG, freq, 2000)
     mirrored = pub.derive_mirrors(con, registry)
     pub.build_pairs(con)
     pub.build_groups(con, registry)
@@ -75,7 +75,7 @@ def test_precedence_picks_first_source_and_falls_back():
         ("a", "AAA", "BBB", "X", 1999, 9.0),   # before start year
     ])
     run(con, make_registry([]))
-    assert q(con, "SELECT year, x FROM pairs ORDER BY year") == [(2000, 2.0), (2001, 3.0)]
+    assert q(con, "SELECT period, x FROM pairs ORDER BY period") == [("2000", 2.0), ("2001", 3.0)]
 
 
 def test_missing_flow_stays_null_not_zero():
@@ -116,11 +116,29 @@ def test_group_uses_membership_as_of_each_year():
     run(con, make_registry([{"id": "G", "name": "G", "members": ["AAA", {"id": "BBB", "from": 2001}]}]))
 
     # 2000: only AAA is a member, so BBB is an outside partner; 2001: AAA->BBB is intra-group.
-    assert q(con, "SELECT year, partner, x FROM group_pairs ORDER BY year, partner") == [
-        (2000, "BBB", 10.0), (2000, "CCC", 1.0), (2001, "CCC", 6.0)]
-    assert q(con, "SELECT year, x FROM group_intra ORDER BY year") == [(2001, 10.0)]
+    assert q(con, "SELECT period, partner, x FROM group_pairs ORDER BY period, partner") == [
+        ("2000", "BBB", 10.0), ("2000", "CCC", 1.0), ("2001", "CCC", 6.0)]
+    assert q(con, "SELECT period, x FROM group_intra ORDER BY period") == [("2001", 10.0)]
     # extra-group exports: 2000 = AAA's world 11; 2001 = (11 + 5) - 10 intra
-    assert q(con, "SELECT year, x FROM group_world ORDER BY year") == [(2000, 11.0), (2001, 6.0)]
+    assert q(con, "SELECT period, x FROM group_world ORDER BY period") == [("2000", 11.0), ("2001", 6.0)]
+
+
+def test_monthly_membership_follows_the_year():
+    rows = [("a", "AAA", "BBB", "X", p, 1.0) for p in ("2000-12", "2001-01")]
+    con = make_con(rows, freq="M")
+    run(con, make_registry([{"id": "G", "name": "G", "members": ["AAA", {"id": "BBB", "from": 2001}]}]), freq="M")
+    assert q(con, "SELECT period, partner FROM group_pairs") == [("2000-12", "BBB")]
+    assert q(con, "SELECT period FROM group_intra") == [("2001-01",)]
+
+
+def test_covered_periods_drops_incomplete_tail():
+    rows = []
+    for p, reporters in [("2000-01", "AAA BBB CCC DDD"), ("2000-02", "AAA BBB CCC"), ("2000-03", "AAA")]:
+        rows += [("a", r, "WLD", "X", p, 1.0) for r in reporters.split()]
+    con = make_con(rows, freq="M")
+    run(con, make_registry([]), freq="M")
+    assert pub.covered_periods(con, 0.7) == ["2000-01", "2000-02"]
+    assert pub.covered_periods(con, 0) == ["2000-01", "2000-02", "2000-03"]
 
 
 def test_sig_rounds_to_millions():
@@ -130,4 +148,4 @@ def test_sig_rounds_to_millions():
 
 
 def test_collect_aligns_to_years():
-    assert pub.collect([("AAA", 2001, 2e6, None)], [2000, 2001]) == {"AAA": [[None, 2], [None, None]]}
+    assert pub.collect([("AAA", "2001", 2e6, None)], ["2000", "2001"]) == {"AAA": [[None, 2], [None, None]]}

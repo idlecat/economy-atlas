@@ -1,10 +1,19 @@
 {
-  "_comment": "Published datasets. `precedence` lists sources from most to least preferred: when several sources report the same (reporter, partner, flow, product, period), the first one wins.",
+  "_comment": "Published datasets. `precedence` lists sources from most to least preferred: when several sources report the same (reporter, partner, flow, product, freq, period), the first one wins. `freqs` lists the frequencies to publish with their first year. Trailing periods where fewer than `min_coverage` (share of the best-covered period's reporters) have reported are dropped, so incomplete recent months don't look like a collapse.",
   "goods_trade": {
     "description": "Bilateral merchandise trade, total of all products",
-    "precedence": ["imf_imts"],
-    "freq": "A",
+    "precedence": [
+      "imf_imts"
+    ],
     "product": "TOTAL",
-    "start": 1990
+    "freqs": {
+      "A": {
+        "start": 1990
+      },
+      "M": {
+        "start": 2000
+      }
+    },
+    "min_coverage": 0.8
   }
 }

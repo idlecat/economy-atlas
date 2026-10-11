@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "0 6 3 * *" # monthly, after the IMF's regular IMTS update
   workflow_dispatch:
+    inputs:
+      refresh:
+        description: "Re-download all source data"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -19,13 +24,30 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - name: Test pipeline
         run: uv run pytest -q
+      # Raw downloads (~1.5 GB, mostly monthly IMF data) are cached so pushes don't re-download.
+      # The monthly scheduled run (or a manual run with refresh) fetches everything again.
+      - id: month
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: data_raw
+          key: data-raw-${{ steps.month.outputs.month }}-${{ github.run_id }}
+          restore-keys: |
+            data-raw-${{ steps.month.outputs.month }}-
+            data-raw-
       - name: Build data files
-        run: uv run python -m pipeline build --refresh
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.refresh }}" = "true" ]; then
+            uv run python -m pipeline build --refresh
+          else
+            uv run python -m pipeline build
+          fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

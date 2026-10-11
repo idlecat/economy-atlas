@@ -4,3 +4,4 @@ __pycache__/
 data_store/
 .venv/
 .pytest_cache/
+site/data/

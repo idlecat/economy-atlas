@@ -1,9 +1,12 @@
 // Data loading and aggregation. All values are USD millions; every series is
-// a pair of arrays [exports[], imports[]] aligned to store.years.
+// a pair of arrays [exports[], imports[]] aligned to store.periods, the periods of
+// the active frequency (store.freq). Each frequency has its own files under data/<freq>/.
+import { yearOf } from "./time.js";
 
 export const store = {
   meta: null,
-  years: [],
+  freq: "A",
+  periods: [],
   totals: {},
   topo: null,
   entities: {},
@@ -12,6 +15,7 @@ export const store = {
 };
 
 const flowsCache = new Map();
+const totalsCache = new Map();
 
 async function getJSON(url) {
   const r = await fetch(url);
@@ -20,25 +24,33 @@ async function getJSON(url) {
 }
 
 export async function loadBase() {
-  const [meta, totals, topo] = await Promise.all([
-    getJSON("data/meta.json"),
-    getJSON("data/totals.json"),
-    getJSON("data/world.json"),
-  ]);
-  Object.assign(store, { meta, totals, topo, years: meta.years, entities: meta.entities, groups: meta.groups });
+  const [meta, topo] = await Promise.all([getJSON("data/meta.json"), getJSON("data/world.json")]);
+  Object.assign(store, { meta, topo, entities: meta.entities, groups: meta.groups });
   for (const g of meta.groups) store.groupById.set(g.id, g);
   return store;
+}
+
+export function availableFreqs() {
+  return Object.keys(store.meta.periods);
+}
+
+/** Switch the active frequency, loading its totals on first use. */
+export async function setFreq(freq) {
+  if (!totalsCache.has(freq)) totalsCache.set(freq, getJSON(`data/${freq}/totals.json`));
+  const totals = await totalsCache.get(freq);
+  Object.assign(store, { freq, totals, periods: store.meta.periods[freq] });
 }
 
 export function hasFlows(code) {
   return store.groupById.has(code) || !!store.entities[code]?.reporter;
 }
 
-export function loadFlows(code) {
-  if (!flowsCache.has(code)) {
-    flowsCache.set(code, hasFlows(code) ? getJSON(`data/flows/${code}.json`) : Promise.resolve({ p: {} }));
+export function loadFlows(code, freq = store.freq) {
+  const key = `${freq}/${code}`;
+  if (!flowsCache.has(key)) {
+    flowsCache.set(key, hasFlows(code) ? getJSON(`data/${freq}/flows/${code}.json`) : Promise.resolve({ p: {} }));
   }
-  return flowsCache.get(code);
+  return flowsCache.get(key);
 }
 
 export function nameOf(code) {
@@ -53,33 +65,33 @@ export function isGroup(code) {
   return store.groupById.has(code);
 }
 
-/** Group a country belongs to in year index `yi` (membership is dated), or undefined. */
-export function groupOf(code, yi) {
+/** Group a country belongs to at period index `pi` (membership is dated by year), or undefined. */
+export function groupOf(code, pi) {
   const spans = store.entities[code]?.groups;
   if (!spans) return undefined;
-  const y = store.years[yi];
+  const y = yearOf(store.periods[pi]);
   return spans.find((s) => (s.from ?? -Infinity) <= y && y <= (s.to ?? Infinity))?.g;
 }
 
-/** Members of a group in year index `yi`. */
-export function membersAt(groupId, yi) {
-  const y = store.years[yi];
+/** Members of a group at period index `pi`. */
+export function membersAt(groupId, pi) {
+  const y = yearOf(store.periods[pi]);
   return store.groupById.get(groupId).members
     .filter((m) => (m.from ?? -Infinity) <= y && y <= (m.to ?? Infinity))
     .map((m) => m.id);
 }
 
-/** The entity a country is shown as in year index `yi`, given which groups are merged. */
-export function displayOf(code, groupsOn, yi) {
-  const g = groupOf(code, yi);
+/** The entity a country is shown as at period index `pi`, given which groups are merged. */
+export function displayOf(code, groupsOn, pi) {
+  const g = groupOf(code, pi);
   return g && groupsOn.has(g) ? g : code;
 }
 
-/** Display key of `code` for every year, or a single string when it never changes. */
+/** Display key of `code` for every period, or a single string when it never changes. */
 function displayKeys(code, groupsOn) {
   const spans = store.entities[code]?.groups;
   if (!spans || !spans.some((s) => groupsOn.has(s.g))) return code;
-  const keys = store.years.map((_, i) => displayOf(code, groupsOn, i));
+  const keys = store.periods.map((_, i) => displayOf(code, groupsOn, i));
   return keys.every((k) => k === keys[0]) ? keys[0] : keys;
 }
 
@@ -94,7 +106,7 @@ function addSeries(acc, s, onlyYear = -1) {
 }
 
 export function emptySeries() {
-  const n = store.years.length;
+  const n = store.periods.length;
   return [new Array(n).fill(null), new Array(n).fill(null)];
 }
 
@@ -163,9 +175,9 @@ export function changeAt(s, i, metric, back) {
   return v / v0;
 }
 
-/** Latest year in which most reporters have published data. */
-export function defaultYearIndex() {
-  const counts = store.years.map((_, i) =>
+/** Latest period in which most reporters have published data. */
+export function defaultPeriodIndex() {
+  const counts = store.periods.map((_, i) =>
     Object.entries(store.totals).filter(([c, s]) => !isGroup(c) && s[0][i] != null).length);
   const max = Math.max(...counts);
   for (let i = counts.length - 1; i >= 0; i--) if (counts[i] >= max * 0.85) return i;

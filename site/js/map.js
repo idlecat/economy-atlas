@@ -40,7 +40,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
   const arcLayer = root.append("g");
 
   let groupsOn = new Set();
-  let yi = 0;
+  let pi = 0;
   let hoverKey = null;
   let k = 1;
 
@@ -49,7 +49,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
     .join("path")
     .attr("class", "country nodata")
     .on("pointerenter", (ev, d) => {
-      hoverKey = d.id ? displayOf(d.id, groupsOn, yi) : null;
+      hoverKey = d.id ? displayOf(d.id, groupsOn, pi) : null;
       drawHover();
       onHover(hoverKey, ev, d);
     })
@@ -60,7 +60,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
       onHover(null);
     })
     .on("click", (ev, d) => {
-      if (d.id) onClick(displayOf(d.id, groupsOn, yi));
+      if (d.id) onClick(displayOf(d.id, groupsOn, pi));
     });
 
   const zoom = d3.zoom()
@@ -86,8 +86,8 @@ export function createMap(container, { onHover, onMove, onClick }) {
   }
 
   function drawOutlines() {
-    const active = (g) => g.id && groupsOn.has(groupOf(g.id, yi));
-    const key = (g) => (g.id ? displayOf(g.id, groupsOn, yi) : g.properties.name);
+    const active = (g) => g.id && groupsOn.has(groupOf(g.id, pi));
+    const key = (g) => (g.id ? displayOf(g.id, groupsOn, pi) : g.properties.name);
     outlines.attr("d", path(topojson.mesh(topo, obj, (a, b) =>
       (active(a) || active(b)) && (a === b || key(a) !== key(b)))));
   }
@@ -95,8 +95,8 @@ export function createMap(container, { onHover, onMove, onClick }) {
   function drawHover() {
     if (!hoverKey) return hoverOutline.attr("d", null);
     hoverOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => {
-      const ia = a.id && displayOf(a.id, groupsOn, yi) === hoverKey;
-      const ib = b.id && displayOf(b.id, groupsOn, yi) === hoverKey;
+      const ia = a.id && displayOf(a.id, groupsOn, pi) === hoverKey;
+      const ib = b.id && displayOf(b.id, groupsOn, pi) === hoverKey;
       return a === b ? ia : ia !== ib;
     })));
   }
@@ -138,15 +138,15 @@ export function createMap(container, { onHover, onMove, onClick }) {
   function render(view) {
     lastView = view;
     groupsOn = view.groupsOn;
-    yi = view.yi;
+    pi = view.pi;
     // outlines depend on which groups are merged and on their membership that year
-    const gk = [...groupsOn].sort().map((g) => `${g}:${membersAt(g, yi).join(".")}`).join("|");
+    const gk = [...groupsOn].sort().map((g) => `${g}:${membersAt(g, pi).join(".")}`).join("|");
     if (gk !== lastGroupsKey) {
       lastGroupsKey = gk;
       drawOutlines();
     }
     paths.each(function (d) {
-      const key = d.id ? displayOf(d.id, groupsOn, yi) : null;
+      const key = d.id ? displayOf(d.id, groupsOn, pi) : null;
       const isFocus = key && (key === view.focus || d.id === view.focus);
       const color = key && !isFocus ? view.colorOf(key) : null;
       const el = d3.select(this)

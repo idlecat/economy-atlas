@@ -1,24 +1,25 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import { store, nameOf, isGroup, metricAt, changeAt, groupOf, membersAt } from "./data.js";
+import { periodLabel, yearOf, yearTicks } from "./time.js";
 import { money, ratioPct, share, escapeHTML as esc } from "./format.js";
 
 const METRIC_LABEL = { total: "total trade", exports: "exports", imports: "imports", balance: "trade balance" };
 
-/** Exports/imports line chart over all years with a marker at the selected year. */
-export function lineChart(el, s, yi, { height = 150, intra = null } = {}) {
-  const years = store.years;
+/** Exports/imports line chart over all periods with a marker at the selected one. */
+export function lineChart(el, s, pi, { height = 150, intra = null } = {}) {
+  const periods = store.periods;
   const W = 320, H = height, m = { t: 8, r: 8, b: 20, l: 44 };
   const svg = d3.select(el).append("svg").attr("viewBox", [0, 0, W, H]);
-  const x = d3.scaleLinear([years[0], years.at(-1)], [m.l, W - m.r]);
+  const x = d3.scaleLinear([0, periods.length - 1], [m.l, W - m.r]);
   const all = [...s[0], ...s[1], ...(intra ? intra[0] : [])].filter((v) => v != null);
   const y = d3.scaleLinear([0, d3.max(all) || 1], [H - m.b, m.t]).nice();
   svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - m.b})`)
-    .call(d3.axisBottom(x).ticks(6, "d").tickSizeOuter(0));
+    .call(d3.axisBottom(x).tickValues(yearTicks(periods, 6)).tickFormat((i) => yearOf(periods[i])).tickSizeOuter(0));
   svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
     .call(d3.axisLeft(y).ticks(4).tickFormat((v) => money(v)).tickSizeOuter(0))
     .call((g) => g.select(".domain").remove());
   const line = d3.line().defined((d) => d[1] != null).x((d) => x(d[0])).y((d) => y(d[1]));
-  const pts = (arr) => years.map((yr, i) => [yr, arr[i]]);
+  const pts = (arr) => periods.map((_, i) => [i, arr[i]]);
   svg.append("path").attr("class", "line x").attr("d", line(pts(s[0])));
   svg.append("path").attr("class", "line m").attr("d", line(pts(s[1])));
   if (intra) {
@@ -26,7 +27,7 @@ export function lineChart(el, s, yi, { height = 150, intra = null } = {}) {
       .attr("d", line(pts(intra[0])));
   }
   svg.append("line").attr("class", "yr")
-    .attr("x1", x(years[yi])).attr("x2", x(years[yi])).attr("y1", m.t).attr("y2", H - m.b);
+    .attr("x1", x(pi)).attr("x2", x(pi)).attr("y1", m.t).attr("y2", H - m.b);
 }
 
 function stat(label, v, d, { balance = false } = {}) {
@@ -36,14 +37,13 @@ function stat(label, v, d, { balance = false } = {}) {
     <div class="d ${cls}">${dTxt}</div></div>`;
 }
 
-function stats(s, yi, back) {
-  const b = back || 1;
+function stats(s, yi, b) {
   return `<div class="stats">
     ${stat("Exports", metricAt(s, yi, "exports"), changeAt(s, yi, "exports", b))}
     ${stat("Imports", metricAt(s, yi, "imports"), changeAt(s, yi, "imports", b))}
     ${stat("Balance", metricAt(s, yi, "balance"), changeAt(s, yi, "balance", b), { balance: true })}
   </div>
-  <p class="note">Change vs. ${store.years[yi - b] ?? "—"}.</p>`;
+  <p class="note">Change vs. ${periodLabel(store.periods[yi - b])}.</p>`;
 }
 
 function rankList(rows, total, metric, active) {
@@ -68,7 +68,7 @@ function topRows(seriesMap, yi, metric, n = 15) {
 function groupBlurb(code, yi) {
   const g = store.groupById.get(code);
   const names = membersAt(code, yi).map((c) => store.entities[c]?.name ?? c);
-  return `<div class="members">${names.length} members in ${store.years[yi]}: ${esc(names.join(", "))}</div>
+  return `<div class="members">${names.length} members in ${yearOf(store.periods[yi])}: ${esc(names.join(", "))}</div>
     ${g.note ? `<p class="note">${esc(g.note)}</p>` : ""}
     <p class="note">Figures are trade with countries outside the group. Dashed line: exports between members.</p>`;
 }
@@ -82,7 +82,7 @@ function bindList(el, onPick) {
 }
 
 export function renderPanel(el, ctx) {
-  const { focus, yi, metric, back, year } = ctx;
+  const { focus, pi: yi, metric, compare, label: year } = ctx;
   el.innerHTML = "";
 
   if (!focus) {
@@ -94,7 +94,7 @@ export function renderPanel(el, ctx) {
       <div class="intro">
         <p>Click a country or region on the map (or search above) to see who it trades with and how that changed over time.</p>
         <ul>
-          <li>Drag the year slider or press ▶ to animate.</li>
+          <li>Drag the time slider or press ▶ to animate. Switch to Monthly for detail, or open a Story for a guided replay.</li>
           <li>“Treat as one” merges countries into a bloc, e.g. the EU.</li>
           <li>Δ modes color by growth instead of size.</li>
         </ul>
@@ -128,10 +128,7 @@ export function renderPanel(el, ctx) {
     <div class="kicker">${group ? "Group" : esc(ent?.subregion ?? "Economy")} · ${year}</div>
     <h2>${esc(nameOf(focus))}</h2>
     ${group ? groupBlurb(focus, yi) : ""}${mirrorNote}${noData}${memberNote}
-    ${stats(fs, yi, back)}
-    <h3>Trade with the world${group ? " (extra-group)" : ""}</h3>
-    <div class="chart" id="p-chart"></div>
-    <div class="chart-key"><span class="x">Exports</span><span class="m">Imports</span></div>
+    ${stats(fs, yi, compare)}
     ${pair ? `
       <h3>With ${esc(nameOf(ctx.pair))}</h3>
       <div class="pair-box">
@@ -141,6 +138,9 @@ export function renderPanel(el, ctx) {
         <div class="row"><span class="note">Balance ${money(metricAt(pair, yi, "balance"), { sign: true })} · ${share(metricAt(pair, yi, "total"), metricAt(fs, yi, "total"))} of total trade</span>
           <button type="button" id="pair-focus">Focus on ${esc(nameOf(ctx.pair))} →</button></div>
       </div>` : ""}
+    <h3>Trade with the world${group ? " (extra-group)" : ""}</h3>
+    <div class="chart" id="p-chart"></div>
+    <div class="chart-key"><span class="x">Exports</span><span class="m">Imports</span></div>
     <h3>Top partners by ${METRIC_LABEL[metric]}, ${year}</h3>
     ${rows.length ? rankList(rows, focusTotal, metric, ctx.pair) : `<p class="note">No partner data for ${year}.</p>`}
     <p class="note">Click a partner to compare over time.</p>`;

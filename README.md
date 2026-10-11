@@ -3,7 +3,8 @@
 An interactive world map of bilateral goods trade, built as a static website.
 
 - **Choropleth + flow arcs.** Shows total trade, exports, imports or trade balance for each country, or for each partner of a selected focus.
-- **Time.** A year slider and a play button cover 1990 to the latest year. The Δ 1/5/10-year modes color partners by growth instead of size.
+- **Time.** Annual data from 1990 and monthly data from 2000, with a time slider and a play button. The Δ 1/5/10-year modes color partners by growth instead of size; on monthly data, Δ 1 yr compares each month with the same month a year earlier.
+- **Stories.** Guided replays of past events (starting with the 2008–09 trade collapse) step through saved views with captions and replay the timeline. Stories are JSON files in `site/stories/` (format in its README).
 - **Focus.** Click a country or bloc to see its partners, its trend over time, and its top-partner ranking. Click a partner to compare the pair over time.
 - **Groupings.** Each bloc can be treated as one entity or split into its countries: EU, ASEAN, GCC, Africa, South America, Central America & Caribbean, and Central Asia. When a bloc is merged, trade between its members is excluded, and membership follows each year (the UK is in the EU through 2020).
 - **Shareable state.** The URL hash keeps the current view, e.g. `#focus=CHN&year=2025&metric=exports&groups=EU,ASEAN`.
@@ -13,7 +14,7 @@ An interactive world map of bilateral goods trade, built as a static website.
 
 | What | Source |
 |---|---|
-| Bilateral exports (FOB) and imports (CIF) of goods, annual, USD | IMF, [International Trade in Goods (by partner country), IMTS](https://data.imf.org/en/datasets/IMF.STA:IMTS), formerly DOTS, via the IMF SDMX API |
+| Bilateral exports (FOB) and imports (CIF) of goods, annual and monthly, USD | IMF, [International Trade in Goods (by partner country), IMTS](https://data.imf.org/en/datasets/IMF.STA:IMTS), formerly DOTS, via the IMF SDMX API |
 | Regions used to define groups | UN Statistics Division, [M49 standard](https://unstats.un.org/unsd/methodology/m49/overview/) |
 | Country shapes | [Natural Earth](https://www.naturalearthdata.com/) 1:50m via `world-atlas@2.0.2` |
 
@@ -66,6 +67,8 @@ Other commands:
 
 The page must be served over HTTP; opening `index.html` as a file won't work.
 
+`site/data/` is generated and not committed (about 200 MB with monthly data). The first `build` downloads about 1.5 GB from the IMF into `data_raw/`, which takes 10–15 minutes; later builds reuse that cache.
+
 ## Deploy
 
-`site/` is plain static files, so any static host works (GitHub Pages, Netlify, Cloudflare Pages, S3). `.github/workflows/deploy.yml` runs the tests, rebuilds the data monthly, and publishes `site/` to GitHub Pages. To enable it, set Settings → Pages → Source to "GitHub Actions".
+`site/` is plain static files, so any static host works (GitHub Pages, Netlify, Cloudflare Pages, S3). `.github/workflows/deploy.yml` runs the tests, builds the data (raw downloads are cached between runs and fully refreshed by the monthly schedule), and publishes `site/` to GitHub Pages. To enable it, set Settings → Pages → Source to "GitHub Actions".

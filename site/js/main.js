@@ -1,25 +1,36 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import {
-  store, loadBase, loadFlows, hasFlows, nameOf, shortNameOf, isGroup, partnerSeries,
-  displayTotals, worldSeries, metricAt, changeAt, defaultYearIndex, emptySeries,
+  store, loadBase, setFreq, availableFreqs, loadFlows, hasFlows, nameOf, shortNameOf, isGroup,
+  partnerSeries, displayTotals, worldSeries, metricAt, changeAt, defaultPeriodIndex, emptySeries,
 } from "./data.js";
 import { createMap } from "./map.js";
 import { renderPanel, lineChart, METRIC_LABEL } from "./panel.js";
+import { initStories, activeStory, startStory, stopStory } from "./stories.js";
+import { FREQS, periodLabel, nearestIndex } from "./time.js";
 import { money, ratioPct, share, escapeHTML as esc } from "./format.js";
 
 const $ = (s) => document.querySelector(s);
 const dark = matchMedia("(prefers-color-scheme: dark)");
+const DEFAULT_GROUPS = ["EU"];
 
 const state = {
+  freq: "A",
+  pi: 0,          // index into store.periods
   focus: null,
-  yi: 0,
   metric: "total",
-  back: 0,
-  groupsOn: new Set(["EU"]),
+  back: 0,        // change mode, in years (0 = levels)
+  groupsOn: new Set(DEFAULT_GROUPS),
   pair: null,
 };
 
-let map, current = null, playTimer = null, updateToken = 0;
+let map, current = null, playTimer = null, updateToken = 0, markers = [];
+
+const period = (i = state.pi) => store.periods[i];
+const label = (i = state.pi) => periodLabel(store.periods[i]);
+/** Change-mode offset in periods (a year back = 12 months back in monthly data). */
+const backN = () => state.back * FREQS[state.freq].perYear;
+/** Comparison offset for stats and tooltips: the change mode, or one year. */
+const compareN = () => (state.back || 1) * FREQS[state.freq].perYear;
 
 // ------------------------------------------------------------------ colors
 
@@ -50,9 +61,8 @@ function buildScale(allValues, metric, back) {
     const M = d3.max(allValues, Math.abs) || 1;
     const s = d3.scaleDivergingSymlog([-M, 0, M], d3.interpolateRgbBasis(pal.diverging)).constant(M / 300).clamp(true);
     const toUnit = s.copy().interpolator(d3.interpolateNumber(0, 1));
-    const pos = (v) => toUnit(v);
     return {
-      color: s, kind: "diverging", pos, fmt: (v) => money(v, { sign: true }),
+      color: s, kind: "diverging", pos: (v) => toUnit(v), fmt: (v) => money(v, { sign: true }),
       ticks: [-M, -M / 20, 0, M / 20, M],
     };
   }
@@ -70,18 +80,19 @@ function buildScale(allValues, metric, back) {
 }
 
 function valueAt(s, i) {
-  return state.back ? changeAt(s, i, state.metric, state.back) : metricAt(s, i, state.metric);
+  return state.back ? changeAt(s, i, state.metric, backN()) : metricAt(s, i, state.metric);
 }
 
 // ------------------------------------------------------------------ main update
 
 async function update() {
   const token = ++updateToken;
-  const { focus, yi, metric, back, groupsOn } = state;
+  const { focus, pi, metric, groupsOn, freq } = state;
+  const back = backN();
   let seriesMap, focusSeries = null, intra = null;
 
   if (focus) {
-    const flows = await loadFlows(focus);
+    const flows = await loadFlows(focus, freq);
     if (token !== updateToken) return;
     seriesMap = partnerSeries(flows, focus, groupsOn);
     focusSeries = store.totals[focus] ?? emptySeries();
@@ -91,35 +102,35 @@ async function update() {
   }
   $("#loading").hidden = true;
 
-  // Fixed color domain across all years, so animation shows real change.
-  const scaleKey = [focus, metric, back, [...groupsOn].sort(), dark.matches].join("|");
+  // Fixed color domain across all periods, so animation shows real change.
+  const scaleKey = [freq, focus, metric, back, [...groupsOn].sort(), dark.matches].join("|");
   if (!current || current.scaleKey !== scaleKey) {
     const all = [];
     for (const s of seriesMap.values()) {
-      for (let i = back; i < store.years.length; i++) {
+      for (let i = back; i < store.periods.length; i++) {
         const v = back ? changeAt(s, i, metric, back) : metricAt(s, i, metric);
         if (v != null) all.push(v);
       }
     }
     current = { scaleKey, scale: buildScale(all, metric, back) };
   }
-  Object.assign(current, { seriesMap, focusSeries, intra });
+  Object.assign(current, { seriesMap, focusSeries, intra, world: worldSeries() });
 
   const values = new Map();
-  for (const [k, s] of seriesMap) values.set(k, valueAt(s, yi));
+  for (const [k, s] of seriesMap) values.set(k, valueAt(s, pi));
   const colorOf = (k) => {
     const v = values.get(k);
     return v == null ? null : current.scale.color(v);
   };
 
-  map.render({ focus, yi, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [] });
+  map.render({ focus, pi, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [] });
   renderLegend();
   renderTitle();
   renderSpark();
   renderPanel($("#panel"), {
-    focus, yi, metric, back, year: store.years[yi], groupsOn,
+    focus, pi, metric, compare: compareN(), label: label(), groupsOn,
     seriesMap, partners: seriesMap, focusSeries, intra, pair: state.pair,
-    world: worldSeries(), hasData: !focus || hasFlows(focus),
+    world: current.world, hasData: !focus || hasFlows(focus),
     onFocus: setFocus,
     onPair: (k) => { state.pair = state.pair === k ? null : k; update(); },
   });
@@ -127,9 +138,9 @@ async function update() {
 }
 
 function buildArcs(partners) {
-  const { focus, yi, metric } = state;
+  const { focus, pi, metric } = state;
   const rows = [...partners]
-    .map(([key, s]) => ({ key, s, v: metricAt(s, yi, metric) }))
+    .map(([key, s]) => ({ key, s, v: metricAt(s, pi, metric) }))
     .filter((r) => r.v != null && r.v !== 0 && map.hasShape(r.key))
     .sort((a, b) => Math.abs(b.v) - Math.abs(a.v))
     .slice(0, 10);
@@ -148,16 +159,17 @@ function buildArcs(partners) {
 // ------------------------------------------------------------------ decorations
 
 function renderTitle() {
-  const { focus, metric, back, yi } = state;
-  const y = store.years[yi];
+  const { focus, metric, back } = state;
   const what = METRIC_LABEL[metric];
   const prep = { exports: "to", imports: "from" }[metric] ?? "with";
   const head = focus
-    ? `${esc(nameOf(focus))}: ${what} ${prep} each partner, ${y}`
-    : `${what[0].toUpperCase() + what.slice(1)} ${prep} the world, ${y}`;
-  const sub = back
-    ? `Change since ${store.years[yi - back] ?? "—"} · goods, current US$`
-    : "Goods, current US$";
+    ? `${esc(nameOf(focus))}: ${what} ${prep} each partner, ${label()}`
+    : `${what[0].toUpperCase() + what.slice(1)} ${prep} the world, ${label()}`;
+  const unit = state.freq === "M" ? "monthly goods trade, current US$" : "goods, current US$";
+  const base = state.pi - backN();
+  const sub = !back ? unit[0].toUpperCase() + unit.slice(1)
+    : base >= 0 ? `Change since ${label(base)} · ${unit}`
+    : `No data ${state.back} year${state.back > 1 ? "s" : ""} earlier: pick a later period or a shorter change`;
   $("#map-title").innerHTML = `${head}<small>${sub}</small>`;
 }
 
@@ -169,9 +181,8 @@ function renderLegend() {
   const svg = d3.select(el).append("svg").attr("width", W).attr("height", H + 18);
   const id = "lg-grad";
   const grad = svg.append("defs").append("linearGradient").attr("id", id);
-  const stops = d3.range(0, 1.0001, 0.05);
   const samples = sampleScale(sc);
-  grad.selectAll("stop").data(stops).join("stop")
+  grad.selectAll("stop").data(d3.range(0, 1.0001, 0.05)).join("stop")
     .attr("offset", (t) => `${t * 100}%`)
     .attr("stop-color", (t) => samples(t));
   svg.append("rect").attr("width", W).attr("height", H).attr("rx", 2).attr("fill", `url(#${id})`);
@@ -193,8 +204,7 @@ function renderLegend() {
 
 /** Map legend position t∈[0,1] to a color by bisecting the scale's pos() function. */
 function sampleScale(sc) {
-  const ticks = sc.ticks;
-  const lo = ticks[0], hi = ticks.at(-1);
+  const lo = sc.ticks[0], hi = sc.ticks.at(-1);
   if (sc.kind === "ratio") return (t) => sc.color(2 ** (t * 4 - 2));
   if (sc.kind === "diverging") {
     return (t) => {
@@ -204,7 +214,6 @@ function sampleScale(sc) {
     };
   }
   return (t) => {
-    // sequential log: pos is linear in log(v)
     const p0 = sc.pos(lo), p1 = sc.pos(hi);
     const lv = Math.log(lo) + ((t - p0) / (p1 - p0 || 1)) * (Math.log(hi) - Math.log(lo));
     return sc.color(Math.exp(lv)) ?? "transparent";
@@ -212,19 +221,25 @@ function sampleScale(sc) {
 }
 
 function renderSpark() {
-  const s = state.focus ? current.focusSeries : worldSeries();
+  const s = state.focus ? current.focusSeries : current.world;
   const el = $("#spark");
   el.innerHTML = "";
-  const W = el.clientWidth || 600, H = 34;
-  const vals = store.years.map((_, i) => metricAt(s, i, "total"));
-  const x = d3.scaleLinear([0, store.years.length - 1], [8, W - 8]);
+  const W = el.clientWidth || 600, H = 34, n = store.periods.length;
+  const vals = store.periods.map((_, i) => metricAt(s, i, "total"));
+  const x = d3.scaleLinear([0, n - 1], [8, W - 8]);
   const y = d3.scaleLinear([0, d3.max(vals) || 1], [H - 2, 4]);
   const svg = d3.select(el).append("svg").attr("viewBox", [0, 0, W, H]).attr("preserveAspectRatio", "none");
   const area = d3.area().defined((v) => v != null).x((_, i) => x(i)).y0(H).y1((v) => y(v));
   svg.append("path").attr("class", "area").attr("d", area(vals));
   svg.append("path").attr("class", "ln").attr("d", area.lineY1()(vals));
-  svg.append("circle").attr("cx", x(state.yi)).attr("cy", y(vals[state.yi] ?? 0)).attr("r", 3).attr("fill", "var(--accent)");
-  svg.append("text").attr("x", 8).attr("y", 11).text(`${state.focus ? esc(nameOf(state.focus)) : "World"} total trade`);
+  for (const m of markers) {
+    const i = nearestIndex(store.periods, m.t);
+    if (i < 0) continue;
+    svg.append("line").attr("class", "marker").attr("x1", x(i)).attr("x2", x(i)).attr("y1", 0).attr("y2", H)
+      .append("title").text(`${periodLabel(m.t)}: ${m.label}`);
+  }
+  svg.append("circle").attr("cx", x(state.pi)).attr("cy", y(vals[state.pi] ?? 0)).attr("r", 3).attr("fill", "var(--accent)");
+  svg.append("text").attr("x", 8).attr("y", 11).text(`${state.focus ? nameOf(state.focus) : "World"} total trade`);
 }
 
 // ------------------------------------------------------------------ tooltip
@@ -233,11 +248,10 @@ const tip = $("#tooltip");
 
 function showTip(key, ev, feature) {
   if (!key) { tip.hidden = true; return; }
-  const { focus, yi } = state;
-  const y = store.years[yi];
+  const { focus, pi } = state;
   let body;
   if (key === focus || (feature?.id === focus)) {
-    body = `<h4>${esc(nameOf(focus))}</h4><div class="sub">Selected · ${y}</div>`;
+    body = `<h4>${esc(nameOf(focus))}</h4><div class="sub">Selected · ${label()}</div>`;
   } else if (!current) {
     return;
   } else {
@@ -250,23 +264,23 @@ function showTip(key, ev, feature) {
       const fs = current.focusSeries;
       const fn = esc(shortNameOf(focus));
       body = `<h4>${esc(name)}${memberOf}</h4>
-        <div class="sub">with ${esc(nameOf(focus))}, ${y}</div>
+        <div class="sub">with ${esc(nameOf(focus))}, ${label()}</div>
         <table>
-          <tr><td>${fn} exports to</td><td>${money(metricAt(s, yi, "exports"))}</td></tr>
-          <tr><td>${fn} imports from</td><td>${money(metricAt(s, yi, "imports"))}</td></tr>
-          <tr><td>Balance</td><td>${money(metricAt(s, yi, "balance"), { sign: true })}</td></tr>
-          <tr><td>Share of ${fn}'s trade</td><td>${share(metricAt(s, yi, "total"), metricAt(fs, yi, "total")) || "—"}</td></tr>
+          <tr><td>${fn} exports to</td><td>${money(metricAt(s, pi, "exports"))}</td></tr>
+          <tr><td>${fn} imports from</td><td>${money(metricAt(s, pi, "imports"))}</td></tr>
+          <tr><td>Balance</td><td>${money(metricAt(s, pi, "balance"), { sign: true })}</td></tr>
+          <tr><td>Share of ${fn}'s trade</td><td>${share(metricAt(s, pi, "total"), metricAt(fs, pi, "total")) || "—"}</td></tr>
           ${changeRow(s)}
         </table>
         <div class="chart" id="tip-chart"></div>
         <div class="hint">Click to focus on ${esc(name)}</div>`;
     } else {
       body = `<h4>${esc(name)}${memberOf}</h4>
-        <div class="sub">${isGroup(key) ? "Trade with non-members" : "Trade with the world"}, ${y}</div>
+        <div class="sub">${isGroup(key) ? "Trade with non-members" : "Trade with the world"}, ${label()}</div>
         <table>
-          <tr><td>Exports</td><td>${money(metricAt(s, yi, "exports"))}</td></tr>
-          <tr><td>Imports</td><td>${money(metricAt(s, yi, "imports"))}</td></tr>
-          <tr><td>Balance</td><td>${money(metricAt(s, yi, "balance"), { sign: true })}</td></tr>
+          <tr><td>Exports</td><td>${money(metricAt(s, pi, "exports"))}</td></tr>
+          <tr><td>Imports</td><td>${money(metricAt(s, pi, "imports"))}</td></tr>
+          <tr><td>Balance</td><td>${money(metricAt(s, pi, "balance"), { sign: true })}</td></tr>
           ${changeRow(s)}
         </table>
         <div class="chart" id="tip-chart"></div>
@@ -276,16 +290,16 @@ function showTip(key, ev, feature) {
   tip.innerHTML = body;
   const chartEl = tip.querySelector("#tip-chart");
   const s = current?.seriesMap.get(key);
-  if (chartEl && s) lineChart(chartEl, s, yi, { height: 90 });
+  if (chartEl && s) lineChart(chartEl, s, pi, { height: 90 });
   tip.hidden = false;
   moveTip(ev);
 }
 
 function changeRow(s) {
-  const b = state.back || 1;
+  const b = compareN();
   const metric = state.metric === "balance" ? "total" : state.metric;
-  const r = changeAt(s, state.yi, metric, b);
-  return `<tr><td>${METRIC_LABEL[metric]} vs ${store.years[state.yi - b] ?? "—"}</td><td class="${r == null ? "" : r >= 1 ? "up" : "down"}">${ratioPct(r)}</td></tr>`;
+  const r = changeAt(s, state.pi, metric, b);
+  return `<tr><td>${METRIC_LABEL[metric]} vs ${label(state.pi - b)}</td><td class="${r == null ? "" : r >= 1 ? "up" : "down"}">${ratioPct(r)}</td></tr>`;
 }
 
 function moveTip(ev) {
@@ -309,44 +323,87 @@ function setFocus(key) {
   update();
 }
 
-function setYear(i) {
-  state.yi = Math.max(0, Math.min(store.years.length - 1, i));
-  $("#year").value = store.years[state.yi];
-  $("#year-label").textContent = store.years[state.yi];
-  update();
+function setPeriod(i) {
+  state.pi = Math.max(0, Math.min(store.periods.length - 1, i));
+  syncTimeline();
+  return update();
+}
+
+async function changeFreq(freq) {
+  if (freq === state.freq || !store.meta.periods[freq]) return;
+  const keep = period();
+  await setFreq(freq);
+  state.freq = freq;
+  state.pi = nearestIndex(store.periods, keep);
+  current = null;
+  setupTimeline();
+  syncControls();
+  await update();
+}
+
+function stopPlay() {
+  if (!playTimer) return;
+  clearInterval(playTimer.id);
+  playTimer.resolve?.();
+  playTimer = null;
+  $("#play").textContent = "▶";
+}
+
+/** Step through periods up to index `to` (default: the end). Resolves when done or stopped. */
+function playTo(to = store.periods.length - 1, ms = FREQS[state.freq].playMs) {
+  stopPlay();
+  if (state.pi >= to) setPeriod(0);
+  $("#play").textContent = "❚❚";
+  return new Promise((resolve) => {
+    playTimer = {
+      resolve,
+      id: setInterval(() => {
+        if (state.pi >= to) { stopPlay(); return; }
+        setPeriod(state.pi + 1);
+      }, ms),
+    };
+  });
 }
 
 function togglePlay() {
-  if (playTimer) {
-    clearInterval(playTimer);
-    playTimer = null;
-    $("#play").textContent = "▶";
-    return;
-  }
-  if (state.yi >= store.years.length - 1) setYear(0);
-  $("#play").textContent = "❚❚";
-  playTimer = setInterval(() => {
-    if (state.yi >= store.years.length - 1) return togglePlay();
-    setYear(state.yi + 1);
-  }, 700);
+  if (playTimer) stopPlay();
+  else playTo();
+}
+
+function syncTimeline() {
+  $("#year").value = state.pi;
+  $("#year").setAttribute("aria-valuetext", label());
+  $("#year-label").textContent = label();
 }
 
 function syncControls() {
+  for (const b of document.querySelectorAll("#freq button")) b.setAttribute("aria-checked", b.dataset.v === state.freq);
   for (const b of document.querySelectorAll("#metric button")) b.setAttribute("aria-checked", b.dataset.v === state.metric);
   for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-checked", +b.dataset.v === state.back);
   for (const b of document.querySelectorAll("#group-chips .chip")) b.setAttribute("aria-pressed", state.groupsOn.has(b.dataset.g));
   $("#world-btn").disabled = !state.focus;
-  $("#year").value = store.years[state.yi];
-  $("#year-label").textContent = store.years[state.yi];
+  syncTimeline();
+}
+
+function setupTimeline() {
+  const input = $("#year");
+  input.min = 0;
+  input.max = store.periods.length - 1;
+  $(".timeline").classList.toggle("monthly", state.freq !== "A");
 }
 
 function setupControls() {
-  const yearInput = $("#year");
-  yearInput.min = store.years[0];
-  yearInput.max = store.years.at(-1);
-  yearInput.addEventListener("input", () => setYear(store.years.indexOf(+yearInput.value)));
+  setupTimeline();
+  $("#year").addEventListener("input", (e) => { stopPlay(); setPeriod(+e.target.value); });
   $("#play").addEventListener("click", togglePlay);
 
+  const freqs = availableFreqs();
+  $("#freq").innerHTML = freqs.map((f) => `<button data-v="${f}" role="radio">${FREQS[f]?.label ?? f}</button>`).join("");
+  $("#freq").hidden = freqs.length < 2;
+  $("#freq").addEventListener("click", (e) => {
+    const v = e.target.closest("button")?.dataset.v;
+    if (v) { stopPlay(); changeFreq(v); }
+  });
   $("#metric").addEventListener("click", (e) => {
     const v = e.target.closest("button")?.dataset.v;
     if (v) { state.metric = v; syncControls(); update(); }
@@ -402,10 +459,10 @@ function setupControls() {
 
   document.addEventListener("keydown", (e) => {
     if (e.target.closest("input, textarea, dialog[open]")) return;
-    if (e.key === "ArrowLeft") setYear(state.yi - 1);
-    else if (e.key === "ArrowRight") setYear(state.yi + 1);
+    if (e.key === "ArrowLeft") { stopPlay(); setPeriod(state.pi - 1); }
+    else if (e.key === "ArrowRight") { stopPlay(); setPeriod(state.pi + 1); }
     else if (e.key === " ") { e.preventDefault(); togglePlay(); }
-    else if (e.key === "Escape") setFocus(null);
+    else if (e.key === "Escape") { if (activeStory()) stopStory(); else setFocus(null); }
   });
 
   $("#about-btn").addEventListener("click", () => $("#about").showModal());
@@ -418,6 +475,8 @@ function setupControls() {
 function renderSources() {
   const src = Object.fromEntries(store.meta.sources.map((s) => [s.id, s]));
   const { imf_imts: imf, un_m49: m49, natural_earth: ne } = src;
+  const span = (f) => `${periodLabel(store.meta.periods[f][0])}–${periodLabel(store.meta.periods[f].at(-1))}`;
+  const coverage = availableFreqs().map((f) => `${FREQS[f]?.label.toLowerCase() ?? f} ${span(f)}`).join("; ");
   $("#source-line").innerHTML = `Source: <a href="${imf.url}" target="_blank" rel="noopener">IMF, International Trade in Goods by partner country (IMTS)</a>, accessed ${imf.accessed}.
     Regions: <a href="${m49.url}" target="_blank" rel="noopener">UN M49</a>. Boundaries: <a href="${ne.url}" target="_blank" rel="noopener">Natural Earth</a>.`;
   const memberLabel = (m) => {
@@ -431,55 +490,76 @@ function renderSources() {
   $("#about-body").innerHTML = `
     <h2>About the data</h2>
     <h3>Trade values</h3>
-    <p>Bilateral merchandise (goods) trade from the <a href="${imf.url}" target="_blank" rel="noopener">${esc(imf.name)}</a>, formerly the ${esc(imf.formerly)}. Annual data, ${store.years[0]}–${store.years.at(-1)}, in current US dollars (not adjusted for inflation). Services trade is not included.</p>
+    <p>Bilateral merchandise (goods) trade from the <a href="${imf.url}" target="_blank" rel="noopener">${esc(imf.name)}</a>, formerly the ${esc(imf.formerly)}. Coverage: ${esc(coverage)}, in current US dollars (not adjusted for inflation or seasonality). Services trade is not included.</p>
     <ul>
       <li>Exports: <code>${esc(imf.series.exports)}</code></li>
       <li>Imports: <code>${esc(imf.series.imports)}</code></li>
     </ul>
-    <p>Each country's figures are <b>as reported by that country</b> (the selected focus). Because exports are valued FOB and imports CIF, and because of timing, re-exports and confidentiality, A's reported exports to B rarely equal B's reported imports from A. The IMF fills gaps for non-reporting economies with estimates derived from partner data. Taiwan is not published as a reporter by the IMF, so its figures here are built from partners' reports ("mirror" data). The latest years may be revised.</p>
+    <p>Each country's figures are <b>as reported by that country</b> (the selected focus). Because exports are valued FOB and imports CIF, and because of timing, re-exports and confidentiality, A's reported exports to B rarely equal B's reported imports from A. The IMF fills gaps for non-reporting economies with estimates derived from partner data. Taiwan is not published as a reporter by the IMF, so its figures here are built from partners' reports ("mirror" data). Recent periods are shown only once most countries have reported them, and may still be revised.</p>
+    <p>Monthly values are not seasonally adjusted. The Δ 1 yr mode compares each month with the same month a year earlier, which removes most of the seasonal pattern.</p>
     <h3>Groupings</h3>
     <p>When a grouping is “treated as one”, its members' flows are summed and trade <i>between</i> members is excluded, so the group is shown trading only with the outside world. Membership is applied as of each year: for example, the UK is part of the EU through 2020 and Croatia from 2013. Groups are defined from <a href="${m49.url}" target="_blank" rel="noopener">UN M49 regions</a> or explicit member lists:</p>
     <ul>${groups}</ul>
     <h3>Change modes</h3>
-    <p>Δ 1/5/10 yr colors each partner by the ratio between the selected year and the earlier year (shown as % change, log scale from −75% to +300%). For the balance metric, change is the difference in US dollars.</p>
+    <p>Δ 1/5/10 yr colors each partner by the ratio between the selected period and the same period that many years earlier (shown as % change, log scale from −75% to +300%). For the balance metric, change is the difference in US dollars.</p>
+    <h3>Stories</h3>
+    <p>Stories are guided replays of past events. Figures quoted in a story are computed from the data on this site; other facts link to their sources in the story card.</p>
     <h3>Map</h3>
     <p>Boundaries from Natural Earth (1:50m, public domain) via the world-atlas package. Their use does not imply any position on the legal status of any territory. Areas with no matching trade data are grey.</p>
     <h3>Citation</h3>
     <p>${esc(imf.citation)}</p>
     <p>Terms of use for IMF data: <a href="${imf.terms}" target="_blank" rel="noopener">${imf.terms}</a>.</p>
-    <p class="note">Data files generated ${store.meta.generated} by <code>scripts/build_data.py</code>.</p>`;
+    <p class="note">Data files generated ${store.meta.generated} by the pipeline in <code>pipeline/</code>.</p>`;
 }
 
-// ------------------------------------------------------------------ URL state
+// ------------------------------------------------------------------ views & URL state
+
+/** A view is the shareable state: {freq, t, focus, metric, change, groups, with}, all strings. */
+async function applyView(view) {
+  stopPlay();
+  const freq = store.meta.periods[view.freq] ? view.freq : "A";
+  if (freq !== state.freq || !store.periods.length) {
+    await setFreq(freq);
+    state.freq = freq;
+    current = null;
+    setupTimeline();
+  }
+  const ti = view.t ? nearestIndex(store.periods, view.t) : -1;
+  state.pi = ti >= 0 ? ti : defaultPeriodIndex();
+  state.metric = METRIC_LABEL[view.metric] ? view.metric : "total";
+  state.back = [1, 5, 10].includes(+view.change) ? +view.change : 0;
+  state.groupsOn = view.groups != null
+    ? new Set(view.groups.split(",").filter((g) => store.groupById.has(g)))
+    : new Set(DEFAULT_GROUPS);
+  state.focus = view.focus && (store.entities[view.focus] || isGroup(view.focus)) ? view.focus : null;
+  if (state.focus && isGroup(state.focus)) state.groupsOn.add(state.focus);
+  state.pair = state.focus && view.with ? view.with : null;
+  syncControls();
+  await update();
+}
+
+function currentView() {
+  const v = { t: period(), groups: [...state.groupsOn].join(",") || "none" };
+  if (state.freq !== "A") v.freq = state.freq;
+  if (state.focus) v.focus = state.focus;
+  if (state.metric !== "total") v.metric = state.metric;
+  if (state.back) v.change = String(state.back);
+  if (state.pair) v.with = state.pair;
+  return v;
+}
 
 function writeHash() {
-  const p = new URLSearchParams();
-  if (state.focus) p.set("focus", state.focus);
-  p.set("year", store.years[state.yi]);
-  if (state.metric !== "total") p.set("metric", state.metric);
-  if (state.back) p.set("change", state.back);
-  p.set("groups", [...state.groupsOn].join(",") || "none");
-  if (state.pair) p.set("with", state.pair);
+  const story = activeStory();
+  const p = story ? new URLSearchParams({ story: story.id, step: story.step + 1 }) : new URLSearchParams(currentView());
   history.replaceState(null, "", `#${p}`);
 }
 
-function readHash() {
-  Object.assign(state, { focus: null, yi: defaultYearIndex(), metric: "total", back: 0, groupsOn: new Set(["EU"]), pair: null });
+async function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  const yr = store.years.indexOf(+p.get("year"));
-  if (yr >= 0) state.yi = yr;
-  if (METRIC_LABEL[p.get("metric")]) state.metric = p.get("metric");
-  if ([1, 5, 10].includes(+p.get("change"))) state.back = +p.get("change");
-  if (p.has("groups")) {
-    state.groupsOn = new Set(p.get("groups").split(",").filter((g) => store.groupById.has(g)));
-  }
-  const f = p.get("focus");
-  if (f && (store.entities[f] || store.groupById.has(f))) {
-    state.focus = f;
-    if (isGroup(f)) state.groupsOn.add(f);
-  }
-  const w = p.get("with");
-  if (w && state.focus) state.pair = w;
+  if (p.get("story") && await startStory(p.get("story"), (+p.get("step") || 1) - 1)) return;
+  const view = Object.fromEntries(p);
+  if (!view.t && view.year) view.t = view.year; // links from before monthly data
+  await applyView(view);
 }
 
 // ------------------------------------------------------------------ boot
@@ -487,22 +567,28 @@ function readHash() {
 async function boot() {
   try {
     await loadBase();
+    await setFreq("A");
   } catch (e) {
     $("#loading").textContent = "Could not load data files. If you opened index.html directly, serve the site folder over HTTP instead.";
     throw e;
   }
-  readHash();
   map = createMap($("#map"), {
     onHover: showTip,
     onMove: moveTip,
-    onClick: (key) => setFocus(key === state.focus ? state.focus : key),
+    onClick: (key) => setFocus(key),
   });
   setupControls();
   renderSources();
-  syncControls();
+  initStories({
+    applyView,
+    playTo: (t, ms) => playTo(nearestIndex(store.periods, t), ms),
+    stopPlay,
+    setMarkers: (m) => { markers = m; if (current) renderSpark(); },
+    onChange: writeHash,
+  });
   // Links pasted into the address bar or back/forward (writeHash uses replaceState, which doesn't fire this).
-  addEventListener("hashchange", () => { readHash(); syncControls(); update(); });
-  await update();
+  addEventListener("hashchange", readHash);
+  await readHash();
 }
 
 boot();

@@ -164,10 +164,41 @@ a { color: var(--accent); }
 .tooltip .hint { color: var(--muted); font-size: 11px; margin-top: 6px; }
 
 /* ---------- side panel */
+/* The side column is capped at the viewport so the timeline stays visible; the panel scrolls. */
+.side { display: flex; flex-direction: column; gap: 12px; min-height: 420px; max-height: calc(100dvh - 260px); }
 .panel {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 16px; overflow-y: auto; max-height: calc(100dvh - 260px); min-height: 420px;
+  padding: 16px; overflow-y: auto; flex: 1; min-height: 0;
 }
+
+/* ---------- stories */
+.story {
+  background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);
+  padding: 14px 16px; box-shadow: var(--shadow); flex: none; max-height: 65%; overflow-y: auto;
+}
+.story-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.story .kicker { color: var(--accent); font-size: 12px; font-weight: 600; }
+.story-close { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 15px; padding: 2px 4px; }
+.story h3 { margin: 6px 0 6px; font-size: 16px; }
+.story p { margin: 6px 0; font-size: 13.5px; }
+.story-replay { margin: 2px 0 4px; }
+.story-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.story-nav .btn { padding: 6px 12px; }
+.story-nav .btn[disabled] { opacity: .4; cursor: default; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); font-weight: 600; }
+.dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+.dots button { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: 0; background: var(--border); cursor: pointer; }
+.dots button.on { background: var(--accent); }
+.story-sources { margin-top: 8px; font-size: 12px; color: var(--muted); }
+.story-sources ul { margin: 4px 0 0; padding-left: 18px; }
+.stories-list { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+.stories-list button {
+  width: 100%; text-align: left; display: grid; gap: 2px; padding: 12px 14px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+}
+.stories-list button:hover { border-color: var(--accent); }
+.stories-list span { color: var(--muted); font-size: 13px; }
+.spark .marker { stroke: var(--imports); stroke-width: 1.5; stroke-dasharray: 2 2; }
 .panel h2 { margin: 0; font-size: 18px; }
 .panel .kicker { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }
 .panel h3 { font-size: 13px; margin: 18px 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
@@ -221,7 +252,8 @@ a { color: var(--accent); }
 .spark .ln { fill: none; stroke: var(--accent); stroke-width: 1.5; }
 .spark text { fill: var(--muted); font-size: 10px; }
 #year { width: 100%; accent-color: var(--accent); margin: 2px 0 0; }
-.year-label { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; }
+.year-label { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; min-width: 64px; text-align: right; white-space: nowrap; }
+.timeline.monthly .year-label { font-size: 22px; min-width: 120px; }
 
 /* ---------- footer */
 .footer {
@@ -247,13 +279,16 @@ dialog code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px
   .layout { display: contents; }
   .map-wrap { order: 2; margin: 0 20px; min-height: 0; height: auto; aspect-ratio: 1.45; }
   .timeline { order: 3; }
-  .panel { order: 4; margin: 6px 20px 0; max-height: none; min-height: 0; }
-  .footer { order: 5; }
+  .side { display: contents; }
+  .story { order: 4; margin: 0 20px; max-height: none; }
+  .panel { order: 5; margin: 6px 20px 0; max-height: none; min-height: 0; }
+  .footer { order: 6; }
 }
 @media (max-width: 600px) {
   .topbar, .toolbar, .timeline, .footer { padding-left: 16px; padding-right: 16px; }
   .map-wrap { margin: 0 16px; aspect-ratio: 1.05; }
   .panel { margin: 6px 16px 0; }
+  .story { margin: 0 16px; }
   .map-title { font-size: 13.5px; max-width: calc(100% - 64px); }
   .seg button { padding: 5px 8px; font-size: 12.5px; }
   .legend { transform: scale(.88); transform-origin: left bottom; }
