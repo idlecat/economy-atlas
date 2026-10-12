@@ -78,6 +78,9 @@ def publish_indicators(con, registry: Registry):
     for ind, ent, period, value in con.execute(
             "SELECT indicator, entity, period, value FROM ind WHERE freq = 'A'").fetchall():
         raw.setdefault(ind, {}).setdefault(ent, {})[int(period)] = value
+    if not raw:
+        log("  indicator files contain no annual rows; skipped")
+        return None
     last = max(y for ents in raw.values() for s in ents.values() for y in s)
     years = list(range(cfg["start"], last + 1))
     values = compute(raw, registry, years, cfg)

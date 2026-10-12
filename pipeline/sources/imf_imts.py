@@ -77,6 +77,8 @@ def fetch(refresh=False, workers=3):
 
 def normalize(con, registry):
     files = [str(p) for f in FREQS for p in sorted((FOLDER / f).glob("*.csv")) if p.stat().st_size > 0]
+    if not files:
+        raise RuntimeError(f"no IMF files in {FOLDER}: run fetch first")
     con.execute(f"""
         CREATE OR REPLACE TEMP TABLE imf_raw AS
         SELECT COUNTRY, INDICATOR, COUNTERPART_COUNTRY, FREQUENCY, TIME_PERIOD, OBS_VALUE

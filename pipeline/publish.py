@@ -12,8 +12,8 @@ Each frequency in config/datasets.json (A, M, ...) is published to site/data/<fr
 """
 import datetime as dt
 import json
-import math
 
+from .indicators import sig as round_sig
 from .net import log, read_manifest
 from .paths import CONFIG, SITE_DATA
 from .registry import WORLD, Registry, load_lists
@@ -40,6 +40,15 @@ def select_observations(con, dataset: str, cfg: dict, freq: str, start: int, pro
               AND CAST(left(o.period, 4) AS INTEGER) >= ?
         ) WHERE rk = 1
     """, [dataset, product, freq, start])
+
+
+def warn_unranked_sources(con, datasets: dict):
+    """Observations of a source missing from its dataset's `precedence` would be dropped silently."""
+    for dataset, cfg in datasets.items():
+        for source, n in con.execute(
+                f"SELECT source, count(*) FROM obs WHERE dataset = ? AND source NOT IN ({', '.join('?' for _ in cfg['precedence'])}) GROUP BY source",
+                [dataset, *cfg["precedence"]]).fetchall():
+            log(f"  WARNING: {n} {dataset} rows from {source} are ignored: add it to precedence in config/datasets.json")
 
 
 def derive_mirrors(con, registry: Registry) -> list[str]:
@@ -133,13 +142,7 @@ def covered_periods(con, min_coverage: float) -> list[str]:
 
 def sig(v, digits=4):
     """USD -> USD millions, rounded to `digits` significant figures."""
-    if v is None:
-        return None
-    m = v / 1e6
-    if m == 0:
-        return 0
-    r = round(m, -int(math.floor(math.log10(abs(m)))) + (digits - 1))
-    return int(r) if r == int(r) else r
+    return round_sig(None if v is None else v / 1e6, digits)
 
 
 def collect(rows, periods):
@@ -291,6 +294,7 @@ def publish():
     con = connect()
     registry = Registry.load(read_reference(con, "un_m49"))
     create_obs_view(con)
+    warn_unranked_sources(con, datasets)
 
     results, products_meta = {}, None
     if "goods_trade" in datasets:

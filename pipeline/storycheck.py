@@ -438,7 +438,10 @@ def _rank(s, xid, yid, key, year, axis):
 def _first_year_above(s, a, b):
     """First year from which a's exports exceed b's in every later year."""
     years = s.periods()
-    ok = [s.v(a, y) > s.v(b, y) for y in years]
+    vals = [(s.v(a, y), s.v(b, y)) for y in years]
+    if missing := [y for y, (va, vb) in zip(years, vals) if va is None or vb is None]:
+        raise ValueError(f"{a} or {b} has no exports in {', '.join(missing)}")
+    ok = [va > vb for va, vb in vals]
     for i in range(len(years)):
         if all(ok[i:]):
             return int(years[i])

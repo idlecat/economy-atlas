@@ -58,7 +58,7 @@ def fetch(refresh=False):
 def normalize(con, registry):
     start, measures = wanted()
     imf = registry.code_map("imf")  # IMF code -> entity id
-    rows, unmapped = [], set()
+    rows, unmapped, unconfigured = [], set(), set()
     for m in measures:
         to_cp = {code: cp for cp, code in m["counterparts"].items()}
         for direction, basis in (("inward", "host"), ("outward", "investor")):
@@ -68,8 +68,12 @@ def normalize(con, registry):
                     continue
                 host, other = (r["COUNTRY"], r["COUNTERPART_COUNTRY"]) if basis == "host" else (r["COUNTERPART_COUNTRY"], r["COUNTRY"])
                 entity, cp = imf.get(host), to_cp.get(other)
-                if entity is None or cp is None:
+                if entity is None:
                     unmapped.add(host)  # IMF regional aggregates (G..., GX..., TX...) and unknown codes
                     continue
+                if cp is None:
+                    unconfigured.add(other)  # counterpart not listed in config/bilateral.json
+                    continue
                 rows.append((ID, m["id"], entity, cp, "A", r["TIME_PERIOD"], float(r["OBS_VALUE"]), m["unit"], basis))
-    return {"rows": write_bilateral(con, ID, rows), "unmapped_codes": sorted(unmapped)}
+    return {"rows": write_bilateral(con, ID, rows), "unmapped_codes": sorted(unmapped),
+            "unconfigured_counterparts": sorted(unconfigured)}

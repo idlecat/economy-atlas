@@ -93,6 +93,9 @@ def publish_bilateral(con, registry: Registry):
         for e, y, v in con.execute("SELECT entity, period, value FROM ind WHERE indicator = 'pop' AND freq = 'A'").fetchall():
             pop.setdefault(e, {})[int(y)] = v
     values, basis, years = compute(rows, cfg, registry, pop)
+    if not years:
+        log("  bilateral files contain no annual rows; skipped")
+        return None
     published = {}
     for spec in cfg["measures"]:
         scale = SCALE.get(spec["unit"], 1)

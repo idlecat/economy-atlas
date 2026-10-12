@@ -33,10 +33,13 @@ def http_get(url, accept=None, retries=4, timeout=120):
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return b""
+            if 400 <= e.code < 500 and e.code not in (408, 429):
+                raise RuntimeError(f"GET {url} failed: {e}") from e  # retrying won't help
             err = e
         except Exception as e:  # timeouts, resets
             err = e
-        time.sleep(2 * (attempt + 1))
+        if attempt < retries - 1:
+            time.sleep(2 * (attempt + 1))
     raise RuntimeError(f"GET {url} failed: {err}")
 
 
@@ -83,10 +86,18 @@ def download_large(path: Path, url, refresh=False, chunk_mb=16, workers=4, retri
     if path.exists() and not refresh:
         return path
     head = urllib.request.Request(url, method="HEAD", headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(head, timeout=60, context=SSL_CONTEXT) as r:
-        size = int(r.headers["Content-Length"])
-        if r.headers.get("Accept-Ranges") != "bytes":
-            raise RuntimeError(f"{url} does not support range requests")
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(head, timeout=60, context=SSL_CONTEXT) as r:
+                size = int(r.headers["Content-Length"])
+                ranges_ok = r.headers.get("Accept-Ranges") == "bytes"
+            break
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            if attempt == retries - 1 or (isinstance(e, urllib.error.HTTPError) and e.code < 500):
+                raise RuntimeError(f"HEAD {url} failed: {e}") from e
+            time.sleep(2 * (attempt + 1))
+    if not ranges_ok:
+        raise RuntimeError(f"{url} does not support range requests")
     parts_dir = path.with_name(path.name + ".parts")
     if refresh and parts_dir.exists():
         shutil.rmtree(parts_dir)

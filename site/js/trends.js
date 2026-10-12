@@ -224,7 +224,7 @@ function multiLine(el, { lines, pi, log, pct, height, onClick = null }) {
       const [px] = d3.pointer(ev);
       const i = indexAt(px);
       cursor.attr("x1", x(i)).attr("x2", x(i)).attr("visibility", "visible");
-      const rows = lines.filter((l) => l.values[i] != null).sort((a, b) => b.values[i] - a.values[i]);
+      const rows = lines.filter((l) => ok(l.values[i])).sort((a, b) => b.values[i] - a.values[i]);
       tip.attr("hidden", null).html(`<b>${periodLabel(periods[i])}</b>${rows.map((l) =>
         `<div><i style="background:${l.color}"></i>${esc(l.label)}<span>${pct ? fmt(l.values[i]) : money(l.values[i], { sign: l.key === "b" })}</span></div>`).join("")}`);
       const left = (x(i) / W) * el.clientWidth;

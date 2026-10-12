@@ -49,6 +49,8 @@ for (const lang of LANGS) {
   await expect(page.$eval(".list-outline", (e) => (e.getAttribute("d") ?? "").length > 1000), "list outline");
   await open(lang, "view=compare&x=gdp&y=exports&t=2024");
   await expect(page.$$eval("#compare circle.dot", (e) => e.length).then((n) => n > 100), "scatter dots");
+  await open(lang, "view=compare&x=removed_metric&y=exports&t=2024");
+  await expect(page.$eval("#sx", (e) => e.value === "gdp"), "unknown axis metric falls back to GDP");
   await open(lang, "view=trends&t=2024&focus=DEU&scale=log");
   await expect(page.$$eval("#trends .tl", (e) => e.length).then((n) => n > 8), "trend lines");
   // interactions
@@ -58,6 +60,12 @@ for (const lang of LANGS) {
   await page.click('#metric button[data-v="balance"]');
   await page.click('#mode button[data-v="5"]');
   await page.waitForTimeout(500);
+  // Space on a focused button activates it instead of starting playback
+  await page.focus('#metric button[data-v="imports"]');
+  await page.keyboard.press(" ");
+  await page.waitForTimeout(300);
+  await expect(page.getAttribute('#metric button[data-v="imports"]', "aria-checked").then((v) => v === "true"), "Space activates a focused button");
+  await expect(page.evaluate(() => location.hash.includes("t=2024")), "Space doesn't start playback");
   await page.click("#about-btn");
   await expect(text("#about-body").then((s) => s.length > 2000), "About text");
   await page.keyboard.press("Escape");

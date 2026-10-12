@@ -103,15 +103,18 @@ async function getMetrics() {
   if (metricsCache.key !== key) {
     const annual = await loadTotals(state.product, "A");
     const periods = state.product === "TOTAL" ? store.meta.periods.A : store.meta.products.periods.A;
-    metricsCache = { key, metrics: buildMetrics(ind, annual, periods, state.product, bil), ind, bil };
+    // every year any metric can have a value in (trade, indicators, bilateral)
+    const ys = [periods, ind?.periods, bil?.periods].flatMap((ps) => (ps ?? []).map(Number));
+    const years = ys.length ? d3.range(d3.min(ys), d3.max(ys) + 1) : [];
+    metricsCache = { key, metrics: buildMetrics(ind, annual, periods, state.product, bil), ind, bil, years };
   }
   return metricsCache;
 }
 
 /** Map colors from an indicator (world view only), with a domain over all years. */
-function indicatorColors(metric, keys) {
+function indicatorColors(metric, keys, years) {
   const all = [];
-  for (const k of keys) for (let y = 1990; y <= 2030; y++) { const v = metric.value(k, y); if (v != null) all.push(v); }
+  for (const k of keys) for (const y of years) { const v = metric.value(k, y); if (v != null) all.push(v); }
   const fmtV = (v, sign = false) => fmtUnit(v, metric.unit, { sign });
   if (metric.log) return buildScale(all.filter((v) => v > 0), "total", 0, fmtV);
   if (metric.share) {
@@ -166,7 +169,7 @@ async function update() {
   Object.assign(current, { seriesMap, focusSeries, intra, flows: focus ? await loadFlows(focus, freq, product) : null });
   const highlight = state.list ? listMembers(state.list) : null;
   current.listSplit = highlight && focus ? splitByList(current.flows, highlight) : null;
-  const { metrics, ind, bil } = await getMetrics();
+  const { metrics, ind, bil, years } = await getMetrics();
   if (token !== updateToken) return;
   current.metrics = metrics;
   syncMetricSelects(metrics);
@@ -181,7 +184,7 @@ async function update() {
     if (byMetric) {
       const keys = [...seriesMap.keys(), ...Object.keys(ind?.values.gdp ?? {}).filter((k) => !isGroup(k) && !seriesMap.has(k))];
       const ik = `ind|${state.mapBy}|${product}|${[...groupsOn].sort()}|${dark.matches}`;
-      if (current.indKey !== ik) Object.assign(current, { indKey: ik, indScale: indicatorColors(byMetric, keys) });
+      if (current.indKey !== ik) Object.assign(current, { indKey: ik, indScale: indicatorColors(byMetric, keys, years) });
       colorOf = (k) => { const v = byMetric.value(k, year()); return v == null || (byMetric.log && v <= 0) ? null : current.indScale.color(v); };
     } else {
       const values = new Map();
@@ -210,8 +213,6 @@ async function update() {
 // ------------------------------------------------------------------ compare view
 
 function renderCompare(metrics, ind) {
-  if (!metrics.has(state.sx)) state.sx = "gdp";
-  if (!metrics.has(state.sy)) state.sy = "exports";
   const d = compareData({ metrics, xId: state.sx, yId: state.sy, year: year(), groupsOn: state.groupsOn, pi: state.pi, focus: state.focus, ind,
     highlight: state.list ? listMembers(state.list) : null });
   current.compare = d;
@@ -252,6 +253,9 @@ function showDotTip(p, ev) {
 }
 
 function syncMetricSelects(metrics) {
+  // a link may name a metric that no longer exists
+  if (!metrics.has(state.sx)) state.sx = "gdp";
+  if (!metrics.has(state.sy)) state.sy = "exports";
   const sig = [...metrics.values()].map((m) => m.id + m.name).join("|");
   for (const [sel, includeTrade] of [["#sx", true], ["#sy", true], ["#map-by", false]]) {
     const el = $(sel);
@@ -678,7 +682,9 @@ function setupControls() {
   $("#zoom-reset").addEventListener("click", () => map.reset());
 
   document.addEventListener("keydown", (e) => {
-    if (e.target.closest("input, textarea, dialog[open]")) return;
+    // leave keys to form controls; Space also activates a focused button or link
+    if (e.target.closest("input, textarea, select, dialog[open]")) return;
+    if (e.key === " " && e.target.closest("button, a[href]")) return;
     if (e.key === "ArrowLeft") { stopPlay(); setPeriod(state.pi - 1); }
     else if (e.key === "ArrowRight") { stopPlay(); setPeriod(state.pi + 1); }
     else if (e.key === " ") { e.preventDefault(); togglePlay(); }

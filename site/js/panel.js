@@ -151,7 +151,7 @@ function growthPairs(ctx) {
   const ex = ctx.metrics.get("exports"), gdp = ctx.metrics.get("gdp");
   if (!ex || !gdp) return [];
   const out = [];
-  for (let y = 1991; y <= ctx.year; y++) {
+  for (let y = +ctx.ind.periods[0] + 1; y <= ctx.year; y++) {
     const e1 = ex.value(ctx.focus, y), e0 = ex.value(ctx.focus, y - 1);
     const g1 = gdp.value(ctx.focus, y), g0 = gdp.value(ctx.focus, y - 1);
     if (e1 > 0 && e0 > 0 && g1 > 0 && g0 > 0) out.push({ y, e: (e1 / e0 - 1) * 100, g: (g1 / g0 - 1) * 100 });

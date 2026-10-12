@@ -69,11 +69,16 @@ def write_observations(con, source_id: str, select_sql: str, params=None) -> int
 
 
 def create_obs_view(con, path_glob=None):
-    path_glob = path_glob or str(OBS_DIR / "*.parquet")
+    if path_glob is None:
+        if not any(OBS_DIR.glob("*.parquet")):
+            raise RuntimeError(f"no observations in {OBS_DIR}: run fetch + normalize first")
+        path_glob = str(OBS_DIR / "*.parquet")
     con.execute(f"CREATE OR REPLACE VIEW obs AS SELECT * FROM read_parquet('{path_glob}', union_by_name = true)")
 
 
 def write_reference(con, name: str, rows: list[dict]):
+    if not rows:
+        raise ValueError(f"reference table {name} is empty")
     REF_DIR.mkdir(parents=True, exist_ok=True)
     cols = list(rows[0])
     con.execute(f"CREATE OR REPLACE TEMP TABLE _ref ({', '.join(f'{c} VARCHAR' for c in cols)})")
