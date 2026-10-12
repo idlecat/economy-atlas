@@ -1,5 +1,5 @@
 {
-  "_comment": "Published datasets. `precedence` lists sources from most to least preferred: when several sources report the same (reporter, partner, flow, product, freq, period), the first one wins. `freqs` lists the frequencies to publish with their first year. Trailing periods where fewer than `min_coverage` (share of the best-covered period's reporters) have reported are dropped, so incomplete recent months don't look like a collapse. BACI is a finished release, so goods_by_product uses min_coverage 0 and every product shares the dataset's full year range.",
+  "_comment": "Published datasets. `precedence` lists sources from most to least preferred: when several sources report the same (reporter, partner, flow, product, freq, period), the first one wins. `freqs` lists the frequencies to publish with their first year. Trailing periods where fewer than `min_coverage` (share of the best-covered period's reporters) have reported are dropped, so incomplete recent months don't look like a collapse. BACI is a finished release, so goods_by_product uses min_coverage 0 and every product shares the dataset's full year range. `provisional` is the number of trailing periods per frequency that the site labels as provisional: the IMF revises recent data and fills gaps with estimates that its API doesn't flag.",
   "goods_trade": {
     "description": "Bilateral merchandise trade, total of all products",
     "precedence": [
@@ -7,10 +7,12 @@
     ],
     "freqs": {
       "A": {
-        "start": 1990
+        "start": 1990,
+        "provisional": 1
       },
       "M": {
-        "start": 2000
+        "start": 2000,
+        "provisional": 6
       }
     },
     "min_coverage": 0.8

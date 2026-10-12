@@ -273,6 +273,8 @@ a { color: var(--accent); }
 .story h3 { margin: 6px 0 6px; font-size: 16px; }
 .story p { margin: 6px 0; font-size: 13.5px; }
 .story-replay { margin: 2px 0 4px; }
+.year-label.provisional::after { content: "*"; color: var(--imports); }
+.map-title .prov { color: var(--imports); }
 .story a.ent { color: inherit; text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 1.5px; text-underline-offset: 2px; cursor: pointer; }
 .story a.ent:hover, .story a.ent:focus-visible { color: var(--accent); }
 .story-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }

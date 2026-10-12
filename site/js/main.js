@@ -320,7 +320,7 @@ function renderTitle(byMetric = null) {
   const sub = !back ? unit
     : base >= 0 ? t("title.changeSince", { period: label(base), unit })
     : t(state.back > 1 ? "title.noBaseN" : "title.noBase1", { n: state.back });
-  $("#map-title").innerHTML = `${head}<small>${sub}</small>`;
+  $("#map-title").innerHTML = `${head}<small>${sub}${isProvisional() ? ` · <span class="prov">${t("provisional.short")}</span>` : ""}</small>`;
 }
 
 function renderLegend(sc = current.scale) {
@@ -537,10 +537,19 @@ function togglePlay() {
   else playTo();
 }
 
+/** Whether the selected period is one the IMF may still revise or has partly estimated (meta.provisional). */
+function isProvisional() {
+  const from = state.product === "TOTAL" ? store.meta.provisional?.[state.freq] : null;
+  return !!from && period() >= from;
+}
+
 function syncTimeline() {
   $("#year").value = state.pi;
   $("#year").setAttribute("aria-valuetext", label());
-  $("#year-label").textContent = label();
+  const el = $("#year-label");
+  el.textContent = label();
+  el.classList.toggle("provisional", isProvisional());
+  el.title = isProvisional() ? t("provisional.title") : "";
 }
 
 function syncControls() {
@@ -750,6 +759,8 @@ function renderSources() {
     </ul>
     <p>${t("about.trade.reported")}</p>
     <p>${t("about.trade.monthly")}</p>
+    ${store.meta.provisional ? `<p>${t("about.trade.provisional", { periods: esc(Object.entries(store.meta.provisional)
+      .map(([f, p]) => `${freqLabel(f).toLowerCase()} ${periodLabel(p)}–${periodLabel(store.meta.periods[f].at(-1))}`).join(t("listSep"))) })}</p>` : ""}
     ${baci ? productsAbout(baci, link) : ""}
     ${wb ? indicatorsAbout(wb, link) : ""}
     ${ids && dip ? `<h3>${t("about.lend.title")}</h3>

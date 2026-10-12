@@ -286,6 +286,9 @@
   "about.lists.text": "A highlighted list outlines its members on the map and in Compare, and compares a country's trade with members and non-members. Unlike groups, lists are never merged and may overlap with groups. The same members are used for every year.",
   "about.lists.withdrawn": "{name} withdrew in {year} ({source}).",
   "list.cpShare": "{cp} took {share} of {name}'s {metric} in {period}.",
-  "list.cpShareBase": "In {period}, before the initiative, it took {share}."
+  "list.cpShareBase": "In {period}, before the initiative, it took {share}.",
+  "provisional.short": "Provisional: recent figures may be revised or partly estimated",
+  "provisional.title": "Provisional period: the IMF revises recent data and fills missing reports with estimates, which its data does not flag.",
+  "about.trade.provisional": "The most recent periods ({periods}) are marked provisional (*): the IMF revises them as countries report, and fills missing reports with estimates that its data does not distinguish from reported values."
  }
 }

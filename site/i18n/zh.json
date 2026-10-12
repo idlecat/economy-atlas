@@ -286,7 +286,10 @@
   "about.lists.text": "突出显示某个名单时，会在地图和“对比”视图中勾勒出其成员，并比较一个国家与成员和非成员的贸易。与集团不同，名单从不合并，并且可以与集团重叠。每一年都使用同样的成员。",
   "about.lists.withdrawn": "{name}已于{year}年退出（{source}）。",
   "list.cpShare": "{period}，{cp}占{name}{metric}的{share}。",
-  "list.cpShareBase": "倡议提出之前的{period}，这一比例为{share}。"
+  "list.cpShareBase": "倡议提出之前的{period}，这一比例为{share}。",
+  "provisional.short": "初步数据：近期数值可能修订或部分为估计值",
+  "provisional.title": "初步时期：IMF会修订近期数据，并以估计值填补缺失的申报，其数据中未标明哪些是估计值。",
+  "about.trade.provisional": "最近的时期（{periods}）标为初步数据（*）：IMF会随各国申报而修订，并以估计值填补缺失的申报，其数据未将估计值与申报值区分开来。"
  },
  "names": {
   "entities": {

@@ -350,6 +350,9 @@ def publish():
     used_sources += [s for s in used_extra if s not in used_sources]
     meta = {
         "periods": {freq: r["periods"] for freq, r in trade.items()},
+        # first period labelled provisional on the site, per frequency
+        "provisional": {freq: r["periods"][-n] for freq, r in trade.items()
+                        if (n := datasets["goods_trade"]["freqs"][freq].get("provisional", 0)) and n <= len(r["periods"])},
         "products": products_meta,
         "units": "USD millions (current prices)",
         "generated": dt.date.today().isoformat(),
