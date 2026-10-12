@@ -1,4 +1,4 @@
-"""Command line: python -m pipeline {fetch,normalize,publish,build} [--only SOURCE ...] [--refresh]
+"""Command line: python -m pipeline {fetch,normalize,publish,build,check-stories} [--only SOURCE ...] [--refresh]
 
 publish always writes every dataset in config/datasets.json, since they share meta.json."""
 import argparse
@@ -42,7 +42,7 @@ def normalize(only=None):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="python -m pipeline")
-    ap.add_argument("command", choices=["fetch", "normalize", "publish", "build"])
+    ap.add_argument("command", choices=["fetch", "normalize", "publish", "build", "check-stories"])
     ap.add_argument("--only", nargs="+", metavar="SOURCE", help=f"limit fetch/normalize to these sources: {', '.join(SOURCES)}")
     ap.add_argument("--refresh", action="store_true", help="re-download even if cached")
     args = ap.parse_args(argv)
@@ -53,3 +53,6 @@ def main(argv=None):
         normalize(args.only)
     if args.command in ("publish", "build"):
         publish()
+    if args.command == "check-stories":
+        from .storycheck import main as check_stories
+        raise SystemExit(check_stories())

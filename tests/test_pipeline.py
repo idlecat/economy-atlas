@@ -293,3 +293,33 @@ def test_download_does_not_cache_rejected_responses(tmp_path, monkeypatch):
     net.download(tmp_path / "x.json", "http://example", validate=check)
     assert (tmp_path / "x.json").read_bytes() == b'[{"page": 1}, []]'
     assert not list(tmp_path.glob("*.tmp"))
+
+
+# --------------------------------------------------------------------------- story figures
+
+from pipeline import storycheck as sc  # noqa: E402
+
+
+def test_written_numbers_carry_their_rounding():
+    assert sc.parse_en("$1.6 trillion", "usd") == (1.6e6, 0.05e6)
+    assert sc.parse_en("−$18.5 billion", "usd") == (-18.5e3, 50)
+    assert sc.parse_en("$13,300", "usd_pc") == (13300, 50)  # trailing zeros: rounded to hundreds
+    assert sc.parse_en("37%", "pct") == (37, 0.5)
+    zh = list(sc.zh_candidates("出口约1150亿美元，占37%，人均13,300美元，第51位", "usd"))
+    assert zh == [(115000.0, 500.0)]
+    assert [v for v, _ in sc.zh_candidates("占37%", "pct")] == [37]
+    assert [v for v, _ in sc.zh_candidates("人均13,300美元", "usd_pc")] == [13300]
+
+
+def test_story_check_reports_drift(tmp_path):
+    import json as js
+    (tmp_path / "zh").mkdir()
+    step = {"title": "t", "view": {}}
+    (tmp_path / "s.json").write_text(js.dumps({"steps": [{**step, "text": ["Exports were **$115 billion** ([China](CHN) 31%)."]}]}))
+    (tmp_path / "zh" / "s.json").write_text(js.dumps({"steps": [{**step, "text": ["出口约1150亿美元（中国31%）。"]}]}))
+    claims = [sc.C("s", 1, "$115 billion", "usd", lambda s: s["x"]), sc.C("s", 1, "China 31%", "pct", lambda s: s["p"])]
+    assert sc.check({"x": 115_300, "p": 30.6}, tmp_path, claims) == []
+    problems = sc.check({"x": 116_000, "p": 31.0}, tmp_path, claims)  # revised: $116 billion
+    assert len(problems) == 1 and "$115 billion" in problems[0]
+    (tmp_path / "zh" / "s.json").write_text(js.dumps({"steps": [{**step, "text": ["出口约1160亿美元（中国31%）。"]}]}))
+    assert "zh" in sc.check({"x": 115_300, "p": 31.0}, tmp_path, claims)[0]  # translation not updated

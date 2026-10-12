@@ -18,6 +18,8 @@ uv run python -m pipeline build                    # fetch (cached) + normalize 
 uv run python -m pipeline publish                  # rebuild site/data from data_store only (seconds)
 uv run python -m pipeline fetch --only imf_imts --refresh
 uv run pytest                                      # all tests
+uv run python -m pipeline check-stories            # story figures still match site/data
+cd tests/e2e && npm ci && npm test                 # browser smoke test (needs the server below; CHANNEL=chrome to use local Chrome)
 uv run pytest tests/test_pipeline.py::test_group_uses_membership_as_of_each_year
 python3 -m http.server -d site 8000                # serve the site; must be HTTP, not file://
 ```
@@ -28,9 +30,9 @@ Run `publish` after any change to `config/` or `pipeline/publish.py`. Run `norma
 
 The first monthly fetch is about 250 IMF requests of 1–10 MB each. HTTPS uses `certifi`, because uv-managed Pythons don't see the macOS system certificate store. Failed requests are reported and make `fetch` exit non-zero; rerunning retries only the missing files.
 
-There is no frontend test suite. Verify UI changes in a browser. There is also no JS linter.
+Frontend: `tests/e2e/smoke.mjs` (Playwright) loads every view and every story step in every language and fails on page errors, failed or external requests and missing content; it runs in CI after the build. Still check UI changes visually in a browser. There is no JS linter.
 
-Deploy: `.github/workflows/deploy.yml` runs the tests and `build` (on push to `main`, monthly, or manually), then publishes `site/` to GitHub Pages. `data_raw/` is kept in the Actions cache; the monthly schedule and manual runs with `refresh` re-download everything. `site/data/` is generated and git-ignored.
+Deploy: `.github/workflows/deploy.yml` runs the tests, `build`, `check-stories` and the browser smoke test (on push to `main`, monthly, or manually), then publishes `site/` to GitHub Pages. `data_raw/` is kept in the Actions cache; the monthly schedule and manual runs with `refresh` re-download everything. `site/data/` is generated and git-ignored.
 
 ## Pipeline architecture
 
@@ -109,6 +111,7 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
 - **`stories.js`:** the story player.
   - Loads `stories/index.json` and `stories/<id>.json`. Each step calls `applyView`, then optionally `playTo`. Step changes bump a `token`, so a replay that is still running can't overwrite a later step.
   - "Treat as one" changes the reader makes during a story are kept for its later steps (`applyStoryView` in `main.js` applies them on top of each step's `groups`; they reset when the story ends).
+  - Every figure a story quotes from site data is listed in `pipeline/storycheck.py` `CLAIMS` (English snippet + how to compute it); `check-stories` recomputes them after each build and requires the English snippet and a matching number in each translation, within the written rounding. Add a claim whenever a story quotes a new figure.
   - Captions support `**bold**` and `[name](CODE)` links (`inline` in `stories.js`); a link calls `setFocus(CODE)` and hovering it calls `map.outline(CODE)`.
   - While a story is active, the URL is `#story=<id>&step=<n>`. The format is in `site/stories/README.md`. Numbers quoted in stories must come from site data, and other facts must be cited in the story's `sources`.
   - To get or check a story's numbers, open the step's view as a URL hash (e.g. `#view=compare&x=gdp&y=exports&t=2024`) and read `#map-title` and the dots' `__data__` in a headless browser; Compare-view r values depend on the dot set (merged groups) and on the axis scales, so they must be re-checked when either changes.

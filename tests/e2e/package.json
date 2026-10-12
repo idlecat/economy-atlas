@@ -1,0 +1,8 @@
+{
+  "name": "eco-map-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser smoke test for site/ (run against a local server: python3 -m http.server -d site 8000)",
+  "scripts": { "test": "node smoke.mjs" },
+  "devDependencies": { "playwright": "1.55.0" }
+}
