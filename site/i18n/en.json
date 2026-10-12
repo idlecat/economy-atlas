@@ -268,6 +268,24 @@
   "about.lend.title": "Lending and investment",
   "about.lend.debt": "<b>Debt</b> comes from the {ids}: public and publicly guaranteed external debt still owed (a stock, not new lending), by creditor country, for low- and middle-income countries only. It counts all lenders based in that country, official and commercial; much of China's lending comes from state-owned banks and is classed as commercial-bank debt, so it is included. Debt owed by private companies without a government guarantee is not.",
   "about.lend.fdi": "<b>Direct investment</b> comes from the {dip}: the stock of direct investment, by the immediate investing economy. Each series uses the receiving economy's report when it has one, and otherwise the investor's own report (China reports by destination only from 2018); the panel marks the latter with *. Much investment passes through financial centres such as Hong Kong, the Netherlands or Caribbean islands, so the immediate investor is often not the ultimate one, and figures can be negative (disinvestment or intra-company loans).",
-  "about.lend.groups": "For merged groups, debt and investment are summed over the members of each year when the members that report hold at least 85% of the group's population (debt data never covers high-income members). Group investment totals use only the receiving economies' own reports, and a group shows no value for a counterpart that is one of its members. Neither source labels lending or investment as part of any particular programme, such as the Belt and Road Initiative."
+  "about.lend.groups": "For merged groups, debt and investment are summed over the members of each year when the members that report hold at least 85% of the group's population (debt data never covers high-income members). Group investment totals use only the receiving economies' own reports, and a group shows no value for a counterpart that is one of its members. Neither source labels lending or investment as part of any particular programme, such as the Belt and Road Initiative.",
+  "list.label": "Highlight",
+  "list.aria": "Highlight a list of countries",
+  "list.none": "None",
+  "list.member": "{name} is one of the {list}.",
+  "list.memberWithdrawn": "{name} is on the official list of {list}, but withdrew in {year} ({source}).",
+  "list.share": "{list} took {share} of {name}'s {metric} in {period}.",
+  "list.shareBase": "In {period}, before the initiative, the same countries took {share}.",
+  "list.debt": "Of the public external debt owed to lenders in {name} in {year}, {list} owed {amount} ({share} of {total}).",
+  "list.fdi": "Of the direct investment stock from {name} in {year}, {amount} ({share} of {total}) was in {list}; most of the rest is in financial centres such as Hong Kong and Caribbean islands.",
+  "list.source": "Source: {source}, accessed {date}.",
+  "trends.listTitle": "{name}: {metric}, {list} vs. other partners",
+  "trends.listNote": "The same partner countries in every year, so the lines compare like with like before and after the initiative.",
+  "trends.others": "Others",
+  "about.lists.title": "Highlighted lists",
+  "about.lists.text": "A highlighted list outlines its members on the map and in Compare, and compares a country's trade with members and non-members. Unlike groups, lists are never merged and may overlap with groups. The same members are used for every year.",
+  "about.lists.withdrawn": "{name} withdrew in {year} ({source}).",
+  "list.cpShare": "{cp} took {share} of {name}'s {metric} in {period}.",
+  "list.cpShareBase": "In {period}, before the initiative, it took {share}."
  }
 }

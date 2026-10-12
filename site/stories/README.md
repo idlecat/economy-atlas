@@ -39,6 +39,7 @@ Guided replays shown by the "Stories" button. Each story is one JSON file listed
 | `scale` | Trends view: `log` or `share`; omit for US$ |
 | `set` | Trends view: economies to compare, comma-separated, or `none`; omit for the 6 largest |
 | `x`, `y` | Compare-view metrics, e.g. `gdp`, `gdp_pc`, `exports`, `exports_gdp` (see `site/js/metrics.js`) |
+| `list` | highlight a country list from `config/lists.json`, e.g. `BRI` |
 | `mapby` | color the world map by a metric instead of trade, e.g. `gdp_pc` |
 
 If the reader changes "Treat as one" during a story, that choice is kept for the following steps (on top of each step's `groups`), so write captions that still make sense with groups split or merged.

@@ -9,6 +9,7 @@
   --accent-soft: #e3ebf9;
   --exports: #1f8a70;
   --imports: #c2562b;
+  --list: #b8860b;
   --land: #e4e7ec;
   --land-stroke: #ffffff;
   --ocean: #f6f7f9;
@@ -30,6 +31,7 @@
     --accent-soft: #24324a;
     --exports: #4cc49f;
     --imports: #f08a5d;
+    --list: #f2c14e;
     --land: #2a323e;
     --land-stroke: #11151c;
     --ocean: #11151c;
@@ -111,6 +113,9 @@ a { color: var(--accent); }
 .scatter .fit { fill: none; stroke: var(--text); stroke-width: 1.5; stroke-dasharray: 5 4; opacity: .55; }
 .scatter .dot { fill-opacity: .72; stroke: var(--surface); stroke-width: 1; cursor: pointer; }
 .scatter .dot:hover { fill-opacity: 1; stroke: var(--text); }
+.scatter .dot.listed { stroke: var(--list); stroke-width: 2; }
+.list-key { display: flex; align-items: center; gap: 6px; }
+.list-key i { width: 16px; border-top: 2px dashed var(--list); }
 .scatter .dot.focus { fill-opacity: 1; stroke: var(--text); stroke-width: 2.5; }
 .scatter .labels text { fill: var(--text); font-size: 11px; pointer-events: none; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .scatter .labels text.focus { font-weight: 700; }
@@ -189,6 +194,7 @@ a { color: var(--accent); }
 .country.focus { fill: var(--focus) !important; }
 .country:hover { filter: brightness(.88); }
 .group-outline { fill: none; stroke: var(--group-stroke); stroke-width: 1.1; stroke-opacity: .55; vector-effect: non-scaling-stroke; pointer-events: none; }
+.list-outline { fill: none; stroke: var(--list); stroke-width: 1.6; stroke-dasharray: 4 2.5; vector-effect: non-scaling-stroke; pointer-events: none; }
 .hover-outline { fill: none; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 .arc { fill: none; stroke-linecap: round; pointer-events: none; opacity: .85; vector-effect: non-scaling-stroke; }
 .arc.exports { stroke: var(--exports); }

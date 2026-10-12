@@ -2,7 +2,7 @@
 //   With a focus: its exports, imports and balance, and its top partners (one line each).
 //   Always: a set of economies side by side, which the reader can edit.
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import { store, metricAt, nameOf, shortNameOf, isGroup, productName, productNameLower } from "./data.js";
+import { store, metricAt, nameOf, shortNameOf, isGroup, productName, productNameLower, listName } from "./data.js";
 import { periodLabel, yearOf, yearTicks } from "./time.js";
 import { money, escapeHTML as esc } from "./format.js";
 import { t } from "./i18n.js";
@@ -66,6 +66,11 @@ export function renderTrends(el, ctx) {
         <p class="note">${t(scale === "log" ? "trends.unitLog" : "trends.unitUsd")}</p>
         <div class="trend-chart" id="tr-focus"></div>
       </section>
+      ${ctx.listSplit ? `<section class="trend">
+        <h3>${t("trends.listTitle", { name, list: esc(listName(ctx.list)), metric: what })}</h3>
+        <p class="note">${unitNote("trends.unitShareFocus", { name })} ${t("trends.listNote")}</p>
+        <div class="trend-chart" id="tr-list"></div>
+      </section>` : ""}
       <section class="trend">
         <h3>${t("trends.partnersTitle", { name, n: TOP_PARTNERS, metric: what, period })}</h3>
         <p class="note">${unitNote("trends.unitShareFocus", { name })} ${t("trends.partnersNote", { name })}</p>
@@ -97,6 +102,15 @@ export function renderTrends(el, ctx) {
     if (scale !== "log") lines.push({ key: "b", label: t("metric.balance"), color: "var(--muted)", dash: true, values: valuesOf(fs, "balance", "usd") });
     multiLine(el.querySelector("#tr-focus"), { lines, pi: ctx.pi, log: scale === "log", pct: false, height: 220 });
 
+    if (ctx.listSplit) {
+      multiLine(el.querySelector("#tr-list"), {
+        lines: [
+          { key: "in", label: listName(ctx.list, { short: true }), color: "var(--list)", values: valuesOf(ctx.listSplit.inList, metric, scale, fs) },
+          { key: "out", label: t("trends.others"), color: "var(--muted)", values: valuesOf(ctx.listSplit.others, metric, scale, fs) },
+        ],
+        pi: ctx.pi, log: scale === "log", pct: scale === "share", height: 220,
+      });
+    }
     const top = topPartners(ctx.partners, ctx.pi, metric);
     multiLine(el.querySelector("#tr-partners"), {
       lines: top.map((r, i) => ({

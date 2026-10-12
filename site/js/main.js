@@ -3,6 +3,7 @@ import {
   store, loadBase, setSlice, availableFreqs, loadFlows, loadBreakdown, hasFlows, nameOf, shortNameOf,
   isGroup, partnerSeries, displayTotals, worldSeries, metricAt, changeAt, defaultPeriodIndex, emptySeries,
   products, productName, productNameLower, loadIndicators, loadTotals, loadBilateral, groupNote, regionName,
+  lists, listName, listNote, listMembers, splitByList,
 } from "./data.js";
 import { buildMetrics } from "./metrics.js";
 import { createScatter } from "./scatter.js";
@@ -34,6 +35,7 @@ const state = {
   mapBy: "trade",    // world-view map colors: "trade" or a metric id (e.g. gdp_pc)
   scale: "usd",      // Trends view: "usd", "log" or "share"
   set: null,         // Trends view: economies side by side; null = the largest ones at the selected period
+  list: null,        // highlighted country list (config/lists.json), e.g. "BRI", or null
 };
 
 let map, scatter, current = null, playTimer = null, updateToken = 0, markers = [];
@@ -112,6 +114,12 @@ function indicatorColors(metric, keys) {
   for (const k of keys) for (let y = 1990; y <= 2030; y++) { const v = metric.value(k, y); if (v != null) all.push(v); }
   const fmtV = (v, sign = false) => fmtUnit(v, metric.unit, { sign });
   if (metric.log) return buildScale(all.filter((v) => v > 0), "total", 0, fmtV);
+  if (metric.share) {
+    // shares (0–100%): one color ramp from 0, capped at the 98th percentile
+    const max = d3.quantile(all.filter((v) => v >= 0).sort(d3.ascending), 0.98) || 1;
+    const s = d3.scaleSequential([0, max], d3.interpolateRgbBasis(palettes().total)).clamp(true);
+    return { color: (v) => s(v), kind: "linear", pos: (v) => v / max, ticks: [0, max / 4, max / 2, (3 * max) / 4, max], fmt: (v) => fmtV(v) };
+  }
   // diverging: a few extreme years (e.g. +123% growth) would wash out everything else, so the range is the
   // 98th percentile of absolute values and anything beyond gets the end colors
   const q = d3.quantile(all.map(Math.abs).sort(d3.ascending), 0.98) || 1;
@@ -154,7 +162,9 @@ async function update() {
     }
     current = { scaleKey, scale: buildScale(all, metric, back) };
   }
-  Object.assign(current, { seriesMap, focusSeries, intra, world: worldSeries() });
+  Object.assign(current, { seriesMap, focusSeries, intra, world: worldSeries(), flows: focus ? await loadFlows(focus, freq, product) : null });
+  const highlight = state.list ? listMembers(state.list) : null;
+  current.listSplit = highlight && focus ? splitByList(current.flows, highlight) : null;
   const { metrics, ind, bil } = await getMetrics();
   if (token !== updateToken) return;
   current.metrics = metrics;
@@ -178,7 +188,7 @@ async function update() {
       colorOf = (k) => { const v = values.get(k); return v == null ? null : current.scale.color(v); };
     }
     current.byMetric = byMetric;
-    map.render({ focus, pi, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [] });
+    map.render({ focus, pi, groupsOn, colorOf, arcs: focus ? buildArcs(seriesMap) : [], highlight });
     renderLegend(byMetric ? current.indScale : current.scale);
     renderTitle(byMetric);
   }
@@ -187,6 +197,7 @@ async function update() {
     ind, bil, metrics, year: year(),
     focus, pi, metric, compare: compareN(), label: label(), groupsOn, product,
     seriesMap, partners: seriesMap, focusSeries, intra, pair: state.pair, breakdown,
+    list: state.list, listSplit: current.listSplit, flows: current.flows,
     world: current.world, hasData: !focus || hasFlows(focus),
     onFocus: setFocus,
     onProduct: setProduct,
@@ -200,14 +211,15 @@ async function update() {
 function renderCompare(metrics, ind) {
   if (!metrics.has(state.sx)) state.sx = "gdp";
   if (!metrics.has(state.sy)) state.sy = "exports";
-  const d = compareData({ metrics, xId: state.sx, yId: state.sy, year: year(), groupsOn: state.groupsOn, pi: state.pi, focus: state.focus, ind });
+  const d = compareData({ metrics, xId: state.sx, yId: state.sy, year: year(), groupsOn: state.groupsOn, pi: state.pi, focus: state.focus, ind,
+    highlight: state.list ? listMembers(state.list) : null });
   current.compare = d;
   scatter.render({ points: d.points, x: d.x, y: d.y, fit: d.stats.fit, animate: true });
   $("#map-title").innerHTML = t("compare.title", { y: esc(d.y.name), x: esc(d.x.name), year: year() }) + statsHTML(d.stats, d.x, d.y, state.groupsOn);
   const regions = [...new Set(d.points.map((p) => p.region))];
   $("#legend").innerHTML = `<div class="region-key">${Object.entries(REGION_COLORS).filter(([r]) => regions.includes(r))
     .map(([r, c]) => `<span><i style="background:${c}"></i>${esc(regionName(r))}</span>`).join("")}${regions.includes("Group") ? `<span><i style="background:#5d6878"></i>${t("compare.mergedGroup")}</span>` : ""}</div>
-    <div>${t("compare.legendNote")}</div>`;
+    <div>${t("compare.legendNote")}</div>${state.list ? `<div class="list-key"><i></i>${esc(listName(state.list))}</div>` : ""}`;
 }
 
 // ------------------------------------------------------------------ trends view
@@ -216,6 +228,7 @@ function renderTrendsView(partners, focusSeries) {
   renderTrends($("#trends"), {
     pi: state.pi, metric: state.metric, scale: state.scale, focus: state.focus, focusSeries, partners,
     pair: state.pair, world: current.world, findEntity,
+    list: state.list, listSplit: current.listSplit,
     set: state.set ?? defaultSet(displayTotals(state.groupsOn), state.pi),
     onPair: (k) => { state.pair = state.pair === k ? null : k; update(); },
     onFocus: setFocus,
@@ -334,6 +347,7 @@ function renderLegend(sc = current.scale) {
       ? `<span style="color:var(--accent)">${t("legend.top10")}</span>`
       : `<span class="x">${t(state.metric === "balance" ? "legend.surplus" : "legend.exportsTo")}</span><span class="m">${t(state.metric === "balance" ? "legend.deficit" : "legend.importsFrom")}</span>`}</div>`
     : "";
+  if (state.list) el.insertAdjacentHTML("beforeend", `<div class="list-key"><i></i>${esc(listName(state.list))}</div>`);
   el.insertAdjacentHTML("beforeend", `<div>${t("legend.noData")} <span style="display:inline-block;width:10px;height:10px;background:var(--land);border-radius:2px;vertical-align:middle"></span></div>${legendNote}`);
 }
 
@@ -341,6 +355,7 @@ function renderLegend(sc = current.scale) {
 function sampleScale(sc) {
   const lo = sc.ticks[0], hi = sc.ticks.at(-1);
   if (sc.kind === "ratio") return (t) => sc.color(2 ** (t * 4 - 2));
+  if (sc.kind === "linear") return (t) => sc.color(t * hi);
   if (sc.kind === "diverging") {
     return (t) => {
       let a = lo, b = hi;
@@ -558,6 +573,7 @@ function syncControls() {
   for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-checked", +b.dataset.v === state.back);
   for (const b of document.querySelectorAll("#group-chips .chip")) b.setAttribute("aria-pressed", state.groupsOn.has(b.dataset.g));
   $("#world-btn").disabled = !state.focus;
+  $("#list").value = state.list ?? "";
   syncTimeline();
 }
 
@@ -600,6 +616,10 @@ function setupControls() {
     const v = e.target.closest("button")?.dataset.v;
     if (v) { state.metric = v; syncControls(); update(); }
   });
+  $("#list").innerHTML = `<option value="">${t("list.none")}</option>` +
+    lists().map((l) => `<option value="${esc(l.id)}">${esc(listName(l.id))}</option>`).join("");
+  $("#list-wrap").hidden = !lists().length;
+  $("#list").addEventListener("change", (e) => { state.list = e.target.value || null; update(); });
   $("#scale").addEventListener("click", (e) => {
     const v = e.target.closest("button")?.dataset.v;
     if (v) { state.scale = v; syncControls(); update(); }
@@ -738,6 +758,10 @@ function renderSources() {
     <h3>${t("about.groups.title")}</h3>
     <p>${t("about.groups.text", { m49: link(m49.url, t("about.groups.m49")) })}</p>
     <ul>${groups}</ul>
+    ${lists().length ? `<h3>${t("about.lists.title")}</h3><p>${t("about.lists.text")}</p>
+      <ul>${lists().map((l) => `<li><b>${esc(listName(l.id))}</b> (${l.members.length}): ${esc(listNote(l.id))}
+        ${t("list.source", { source: link(l.source.url, l.source.name), date: l.source.accessed })}
+        ${(l.withdrawn ?? []).map((w) => t("about.lists.withdrawn", { name: esc(nameOf(w.id)), year: w.year, source: link(w.source.url, w.source.name) })).join(" ")}</li>`).join("")}</ul>` : ""}
     <h3>${t("about.change.title")}</h3>
     <p>${t("about.change.text")}</p>
     <h3>${t("about.stories.title")}</h3>
@@ -830,6 +854,7 @@ async function applyView(view) {
   state.sx = view.x || "gdp";
   state.sy = view.y || "exports";
   state.mapBy = view.mapby || "trade";
+  state.list = lists().some((l) => l.id === view.list) ? view.list : null;
   syncControls();
   await update();
 }
@@ -842,6 +867,7 @@ function currentView() {
   if (state.metric !== "total") v.metric = state.metric;
   if (state.back) v.change = String(state.back);
   if (state.pair) v.with = state.pair;
+  if (state.list) v.list = state.list;
   if (state.view === "compare") Object.assign(v, { view: "compare", x: state.sx, y: state.sy });
   else if (state.view === "trends") {
     v.view = "trends";

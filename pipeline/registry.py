@@ -144,3 +144,18 @@ def attach_m49(entities: dict[str, Entity], m49_rows):
             e.region, e.region_name = r["region"], r["region_name"]
             e.subregion, e.subregion_name = r["subregion"], r["subregion_name"]
             e.intermediate = r["intermediate"]
+
+
+def load_lists(entities: dict[str, Entity], path=CONFIG / "lists.json") -> list[dict]:
+    """config/lists.json: overlapping country lists (never merged). Unknown ids are an error."""
+    if not path.exists():
+        return []
+    lists = json.loads(path.read_text())["lists"]
+    for lst in lists:
+        ids = list(lst["members"]) + [w["id"] for w in lst.get("withdrawn", [])] + [lst["counterpart"]]
+        unknown = sorted(set(ids) - set(entities))
+        if unknown:
+            raise ValueError(f"list {lst['id']}: unknown entity ids {unknown}")
+        if len(set(lst["members"])) != len(lst["members"]):
+            raise ValueError(f"list {lst['id']}: duplicate members")
+    return lists

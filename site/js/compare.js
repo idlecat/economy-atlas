@@ -20,7 +20,7 @@ function candidates(groupsOn, pi, ind) {
  * @returns {points, x, y, stats: {n, r, rho, fit, text}}
  * Correlations use log10 values on log axes (points with values <= 0 are left out there).
  */
-export function compareData({ metrics, xId, yId, year, groupsOn, pi, focus, ind }) {
+export function compareData({ metrics, xId, yId, year, groupsOn, pi, focus, ind, highlight = null }) {
   const x = metrics.get(xId), y = metrics.get(yId);
   const pop = metrics.get("pop");
   const points = [];
@@ -34,6 +34,7 @@ export function compareData({ metrics, xId, yId, year, groupsOn, pi, focus, ind 
       color: region ? REGION_COLORS[region] ?? GROUP_COLOR : GROUP_COLOR,
       region: region ?? "Group",
       focus: key === focus,
+      listed: !!highlight?.has(key),
     });
   }
   const tx = x.log ? Math.log10 : (v) => v, ty = y.log ? Math.log10 : (v) => v;

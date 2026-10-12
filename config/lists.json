@@ -1,0 +1,37 @@
+{
+  "_comment": "Country lists: sets of countries that may overlap with groups and with each other. A list never merges countries on the map; the site can highlight its members and compare trade with members and non-members. `members` is a fixed set applied to every year, so trends compare the same countries before and after `since`. `counterpart` is the country the list is about (shares are of its trade). `withdrawn` records members that have since left, with a source; they stay in `members` because the source still lists them.",
+  "lists": [
+    {
+      "id": "BRI",
+      "name": "Belt and Road partners",
+      "short": "Belt and Road",
+      "counterpart": "CHN",
+      "since": 2013,
+      "note": "Countries that have signed Belt and Road cooperation documents with China, as listed on China's official Belt and Road Portal. The same countries are used for every year.",
+      "source": {
+        "name": "Belt and Road Portal (中国一带一路网): countries",
+        "url": "https://www.yidaiyilu.gov.cn/country",
+        "accessed": "2026-10-11"
+      },
+      "withdrawn": [
+        {
+          "id": "ITA",
+          "year": 2023,
+          "source": {
+            "name": "Al Jazeera: China warns against ‘undermining’ Belt and Road plan after Italy withdraws (7 December 2023)",
+            "url": "https://www.aljazeera.com/news/2023/12/7/china-warns-against-undermining-belt-and-road-after-italy-withdraws"
+          }
+        },
+        {
+          "id": "PAN",
+          "year": 2025,
+          "source": {
+            "name": "Al Jazeera: China slams US as Panama quits Belt and Road Initiative (7 February 2025)",
+            "url": "https://www.aljazeera.com/news/2025/2/7/china-blasts-us-as-panama-quits-belt-and-road-initiative"
+          }
+        }
+      ],
+      "members": ["AFG", "AGO", "ALB", "ARE", "ARG", "ARM", "ATG", "AUT", "AZE", "BDI", "BEN", "BFA", "BGD", "BGR", "BHR", "BIH", "BLR", "BOL", "BRA", "BRB", "BRN", "BWA", "CAF", "CHL", "CIV", "CMR", "COD", "COG", "COK", "COL", "COM", "CPV", "CRI", "CUB", "CYP", "CZE", "DJI", "DMA", "DOM", "DZA", "ECU", "EGY", "ERI", "EST", "ETH", "FJI", "FSM", "GAB", "GEO", "GHA", "GIN", "GMB", "GNB", "GNQ", "GRC", "GRD", "GUY", "HND", "HRV", "HUN", "IDN", "IRN", "IRQ", "ITA", "JAM", "JOR", "KAZ", "KEN", "KGZ", "KHM", "KIR", "KOR", "KWT", "LAO", "LBN", "LBR", "LBY", "LKA", "LSO", "LTU", "LUX", "LVA", "MAR", "MDA", "MDG", "MDV", "MKD", "MLI", "MLT", "MMR", "MNE", "MNG", "MOZ", "MRT", "MWI", "MYS", "NAM", "NER", "NGA", "NIC", "NIU", "NPL", "NRU", "NZL", "OMN", "PAK", "PAN", "PER", "PHL", "PNG", "POL", "PRT", "PSE", "QAT", "ROU", "RUS", "RWA", "SAU", "SDN", "SEN", "SGP", "SLB", "SLE", "SLV", "SOM", "SRB", "SSD", "STP", "SUR", "SVK", "SVN", "SYC", "SYR", "TCD", "TGO", "THA", "TJK", "TKM", "TLS", "TON", "TTO", "TUN", "TUR", "TZA", "UGA", "UKR", "URY", "UZB", "VEN", "VNM", "VUT", "WSM", "YEM", "ZAF", "ZMB", "ZWE"]
+    }
+  ]
+}

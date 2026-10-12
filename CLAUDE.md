@@ -65,6 +65,8 @@ Identity and grouping:
   - `resolve_groups` raises an error if any entity is in two groups in overlapping years.
   - Group aggregates use membership **per year**, for both the member reporting and the partner. A group's totals are extra-group trade only; trade between members is published separately as `intra`.
 
+Lists (`config/lists.json`, validated by `registry.load_lists`, published as `meta.lists`): overlapping country sets that are never merged, e.g. `BRI` (156 Belt and Road partners from the official portal, accessed date in `source`). Members are a fixed set applied to every year (so before/after comparisons use the same countries); `withdrawn` records members that left, with sources, without removing them; `since` is the start year used for "before" comparisons; `counterpart` is the country the list is about. Site: the **Highlight** select (`state.list`, URL `list=`) outlines members on the map (`map.js` `drawList`) and in Compare (`.dot.listed`), adds a members-vs-others chart in Trends (`data.js` `splitByList` over the focus's unmerged flows) and a panel section (`listSection`: counterpart's share of the focus's trade now vs `since - 1`, or for the counterpart itself the members' share of its trade, debt and investment).
+
 Adding a source:
 1. Add a module in `pipeline/sources/` with `ID`, `KIND`, `META`, `fetch` and `normalize`. The contract is described in `sources/__init__.py`.
 2. Register it in `SOURCES`.

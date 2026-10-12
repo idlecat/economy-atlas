@@ -37,10 +37,12 @@ export function createMap(container, { onHover, onMove, onClick }) {
   const ocean = root.append("path").attr("class", "ocean").datum({ type: "Sphere" });
   const countries = root.append("g");
   const outlines = root.append("path").attr("class", "group-outline");
+  const listOutline = root.append("path").attr("class", "list-outline");
   const hoverOutline = root.append("path").attr("class", "hover-outline");
   const arcLayer = root.append("g");
 
   let groupsOn = new Set();
+  let highlight = null; // Set of entity ids outlined as a list (e.g. Belt and Road partners), or null
   let pi = 0;
   let hoverKey = null;
   let k = 1;
@@ -82,6 +84,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
     ocean.attr("d", path);
     paths.attr("d", path);
     drawOutlines();
+    drawList();
     drawHover();
     if (lastView) drawArcs(lastView.arcs);
   }
@@ -91,6 +94,13 @@ export function createMap(container, { onHover, onMove, onClick }) {
     const key = (g) => (g.id ? displayOf(g.id, groupsOn, pi) : g.properties.name);
     outlines.attr("d", path(topojson.mesh(topo, obj, (a, b) =>
       (active(a) || active(b)) && (a === b || key(a) !== key(b)))));
+  }
+
+  /** Outline around the highlighted list's members (borders with non-members and their coasts). */
+  function drawList() {
+    if (!highlight) return listOutline.attr("d", null);
+    const inList = (g) => !!g.id && highlight.has(g.id);
+    listOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => (a === b ? inList(a) : inList(a) !== inList(b)))));
   }
 
   function drawHover() {
@@ -145,6 +155,10 @@ export function createMap(container, { onHover, onMove, onClick }) {
     if (gk !== lastGroupsKey) {
       lastGroupsKey = gk;
       drawOutlines();
+    }
+    if (view.highlight !== highlight) {
+      highlight = view.highlight;
+      drawList();
     }
     paths.each(function (d) {
       const key = d.id ? displayOf(d.id, groupsOn, pi) : null;

@@ -77,7 +77,7 @@ export function createScatter(container, { onHover, onMove, onClick }) {
         (update) => update,
         (exit) => exit.transition(trans).attr("r", 0).remove(),
       )
-      .attr("class", (p) => `dot${p.focus ? " focus" : ""}`)
+      .attr("class", (p) => `dot${p.focus ? " focus" : ""}${p.listed ? " listed" : ""}`)
       .style("fill", (p) => p.color)
       .on("pointerenter", (ev, p) => onHover(p, ev))
       .on("pointermove", (ev) => onMove(ev))

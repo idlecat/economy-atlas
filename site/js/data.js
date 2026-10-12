@@ -121,6 +121,39 @@ export function regionName(name) {
   return names("regions", name) ?? name;
 }
 
+// ------------------------------------------------------------------ lists (meta.lists): overlapping sets, never merged
+
+export function lists() {
+  return store.meta.lists ?? [];
+}
+
+export function listById(id) {
+  return lists().find((l) => l.id === id) ?? null;
+}
+
+export function listName(id, { short = false } = {}) {
+  const l = listById(id), tr = names("lists", id);
+  return short ? tr?.short ?? l?.short ?? id : tr?.name ?? l?.name ?? id;
+}
+
+export function listNote(id) {
+  return names("lists", id)?.note ?? listById(id)?.note ?? "";
+}
+
+const memberSets = new Map();
+/** Members of a list as a Set (the same for every year). */
+export function listMembers(id) {
+  if (!memberSets.has(id)) memberSets.set(id, new Set(listById(id)?.members ?? []));
+  return memberSets.get(id);
+}
+
+/** A focus's trade with a list's members and with everyone else, summed from its (unmerged) partner flows. */
+export function splitByList(flows, members) {
+  const inList = emptySeries(), others = emptySeries();
+  for (const [p, s] of Object.entries(flows?.p ?? {})) addSeries(members.has(p) ? inList : others, s);
+  return { inList, others };
+}
+
 export function isGroup(code) {
   return store.groupById.has(code);
 }

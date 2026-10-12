@@ -269,3 +269,14 @@ def test_bilateral_group_uses_host_reports_only():
     values, _, _ = bil.compute(rows, BIL_CFG, reg, pop)
     assert values["fdi"]["CCC"]["G"] == {2000: 5.0}
     assert values["fdi"]["CCC"]["BBB"] == {2000: 400.0}  # still shown for the country itself
+
+
+def test_lists_reject_unknown_members(tmp_path):
+    from pipeline.registry import load_lists
+    reg = make_registry([])
+    path = tmp_path / "lists.json"
+    path.write_text('{"lists": [{"id": "L", "counterpart": "AAA", "members": ["BBB", "ZZZ"]}]}')
+    with pytest.raises(ValueError, match="ZZZ"):
+        load_lists(reg.entities, path)
+    path.write_text('{"lists": [{"id": "L", "counterpart": "AAA", "members": ["BBB", "CCC"]}]}')
+    assert load_lists(reg.entities, path)[0]["members"] == ["BBB", "CCC"]

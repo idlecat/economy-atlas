@@ -16,7 +16,7 @@ import math
 
 from .net import log, read_manifest
 from .paths import CONFIG, SITE_DATA
-from .registry import WORLD, Registry
+from .registry import WORLD, Registry, load_lists
 from .sources import SOURCES
 from .sources import natural_earth
 from .store import REPORT_DIR, connect, create_obs_view, read_reference
@@ -353,6 +353,7 @@ def publish():
         "groups": [{"id": g.id, "name": g.name, "short": g.short, "note": g.note,
                     "members": [_span({"id": m.entity}, m) for m in g.members if m.entity in listed]}
                    for g in registry.groups],
+        "lists": [{k: v for k, v in lst.items() if not k.startswith("_")} for lst in load_lists(registry.entities)],
         "sources": [source_meta(s) for s in used_sources] + [source_meta("un_m49"), source_meta("natural_earth")],
     }
     dump(SITE_DATA / "meta.json", meta)

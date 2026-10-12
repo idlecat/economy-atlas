@@ -1,6 +1,9 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import { store, nameOf, shortNameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName, productNameLower, groupNote, regionName } from "./data.js";
-import { periodLabel, yearOf, yearTicks } from "./time.js";
+import {
+  store, nameOf, shortNameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName, productNameLower,
+  groupNote, regionName, listById, listName, listNote, listMembers,
+} from "./data.js";
+import { periodLabel, yearOf, yearTicks, nearestIndex } from "./time.js";
 import { money, ratioPct, share, fmtUnit, escapeHTML as esc } from "./format.js";
 import { pearson, describe } from "./stats.js";
 import { has, t } from "./i18n.js";
@@ -201,6 +204,72 @@ function chartKey() {
   return `<div class="chart-key"><span class="x">${t("metric.exports")}</span><span class="m">${t("metric.imports")}</span></div>`;
 }
 
+// ------------------------------------------------------------------ highlighted list (e.g. Belt and Road partners)
+
+/** Share of the focus's trade with the list's members, now and in the year before the list started. */
+function listSection(ctx) {
+  const lst = ctx.list && listById(ctx.list);
+  if (!lst || !ctx.focus) return "";
+  const name = esc(nameOf(ctx.focus)), list = esc(listName(lst.id));
+  const metric = ctx.metric === "balance" ? "total" : ctx.metric;
+  const parts = [];
+  const members = listMembers(lst.id);
+  const withdrawn = (lst.withdrawn ?? []).find((w) => w.id === ctx.focus);
+  if (members.has(ctx.focus)) {
+    parts.push(t(withdrawn ? "list.memberWithdrawn" : "list.member", { name, list, year: withdrawn?.year,
+      source: withdrawn ? `<a href="${esc(withdrawn.source.url)}" target="_blank" rel="noopener">${esc(withdrawn.source.name)}</a>` : "" }));
+  }
+  if (ctx.listSplit && ctx.focus !== lst.counterpart) {
+    // other countries: the counterpart's (China's) share of their trade, from their own partner flows
+    const cp = ctx.flows?.p?.[lst.counterpart];
+    const shareCp = (i) => {
+      const a = metricAt(cp, i, metric);
+      const all = metricAt(ctx.listSplit.inList, i, metric) + metricAt(ctx.listSplit.others, i, metric);
+      return a == null || !all ? null : a / all;
+    };
+    const base = nearestIndex(store.periods, String(lst.since - 1));
+    const now = cp ? shareCp(ctx.pi) : null, then = cp && base >= 0 && base < ctx.pi ? shareCp(base) : null;
+    if (now != null) {
+      parts.push(t("list.cpShare", { cp: esc(nameOf(lst.counterpart)), name, metric: metricLabel(metric), share: pctText(now), period: periodLabel(store.periods[ctx.pi]) })
+        + (then != null ? ` ${t("list.cpShareBase", { share: pctText(then), period: periodLabel(store.periods[base]) })}` : ""));
+    }
+  } else if (ctx.listSplit) {
+    const share = (i) => {
+      const a = metricAt(ctx.listSplit.inList, i, metric), b = metricAt(ctx.listSplit.others, i, metric);
+      return a == null || b == null || !(a + b) ? null : a / (a + b);
+    };
+    const base = nearestIndex(store.periods, String(lst.since - 1));
+    const now = share(ctx.pi), then = base >= 0 && base < ctx.pi ? share(base) : null;
+    if (now != null) {
+      parts.push(t("list.share", { list, name, metric: metricLabel(metric), share: pctText(now), period: periodLabel(store.periods[ctx.pi]) })
+        + (then != null ? ` ${t("list.shareBase", { share: pctText(then), period: periodLabel(store.periods[base]) })}` : ""));
+    }
+  }
+  // the list's counterpart as a lender/investor: how much of it is with members
+  const bil = ctx.bil;
+  if (bil && ctx.focus === lst.counterpart) {
+    const at = bilIndex(bil, ctx.year);
+    for (const m of at ? bil.measures.filter((x) => x.counterparts.includes(ctx.focus)) : []) {
+      let inList = 0, all = 0;
+      for (const [e, s] of Object.entries(bil.values[m.id][ctx.focus] ?? {})) {
+        const v = s[at.i];
+        if (isGroup(e) || v == null || v <= 0) continue;
+        all += v;
+        if (members.has(e)) inList += v;
+      }
+      if (all) parts.push(t(`list.${m.id}`, { list, name, amount: money(inList), total: money(all), share: pctText(inList / all), year: at.year }));
+    }
+  }
+  if (!parts.length) return "";
+  return `<h3>${list}</h3>${parts.map((p) => `<p class="note">${p}</p>`).join("")}
+    <p class="note">${esc(listNote(lst.id))} ${t("list.source", { source: `<a href="${esc(lst.source.url)}" target="_blank" rel="noopener">${esc(lst.source.name)}</a>`, date: lst.source.accessed })}</p>`;
+}
+
+/** 48%, 4.5%, and 99.7% rather than a rounded 100%. */
+function pctText(r) {
+  return `${(r * 100).toFixed(r >= 0.1 && r < 0.99 ? 0 : 1)}%`;
+}
+
 // ------------------------------------------------------------------ lending & investment (bilateral.json)
 
 /** Index of `year` in the bilateral periods, or the latest year when `year` is later (the data ends earlier). */
@@ -319,6 +388,7 @@ export function renderPanel(el, ctx) {
     ${group ? groupBlurb(focus, yi) : ""}${partOf}${ctx.product === "TOTAL" ? mirrorNote : ""}${noData}${memberNote}
     ${productShare(ctx, yi)}
     ${stats(fs, yi, compare)}
+    ${listSection(ctx)}
     ${pair ? `
       <h3>${t("panel.with", { name: esc(nameOf(ctx.pair)) })}</h3>
       <div class="pair-box">
