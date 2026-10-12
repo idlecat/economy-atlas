@@ -1,0 +1,99 @@
+{
+  "title": "俄罗斯石油转向东方",
+  "markers": [
+    {
+      "t": "2022",
+      "label": "俄罗斯入侵乌克兰；欧盟自12月5日起禁止经海运进口俄罗斯原油"
+    }
+  ],
+  "sources": [
+    {
+      "name": "EEAS: UN General Assembly demands Russian Federation withdraw all military forces from the territory of Ukraine (2 March 2022)",
+      "url": "https://www.eeas.europa.eu/eeas/un-general-assembly-demands-russian-federation-withdraw-all-military-forces-territory-ukraine_und_da"
+    },
+    {
+      "name": "CSIS: Progress Report on the EU Embargo and Russian Oil Price Cap",
+      "url": "https://www.csis.org/analysis/progress-report-eu-embargo-and-russian-oil-price-cap"
+    },
+    {
+      "name": "CEPII BACI (trade by product)",
+      "url": "https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2021年：欧洲是俄罗斯石油的主要买家",
+      "text": [
+        "2021年，俄罗斯出口原油约**1150亿美元**。其中欧盟购买了**46%**，中国31%，印度仅约1%。",
+        "地图显示俄罗斯对各伙伴的原油出口额。这些数据来自 CEPII BACI，它对出口方和进口方的申报进行了协调。"
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2021",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2022年：战争与制裁",
+      "text": [
+        "2022年初，俄罗斯入侵乌克兰。欧盟自**2022年12月5日**起禁止经海运进口俄罗斯原油，管道输送的石油获得豁免；七国集团、欧盟和澳大利亚还设定了每桶60美元的价格上限。",
+        "由于油价高企，俄罗斯2022年的原油出口实际上增至约**1480亿美元**。欧盟仍购买了38%，而印度的份额已跃升至17%。"
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2022",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2023–24年：石油流向东方",
+      "text": [
+        "禁运生效后，到2024年，欧盟在俄罗斯原油出口中的份额骤降至**5%**（约70亿美元）。",
+        "如今几乎全部流向中国（**50%**，630亿美元）和印度（**42%**，530亿美元）。观察弧线如何从欧洲转向亚洲。"
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2021",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 1600
+      }
+    },
+    {
+      "title": "印度的新头号供应国",
+      "text": [
+        "从印度来看，俄罗斯在其原油进口中的份额从2021年的**1%**升至2024年的**37%**，超过了伊拉克和沙特阿拉伯。",
+        "面板对比了印度自俄罗斯进口原油的历年变化。"
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2024",
+        "focus": "IND",
+        "metric": "imports",
+        "groups": "EU",
+        "with": "RUS"
+      }
+    },
+    {
+      "title": "继续探索",
+      "text": [
+        "将产品切换为**成品油**或**天然气**，看看其他能源流向如何变化；也可以选择任意国家，查看它的贸易构成。"
+      ],
+      "view": {
+        "product": "ENERGY",
+        "t": "2024",
+        "focus": "RUS",
+        "metric": "exports",
+        "groups": "EU"
+      }
+    }
+  ]
+}

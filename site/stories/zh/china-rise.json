@@ -1,0 +1,122 @@
+{
+  "title": "规模而非财富：中国作为出口国的崛起",
+  "markers": [
+    {
+      "t": "2001",
+      "label": "世贸组织批准中国加入（2001年11月10日）"
+    }
+  ],
+  "sources": [
+    {
+      "name": "WTO press release 252: WTO Ministerial Conference approves China's accession (10 November 2001)",
+      "url": "https://www.wto.org/english/news_e/pres01_e/pr252_e.htm"
+    },
+    {
+      "name": "IMF International Trade in Goods (exports)",
+      "url": "https://data.imf.org/en/datasets/IMF.STA:IMTS"
+    },
+    {
+      "name": "World Bank World Development Indicators (GDP, GDP per capita, population)",
+      "url": "https://databank.worldbank.org/source/world-development-indicators"
+    }
+  ],
+  "steps": [
+    {
+      "title": "经济规模越大，出口越多",
+      "text": [
+        "每个圆点代表2024年的一个经济体，大小表示人口，欧盟计为一个整体。在**184**个经济体中，按对数刻度，货物出口与GDP几乎完全一致：Pearson **r = 0.93**。",
+        "这主要与规模有关。大型经济体什么都生产得更多，包括销往国外的商品。"
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp",
+        "y": "exports",
+        "t": "2024",
+        "focus": "CHN",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "富裕不等于规模大",
+      "text": [
+        "把GDP换成**人均**GDP，关系减弱为 **r = 0.34**。与规模相比，财富对一个国家出口多少的解释力要小得多。",
+        "中国是最明显的例子：2024年它是全球最大的货物出口国（**3.58万亿美元**），但人均GDP仅排第67位，约为**13,300美元**。"
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports",
+        "t": "2024",
+        "focus": "CHN",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "1995年：一个贫穷但已是出口大国的国家",
+      "text": [
+        "1995年，中国人均GDP约为**610美元**，低于其他121个经济体，但出口已排名第7，达**1490亿美元**。",
+        "当时领先的是欧盟（对欧盟以外出口8150亿美元）、美国和日本。"
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports",
+        "t": "1995",
+        "focus": "CHN",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "三十年一气呵成",
+      "text": [
+        "世贸组织于2001年11月批准中国加入。观察代表中国的圆点如何向右上方攀升。",
+        "中国出口在**2007年**超过美国，在**2014年**超过欧盟对世界其他地区的出口。到2024年，出口额是1995年的**24倍**，按现价美元计算的人均GDP增长了约**22倍**。",
+        "越南沿着相似的路径紧随其后：出口排名从第48位升至第15位。"
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports",
+        "t": "1995",
+        "focus": "CHN",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 700
+      }
+    },
+    {
+      "title": "出口对中国的重要性下降",
+      "text": [
+        "中国货物出口占GDP的比重在2006年达到**35%**的峰值，2019年降至**17%**，2024年为**19%**：国内经济的增长甚至快于出口。",
+        "一些经济体对货物出口的依赖程度要高得多：越南占GDP的**82%**，新加坡为**88%**，而美国仅为**7%**。但规模小并不简单地意味着开放：在所有经济体中，两者的关系很弱，甚至略呈正相关（2024年 r = 0.30），因为许多最小的经济体，例如左侧的太平洋岛国，几乎不出口货物。"
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp",
+        "y": "exports_gdp",
+        "t": "2006",
+        "focus": "CHN",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 600
+      }
+    },
+    {
+      "title": "继续探索",
+      "text": [
+        "在坐标轴菜单中选择其他指标，选择**半导体和集成电路**等产品，或点击任意圆点打开该经济体的面板。各经济体之间的相关性并不代表因果关系。"
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports_gdp",
+        "t": "2024",
+        "groups": "EU"
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 import { store, displayTotals, displayOf, isGroup, shortNameOf } from "./data.js";
 import { pearson, spearman, linearFit, describe } from "./stats.js";
 import { escapeHTML as esc } from "./format.js";
+import { t } from "./i18n.js";
 
 export const REGION_COLORS = {
   Africa: "#d08c2b", Americas: "#3a8f75", Asia: "#c2562b", Europe: "#2f5fb3", Oceania: "#8a5cc2",
@@ -45,10 +46,10 @@ export function compareData({ metrics, xId, yId, year, groupsOn, pi, focus, ind 
 }
 
 export function statsHTML(stats, x, y, groupsOn) {
-  if (stats.r == null) return `<small>Not enough data for this year.</small>`;
-  const scales = x.log && y.log ? "log–log" : x.log || y.log ? "one log axis" : "linear";
-  const merged = groupsOn.size ? ` Merged groups count as one point each.` : "";
-  return `<small><b>${esc(stats.text[0].toUpperCase() + stats.text.slice(1))}</b>:
-    Pearson r = ${stats.r.toFixed(2)} (${scales}), Spearman ρ = ${stats.rho.toFixed(2)}, n = ${stats.n}.
-    Correlation across economies; it does not show cause and effect.${merged}</small>`;
+  if (stats.r == null) return `<small>${t("compare.noData")}</small>`;
+  const scales = t(x.log && y.log ? "compare.logLog" : x.log || y.log ? "compare.oneLog" : "compare.linear");
+  return `<small>${t("compare.stats", {
+    text: `<b>${esc(stats.text[0].toUpperCase() + stats.text.slice(1))}</b>`,
+    r: stats.r.toFixed(2), scales, rho: stats.rho.toFixed(2), n: stats.n,
+  })}${groupsOn.size ? t("compare.merged") : ""}</small>`;
 }

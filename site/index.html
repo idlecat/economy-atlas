@@ -13,67 +13,68 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <h1>Trade Atlas</h1>
-      <p>Who trades with whom: goods exports and imports over time</p>
+      <h1 data-i18n="site.title">Trade Atlas</h1>
+      <p data-i18n="site.tagline">Who trades with whom: goods exports and imports over time</p>
     </div>
     <div class="controls">
       <label class="search">
-        <span class="sr-only">Focus on a country or group</span>
-        <input id="search" type="search" list="entity-list" placeholder="Search a country or group…" autocomplete="off">
+        <span class="sr-only" data-i18n="search.label">Focus on a country or group</span>
+        <input id="search" type="search" list="entity-list" placeholder="Search a country or group…" autocomplete="off" data-i18n-attr="placeholder:search.placeholder">
         <datalist id="entity-list"></datalist>
       </label>
-      <button id="stories-btn" class="btn" type="button" title="Guided replays of past events">Stories</button>
-      <button id="world-btn" class="btn ghost" type="button" title="Back to the world overview">World view</button>
+      <button id="stories-btn" class="btn" type="button" title="Guided replays of past events" data-i18n="stories.button" data-i18n-attr="title:stories.buttonTitle">Stories</button>
+      <button id="world-btn" class="btn ghost" type="button" title="Back to the world overview" data-i18n="worldView.button" data-i18n-attr="title:worldView.title">World view</button>
+      <button id="lang-btn" class="btn ghost" type="button"></button>
     </div>
   </header>
 
-  <section class="toolbar" aria-label="Map options">
-    <div class="seg" id="view" role="radiogroup" aria-label="View">
-      <button data-v="map" role="radio" title="Trade on a world map">Map</button>
-      <button data-v="compare" role="radio" title="Plot two metrics against each other, e.g. trade vs GDP">Compare</button>
+  <section class="toolbar" aria-label="Map options" data-i18n-attr="aria-label:toolbar.label">
+    <div class="seg" id="view" role="radiogroup" aria-label="View" data-i18n-attr="aria-label:view.label">
+      <button data-v="map" role="radio" title="Trade on a world map" data-i18n="view.map" data-i18n-attr="title:view.mapTitle">Map</button>
+      <button data-v="compare" role="radio" title="Plot two metrics against each other, e.g. trade vs GDP" data-i18n="view.compare" data-i18n-attr="title:view.compareTitle">Compare</button>
     </div>
     <label class="product-pick">
-      <span class="sr-only">Product</span>
-      <select id="product" aria-label="Product"></select>
+      <span class="sr-only" data-i18n="product.label">Product</span>
+      <select id="product" aria-label="Product" data-i18n-attr="aria-label:product.label"></select>
     </label>
-    <div class="seg" id="freq" role="radiogroup" aria-label="Frequency"></div>
-    <div class="seg" id="metric" role="radiogroup" aria-label="Metric">
-      <button data-v="total" role="radio">Total trade</button>
-      <button data-v="exports" role="radio">Exports</button>
-      <button data-v="imports" role="radio">Imports</button>
-      <button data-v="balance" role="radio">Balance</button>
+    <div class="seg" id="freq" role="radiogroup" aria-label="Frequency" data-i18n-attr="aria-label:freq.label"></div>
+    <div class="seg" id="metric" role="radiogroup" aria-label="Metric" data-i18n-attr="aria-label:metric.label">
+      <button data-v="total" role="radio" data-i18n="metric.total">Total trade</button>
+      <button data-v="exports" role="radio" data-i18n="metric.exports">Exports</button>
+      <button data-v="imports" role="radio" data-i18n="metric.imports">Imports</button>
+      <button data-v="balance" role="radio" data-i18n="metric.balance">Balance</button>
     </div>
     <div id="compare-controls" class="compare-controls" hidden>
-      <label>Y <select id="sy" aria-label="Vertical axis"></select></label>
-      <button id="swap-axes" class="btn" type="button" title="Swap axes" aria-label="Swap axes">⇅</button>
-      <label>X <select id="sx" aria-label="Horizontal axis"></select></label>
+      <label>Y <select id="sy" aria-label="Vertical axis" data-i18n-attr="aria-label:compare.yAxis"></select></label>
+      <button id="swap-axes" class="btn" type="button" title="Swap axes" aria-label="Swap axes" data-i18n-attr="title:compare.swap;aria-label:compare.swap">⇅</button>
+      <label>X <select id="sx" aria-label="Horizontal axis" data-i18n-attr="aria-label:compare.xAxis"></select></label>
     </div>
-    <label id="map-by-wrap" class="map-by">Color map by <select id="map-by" aria-label="Color the map by"></select></label>
-    <div class="seg" id="mode" role="radiogroup" aria-label="Show">
-      <button data-v="0" role="radio" title="Show values for the selected period">Level</button>
-      <button data-v="1" role="radio" title="Change vs. the same period one year earlier">Δ 1 yr</button>
-      <button data-v="5" role="radio" title="Change vs. the same period five years earlier">Δ 5 yr</button>
-      <button data-v="10" role="radio" title="Change vs. the same period ten years earlier">Δ 10 yr</button>
+    <label id="map-by-wrap" class="map-by"><span data-i18n="mapBy.label">Color map by</span> <select id="map-by" aria-label="Color the map by" data-i18n-attr="aria-label:mapBy.aria"></select></label>
+    <div class="seg" id="mode" role="radiogroup" aria-label="Show" data-i18n-attr="aria-label:mode.label">
+      <button data-v="0" role="radio" title="Show values for the selected period" data-i18n="mode.level" data-i18n-attr="title:mode.levelTitle">Level</button>
+      <button data-v="1" role="radio" title="Change vs. the same period one year earlier" data-i18n="mode.1" data-i18n-attr="title:mode.1Title">Δ 1 yr</button>
+      <button data-v="5" role="radio" title="Change vs. the same period five years earlier" data-i18n="mode.5" data-i18n-attr="title:mode.5Title">Δ 5 yr</button>
+      <button data-v="10" role="radio" title="Change vs. the same period ten years earlier" data-i18n="mode.10" data-i18n-attr="title:mode.10Title">Δ 10 yr</button>
     </div>
     <div class="groups">
-      <span class="label">Treat as one:</span>
+      <span class="label" data-i18n="groups.label">Treat as one:</span>
       <div id="group-chips" class="chips"></div>
     </div>
   </section>
 
   <main class="layout">
-    <section class="map-wrap" aria-label="World map">
+    <section class="map-wrap" aria-label="World map" data-i18n-attr="aria-label:map.label">
       <div id="map"></div>
       <div id="compare" hidden></div>
       <div id="map-title" class="map-title"></div>
       <div id="legend" class="legend"></div>
       <div class="zoom">
-        <button id="zoom-in" type="button" aria-label="Zoom in">+</button>
-        <button id="zoom-out" type="button" aria-label="Zoom out">−</button>
-        <button id="zoom-reset" type="button" aria-label="Reset zoom">⟲</button>
+        <button id="zoom-in" type="button" aria-label="Zoom in" data-i18n-attr="aria-label:zoom.in">+</button>
+        <button id="zoom-out" type="button" aria-label="Zoom out" data-i18n-attr="aria-label:zoom.out">−</button>
+        <button id="zoom-reset" type="button" aria-label="Reset zoom" data-i18n-attr="aria-label:zoom.reset">⟲</button>
       </div>
       <div id="tooltip" class="tooltip" role="tooltip" hidden></div>
-      <div id="loading" class="loading">Loading data…</div>
+      <div id="loading" class="loading" data-i18n="loading">Loading data…</div>
     </section>
 
     <div class="side">
@@ -82,29 +83,29 @@
     </div>
   </main>
 
-  <section class="timeline" aria-label="Time">
-    <button id="play" class="btn play" type="button" aria-label="Play through time">▶</button>
+  <section class="timeline" aria-label="Time" data-i18n-attr="aria-label:time.label">
+    <button id="play" class="btn play" type="button" aria-label="Play through time" data-i18n-attr="aria-label:time.play">▶</button>
     <div class="slider-wrap">
       <div id="spark" class="spark"></div>
-      <input id="year" type="range" min="0" max="0" step="1" aria-label="Time period">
+      <input id="year" type="range" min="0" max="0" step="1" aria-label="Time period" data-i18n-attr="aria-label:time.period">
     </div>
     <output id="year-label" class="year-label" for="year"></output>
   </section>
 
   <footer class="footer">
     <div id="source-line"></div>
-    <button id="about-btn" class="linklike" type="button">About the data &amp; methodology</button>
+    <button id="about-btn" class="linklike" type="button" data-i18n="about.button">About the data &amp; methodology</button>
   </footer>
 
   <dialog id="stories-dialog" aria-labelledby="stories-title">
-    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
-    <h2 id="stories-title">Stories</h2>
-    <p class="note">Guided replays of moments that reshaped world trade.</p>
+    <form method="dialog"><button class="close" aria-label="Close" data-i18n-attr="aria-label:close">×</button></form>
+    <h2 id="stories-title" data-i18n="stories.button">Stories</h2>
+    <p class="note" data-i18n="stories.intro">Guided replays of moments that reshaped world trade.</p>
     <ul id="stories-list" class="stories-list"></ul>
   </dialog>
 
   <dialog id="about">
-    <form method="dialog"><button class="close" aria-label="Close">×</button></form>
+    <form method="dialog"><button class="close" aria-label="Close" data-i18n-attr="aria-label:close">×</button></form>
     <div id="about-body"></div>
   </dialog>
 

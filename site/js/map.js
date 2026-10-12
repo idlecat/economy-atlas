@@ -1,6 +1,7 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import * as topojson from "https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/+esm";
 import { store, displayOf, groupOf, membersAt } from "./data.js";
+import { t } from "./i18n.js";
 
 /** Centroid of the largest polygon(s): keeps France's centroid in Europe, not between it and Guiana. */
 function mainCentroid(geom) {
@@ -29,7 +30,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
     if (gs.length) groupCentroid.set(g.id, mainCentroid(topojson.merge(topo, gs)));
   }
 
-  const svg = d3.select(container).append("svg").attr("role", "img").attr("aria-label", "World trade map");
+  const svg = d3.select(container).append("svg").attr("role", "img").attr("aria-label", t("map.aria"));
   const projection = d3.geoEqualEarth();
   const path = d3.geoPath(projection);
   const root = svg.append("g");

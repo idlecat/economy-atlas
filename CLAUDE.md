@@ -110,12 +110,14 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
 - **`panel.js`:** the side panel and `lineChart`, which is reused in tooltips. The Economy section shows indicators for the focus and correlates year-on-year % changes of exports and nominal GDP (`growthPairs`); levels are deliberately not correlated.
 - **Compare view:** `metrics.js` `buildMetrics` defines every plottable metric (`value(key, year)`): trade from the active product's **annual** totals, World Bank indicators, and trade/GDP ratios. `compare.js` picks the dots (same display keys as the map, respecting merged groups) and computes Pearson r on the plotted scale (log10 on log axes), Spearman ρ and a least-squares fit (`stats.js`). `scatter.js` draws it. Metrics with units usd, usd_pc or people get log axes (except signed ones: balance, FDI, current account), and so do the trade/GDP ratios, which span 0.1% to over 300%; points ≤0 are dropped on log axes. Entering Compare forces annual data. State keys: `view`, `sx`, `sy`; the map's world view can be colored by a metric via `mapBy`.
 
+Languages (`i18n.js`): English and Simplified Chinese. `site/i18n/<lang>.json` has `ui` strings by key (may contain HTML; `t(key, vars)` fills `{placeholders}` unescaped, so callers escape data) and, for non-English, `names` of entities, regions, groups, products and indicators. `nameOf`, `productName`, `regionName` and `groupNote` in `data.js` and metric names in `metrics.js` return the translated name, falling back to the English in the data files. Number and period formats are locale-aware (`format.js`: Chinese uses 亿/万亿; `time.js`: "2008年9月"). The language comes from `?lang=`, then localStorage, then the browser, and switching reloads the page. Static HTML text uses `data-i18n` / `data-i18n-attr`. Translated stories live in `site/stories/<lang>/` with the same ids. Don't name a local variable `t` in a module that imports it. Chinese country names are CLDR short names with a few overrides to match the English names (e.g. 中国香港, 台湾, 约旦河西岸和加沙); region names are UN M49's official Chinese. Source names, citations and licences are not translated. `tests/test_i18n.py` requires the same keys and placeholders in every language, a name for every entity/group/product/indicator in config, and a translation of every story with identical views, replays, marker times and source URLs.
+
 Theming uses CSS variables with a `prefers-color-scheme` dark mode, and the JS palettes in `palettes()` follow it. On screens ≤980px, `.layout` uses `display: contents` so blocks can be reordered with `order`.
 
 ## Constraints
 
 - This is a public site, so attribution matters. Keep `META` in source modules, the footer and the About dialog accurate.
-- When aggregation logic changes, update the methodology text in `renderSources` (`main.js`). Current caveats:
+- When aggregation logic changes, update the methodology text (`about.*` keys in `site/i18n/en.json` **and** `zh.json`; `renderSources` in `main.js` assembles it). Current caveats:
   - Figures are as reported by the focus country.
   - Exports are valued FOB and imports CIF.
   - Mirror data for Taiwan.

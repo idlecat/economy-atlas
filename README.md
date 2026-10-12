@@ -10,6 +10,7 @@ An interactive world map of bilateral goods trade, built as a static website.
 - **Focus.** Click a country or bloc to see its partners, its trend over time, and its top-partner ranking. Click a partner to compare the pair over time.
 - **Groupings.** Each bloc can be treated as one entity or split into its countries: EU, ASEAN, GCC, Africa, South America, Central America & Caribbean, and Central Asia. When a bloc is merged, trade between its members is excluded, and membership follows each year (the UK is in the EU through 2020).
 - **Shareable state.** The URL hash keeps the current view, e.g. `#focus=CHN&year=2025&metric=exports&groups=EU,ASEAN`.
+- **Languages.** English and Simplified Chinese (button in the header, or `?lang=zh`), including the stories and the methodology. Strings are in `site/i18n/`; Chinese country names follow Unicode CLDR and region names UN M49.
 - **Attribution.** Sources are shown in the footer and in the "About the data" dialog.
 
 ## Data sources

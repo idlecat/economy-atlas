@@ -1,9 +1,12 @@
-// Number formatting. Inputs are USD millions.
+// Number formatting. Inputs are USD millions. Chinese uses 万 (1e4), 亿 (1e8) and 万亿 (1e12).
+import { getLang } from "./i18n.js";
 
-export function money(v, { sign = false } = {}) {
+/** "$1.6T" / "1.6万亿美元". `compact` drops the currency in Chinese, for axis ticks. */
+export function money(v, { sign = false, compact = false } = {}) {
   if (v == null || Number.isNaN(v)) return "—";
   const s = v < 0 ? "−" : sign && v > 0 ? "+" : "";
   const a = Math.abs(v);
+  if (getLang() === "zh") return s + moneyZh(a, compact ? "" : "美元");
   let out;
   if (a >= 1e6) out = `${trim(a / 1e6, 2)}T`;
   else if (a >= 1e3) out = `${trim(a / 1e3, a >= 1e5 ? 0 : 1)}B`;
@@ -11,6 +14,13 @@ export function money(v, { sign = false } = {}) {
   else if (a > 0) out = `${trim(a * 1e3, 0)}K`;
   else return "$0";
   return `${s}$${out}`;
+}
+
+function moneyZh(a, unit) {
+  if (a >= 1e6) return `${trim(a / 1e6, 2)}万亿${unit}`;
+  if (a >= 100) return `${trim(a / 100, a >= 1e3 ? 0 : 1)}亿${unit}`;
+  if (a >= 0.01) return `${trim(a * 100, 0)}万${unit}`;
+  return a > 0 ? `${trim(a * 1e6, 0)}${unit}` : `0${unit}`;
 }
 
 function trim(n, d) {
@@ -41,13 +51,17 @@ export function escapeHTML(s) {
 }
 
 /** Format an indicator value by unit: usd (USD millions), usd_pc, people, pct. */
-export function fmtUnit(v, unit, { sign = false } = {}) {
+export function fmtUnit(v, unit, { sign = false, compact = false } = {}) {
   if (v == null || Number.isNaN(v)) return "—";
   switch (unit) {
-    case "usd": return money(v, { sign });
-    case "usd_pc": return `${v < 0 ? "−" : ""}$${Math.round(Math.abs(v)).toLocaleString("en-US")}`;
+    case "usd": return money(v, { sign, compact });
+    case "usd_pc": {
+      const n = Math.round(Math.abs(v)).toLocaleString("en-US");
+      return `${v < 0 ? "−" : ""}${getLang() === "zh" ? `${n}美元` : `$${n}`}`;
+    }
     case "people": {
       const a = Math.abs(v);
+      if (getLang() === "zh") return a >= 1e8 ? `${trim(a / 1e8, 2)}亿` : a >= 1e4 ? `${trim(a / 1e4, a >= 1e6 ? 0 : 1)}万` : String(Math.round(a));
       return a >= 1e9 ? `${trim(a / 1e9, 2)}B` : a >= 1e6 ? `${trim(a / 1e6, a >= 1e8 ? 0 : 1)}M` : a >= 1e3 ? `${trim(a / 1e3, 0)}K` : String(Math.round(a));
     }
     case "pct": return `${sign && v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 0 : 1)}%`;

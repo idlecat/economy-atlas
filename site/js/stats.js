@@ -1,4 +1,5 @@
 // Correlation helpers for the Compare view and the panel's growth chart.
+import { t } from "./i18n.js";
 
 function mean(a) { return a.reduce((s, v) => s + v, 0) / a.length; }
 
@@ -43,8 +44,9 @@ export function linearFit(xs, ys) {
 
 /** Plain-language strength of a correlation coefficient. */
 export function describe(r) {
-  if (r == null) return "not enough data";
+  if (r == null) return t("corr.none");
   const a = Math.abs(r);
-  const s = a >= 0.8 ? "very strong" : a >= 0.6 ? "strong" : a >= 0.4 ? "moderate" : a >= 0.2 ? "weak" : "little or no";
-  return a < 0.2 ? `${s} correlation` : `${s} ${r > 0 ? "positive" : "negative"} correlation`;
+  if (a < 0.2) return t("corr.little");
+  const strength = t(`corr.${a >= 0.8 ? "veryStrong" : a >= 0.6 ? "strong" : a >= 0.4 ? "moderate" : "weak"}`);
+  return t(r > 0 ? "corr.positive" : "corr.negative", { strength });
 }

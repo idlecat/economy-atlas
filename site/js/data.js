@@ -3,6 +3,7 @@
 // active slice: a frequency (store.freq) of all goods (data/<freq>/) or of one product
 // (store.product, data/products/<product>/<freq>/).
 import { yearOf } from "./time.js";
+import { names, t } from "./i18n.js";
 
 export const store = {
   meta: null,
@@ -60,7 +61,8 @@ export function products() {
 }
 
 export function productName(id) {
-  return id === "TOTAL" ? "All goods" : products().find((p) => p.id === id)?.name ?? id;
+  if (id === "TOTAL") return t("product.all");
+  return names("products", id) ?? products().find((p) => p.id === id)?.name ?? id;
 }
 
 /** {product: series} of an entity's annual trade with the world, by product (CEPII BACI). */
@@ -87,12 +89,30 @@ export function loadFlows(code, freq = store.freq, product = store.product) {
   return flowsCache.get(key);
 }
 
+// Names in the interface language (i18n "names"), falling back to the English names in meta.json.
+
+function entityName(code) {
+  return names("entities", code) ?? store.entities[code]?.name ?? code;
+}
+
 export function nameOf(code) {
-  return store.groupById.get(code)?.name ?? store.entities[code]?.name ?? code;
+  const g = store.groupById.get(code);
+  return g ? names("groups", code)?.name ?? g.name : entityName(code);
 }
 
 export function shortNameOf(code) {
-  return store.groupById.get(code)?.short ?? store.entities[code]?.name ?? code;
+  const g = store.groupById.get(code);
+  return g ? names("groups", code)?.short ?? g.short : entityName(code);
+}
+
+export function groupNote(code) {
+  const g = store.groupById.get(code);
+  return names("groups", code)?.note ?? g?.note;
+}
+
+/** UN M49 region or sub-region name. */
+export function regionName(name) {
+  return names("regions", name) ?? name;
 }
 
 export function isGroup(code) {

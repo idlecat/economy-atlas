@@ -1,10 +1,16 @@
 // Period helpers. Periods are strings: "2008" (annual), "2008-Q4" (quarterly), "2008-09" (monthly).
+import { getLang, t } from "./i18n.js";
 
 export const FREQS = {
-  A: { label: "Annual", perYear: 1, playMs: 700 },
-  Q: { label: "Quarterly", perYear: 4, playMs: 400 },
-  M: { label: "Monthly", perYear: 12, playMs: 220 },
+  A: { perYear: 1, playMs: 700 },
+  Q: { perYear: 4, playMs: 400 },
+  M: { perYear: 12, playMs: 220 },
 };
+
+/** "Annual", "Monthly", … in the interface language. */
+export function freqLabel(f) {
+  return FREQS[f] ? t(`freq.${f}`) : f;
+}
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -18,10 +24,14 @@ export function yearOf(period) {
   return +period.slice(0, 4);
 }
 
-/** "2008", "Q4 2008", "Sep 2008" */
+/** "2008", "Q4 2008", "Sep 2008" (Chinese: "2008年", "2008年第4季度", "2008年9月") */
 export function periodLabel(period) {
   if (!period) return "—";
   const f = freqOf(period);
+  if (getLang() === "zh") {
+    const y = `${period.slice(0, 4)}年`;
+    return f === "A" ? y : f === "Q" ? `${y}第${period.slice(6)}季度` : `${y}${+period.slice(5, 7)}月`;
+  }
   if (f === "A") return period;
   if (f === "Q") return `${period.slice(5)} ${period.slice(0, 4)}`;
   return `${MONTHS[+period.slice(5, 7) - 1]} ${period.slice(0, 4)}`;

@@ -2,15 +2,16 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import {
   store, loadBase, setSlice, availableFreqs, loadFlows, loadBreakdown, hasFlows, nameOf, shortNameOf,
   isGroup, partnerSeries, displayTotals, worldSeries, metricAt, changeAt, defaultPeriodIndex, emptySeries,
-  products, productName, loadIndicators, loadTotals,
+  products, productName, loadIndicators, loadTotals, groupNote, regionName,
 } from "./data.js";
 import { buildMetrics } from "./metrics.js";
 import { createScatter } from "./scatter.js";
 import { compareData, statsHTML, REGION_COLORS } from "./compare.js";
 import { createMap } from "./map.js";
-import { renderPanel, lineChart, METRIC_LABEL } from "./panel.js";
+import { renderPanel, lineChart, METRICS, metricLabel } from "./panel.js";
 import { initStories, activeStory, startStory, stopStory } from "./stories.js";
-import { FREQS, periodLabel, nearestIndex } from "./time.js";
+import { FREQS, freqLabel, periodLabel, nearestIndex } from "./time.js";
+import { initI18n, t, getLang, setLang, LANGS } from "./i18n.js";
 import { money, ratioPct, share, fmtUnit, escapeHTML as esc } from "./format.js";
 
 const $ = (s) => document.querySelector(s);
@@ -194,23 +195,23 @@ function renderCompare(metrics, ind) {
   const d = compareData({ metrics, xId: state.sx, yId: state.sy, year: year(), groupsOn: state.groupsOn, pi: state.pi, focus: state.focus, ind });
   current.compare = d;
   scatter.render({ points: d.points, x: d.x, y: d.y, fit: d.stats.fit, animate: true });
-  $("#map-title").innerHTML = `${esc(d.y.name)} vs. ${esc(d.x.name)}, ${year()}${statsHTML(d.stats, d.x, d.y, state.groupsOn)}`;
+  $("#map-title").innerHTML = t("compare.title", { y: esc(d.y.name), x: esc(d.x.name), year: year() }) + statsHTML(d.stats, d.x, d.y, state.groupsOn);
   const regions = [...new Set(d.points.map((p) => p.region))];
   $("#legend").innerHTML = `<div class="region-key">${Object.entries(REGION_COLORS).filter(([r]) => regions.includes(r))
-    .map(([r, c]) => `<span><i style="background:${c}"></i>${r}</span>`).join("")}${regions.includes("Group") ? `<span><i style="background:#5d6878"></i>Merged group</span>` : ""}</div>
-    <div>Dot size: population. Click a dot for details.</div>`;
+    .map(([r, c]) => `<span><i style="background:${c}"></i>${esc(regionName(r))}</span>`).join("")}${regions.includes("Group") ? `<span><i style="background:#5d6878"></i>${t("compare.mergedGroup")}</span>` : ""}</div>
+    <div>${t("compare.legendNote")}</div>`;
 }
 
 function showDotTip(p, ev) {
   if (!p) { tip.hidden = true; return; }
   const { x, y } = current.compare;
   const pop = current.metrics.get("pop")?.value(p.key, year());
-  tip.innerHTML = `<h4>${esc(nameOf(p.key))}</h4><div class="sub">${year()}</div>
+  tip.innerHTML = `<h4>${esc(nameOf(p.key))}</h4><div class="sub">${label()}</div>
     <table>
       <tr><td>${esc(y.name)}</td><td>${fmtUnit(p.y, y.unit)}</td></tr>
       <tr><td>${esc(x.name)}</td><td>${fmtUnit(p.x, x.unit)}</td></tr>
-      ${pop ? `<tr><td>Population</td><td>${fmtUnit(pop, "people")}</td></tr>` : ""}
-    </table><div class="hint">Click for details</div>`;
+      ${pop ? `<tr><td>${esc(current.metrics.get("pop").name)}</td><td>${fmtUnit(pop, "people")}</td></tr>` : ""}
+    </table><div class="hint">${t("tip.clickDetails")}</div>`;
   tip.hidden = false;
   moveTip(ev);
 }
@@ -222,11 +223,11 @@ function syncMetricSelects(metrics) {
     if (el.dataset.sig !== sig) {
       const groups = {};
       for (const m of metrics.values()) {
-        if (!includeTrade && m.group === "Trade") continue;
+        if (!includeTrade && m.group === "trade") continue;
         (groups[m.group] ??= []).push(m);
       }
-      el.innerHTML = (sel === "#map-by" ? `<option value="trade">Trade (map metric)</option>` : "") +
-        Object.entries(groups).map(([g, ms]) => `<optgroup label="${esc(g)}">${ms.map((m) =>
+      el.innerHTML = (sel === "#map-by" ? `<option value="trade">${t("mapBy.trade")}</option>` : "") +
+        Object.entries(groups).map(([g, ms]) => `<optgroup label="${esc(t(`metricGroup.${g}`))}">${ms.map((m) =>
           `<option value="${m.id}">${esc(m.name)}</option>`).join("")}</optgroup>`).join("");
       el.dataset.sig = sig;
     }
@@ -269,22 +270,21 @@ function buildArcs(partners) {
 
 function renderTitle(byMetric = null) {
   if (byMetric) {
-    $("#map-title").innerHTML = `${esc(byMetric.name)}, ${year()}<small>${esc(byMetric.description ?? "")}${byMetric.group === "Economy" ? " · World Bank WDI" : ""}</small>`;
+    $("#map-title").innerHTML = `${t("title.indicator", { name: esc(byMetric.name), year: year() })}<small>${esc(byMetric.description ?? "")}${byMetric.group === "economy" ? " · World Bank WDI" : ""}</small>`;
     return;
   }
   const { focus, metric, back, product } = state;
-  const prod = product === "TOTAL" ? "" : `${productName(product).toLowerCase()} `;
-  const what = prod && metric === "total" ? "trade" : METRIC_LABEL[metric];
-  const prep = { exports: "to", imports: "from" }[metric] ?? "with";
+  // "China: crude oil exports to each partner, 2024" / "Total trade with the world, 2024"
+  const prod = product === "TOTAL" ? "" : productName(product).toLowerCase();
+  const what = prod ? t(`title.what.${metric}`, { product: prod }) : metricLabel(metric);
   const head = focus
-    ? `${esc(nameOf(focus))}: ${esc(prod)}${what} ${prep} each partner, ${label()}`
-    : esc(`${prod}${what}`.replace(/^./, (c) => c.toUpperCase())) + ` ${prep} the world, ${label()}`;
-  const unit = product !== "TOTAL" ? "goods by product (CEPII BACI), current US$"
-    : state.freq === "M" ? "monthly goods trade, current US$" : "goods, current US$";
+    ? t(`title.focus.${metric}`, { name: esc(nameOf(focus)), what: esc(what), period: label() })
+    : t(`title.world.${metric}`, { what: esc(what[0].toUpperCase() + what.slice(1)), period: label() });
+  const unit = t(product !== "TOTAL" ? "title.unit.product" : state.freq === "M" ? "title.unit.monthly" : "title.unit.goods");
   const base = state.pi - backN();
-  const sub = !back ? unit[0].toUpperCase() + unit.slice(1)
-    : base >= 0 ? `Change since ${label(base)} · ${unit}`
-    : `No data ${state.back} year${state.back > 1 ? "s" : ""} earlier: pick a later period or a shorter change`;
+  const sub = !back ? unit
+    : base >= 0 ? t("title.changeSince", { period: label(base), unit })
+    : t(state.back > 1 ? "title.noBaseN" : "title.noBase1", { n: state.back });
   $("#map-title").innerHTML = `${head}<small>${sub}</small>`;
 }
 
@@ -310,10 +310,10 @@ function renderLegend(sc = current.scale) {
     .text((t) => sc.fmt(t));
   const legendNote = state.focus && !current.byMetric
     ? `<div class="arc-key">${state.metric === "total"
-      ? `<span style="color:var(--accent)">Top 10 partners</span>`
-      : `<span class="x">${state.metric === "balance" ? "Surplus with" : "Exports to"}</span><span class="m">${state.metric === "balance" ? "Deficit with" : "Imports from"}</span>`}</div>`
+      ? `<span style="color:var(--accent)">${t("legend.top10")}</span>`
+      : `<span class="x">${t(state.metric === "balance" ? "legend.surplus" : "legend.exportsTo")}</span><span class="m">${t(state.metric === "balance" ? "legend.deficit" : "legend.importsFrom")}</span>`}</div>`
     : "";
-  el.insertAdjacentHTML("beforeend", `<div>No data <span style="display:inline-block;width:10px;height:10px;background:var(--land);border-radius:2px;vertical-align:middle"></span></div>${legendNote}`);
+  el.insertAdjacentHTML("beforeend", `<div>${t("legend.noData")} <span style="display:inline-block;width:10px;height:10px;background:var(--land);border-radius:2px;vertical-align:middle"></span></div>${legendNote}`);
 }
 
 /** Map legend position t∈[0,1] to a color by bisecting the scale's pos() function. */
@@ -353,8 +353,9 @@ function renderSpark() {
       .append("title").text(`${periodLabel(m.t)}: ${m.label}`);
   }
   svg.append("circle").attr("cx", x(state.pi)).attr("cy", y(vals[state.pi] ?? 0)).attr("r", 3).attr("fill", "var(--accent)");
-  const what = state.product === "TOTAL" ? "total trade" : `${productName(state.product).toLowerCase()} trade`;
-  svg.append("text").attr("x", 8).attr("y", 11).text(`${state.focus ? nameOf(state.focus) : "World"} ${what}`);
+  svg.append("text").attr("x", 8).attr("y", 11).text(t(state.product === "TOTAL" ? "spark.total" : "spark.product", {
+    name: state.focus ? nameOf(state.focus) : t("world"), product: productName(state.product).toLowerCase(),
+  }));
 }
 
 // ------------------------------------------------------------------ tooltip
@@ -366,41 +367,43 @@ function showTip(key, ev, feature) {
   const { focus, pi } = state;
   let body;
   if (key === focus || (feature?.id === focus)) {
-    body = `<h4>${esc(nameOf(focus))}</h4><div class="sub">Selected · ${label()}</div>`;
+    body = `<h4>${esc(nameOf(focus))}</h4><div class="sub">${t("tip.selected")} · ${label()}</div>`;
   } else if (!current) {
     return;
   } else {
     const s = current.seriesMap.get(key);
     const name = nameOf(key);
-    const memberOf = feature?.id && feature.id !== key ? ` (incl. ${esc(feature.properties.name)})` : "";
+    // shapes without an entity id (e.g. Antarctica) only have Natural Earth's English name
+    const shapeName = feature ? (feature.id ? nameOf(feature.id) : feature.properties.name) : name;
+    const memberOf = feature?.id && feature.id !== key ? t("tip.incl", { name: esc(shapeName) }) : "";
     if (!s) {
-      body = `<h4>${esc(feature?.properties?.name ?? name)}</h4><div class="sub">No data${focus ? ` with ${esc(nameOf(focus))}` : ""}</div>`;
+      body = `<h4>${esc(shapeName)}</h4><div class="sub">${focus ? t("tip.noDataWith", { name: esc(nameOf(focus)) }) : t("legend.noData")}</div>`;
     } else if (focus) {
       const fs = current.focusSeries;
       const fn = esc(shortNameOf(focus));
       body = `<h4>${esc(name)}${memberOf}</h4>
-        <div class="sub">with ${esc(nameOf(focus))}, ${label()}</div>
+        <div class="sub">${t("tip.with", { name: esc(nameOf(focus)), period: label() })}</div>
         <table>
-          <tr><td>${fn} exports to</td><td>${money(metricAt(s, pi, "exports"))}</td></tr>
-          <tr><td>${fn} imports from</td><td>${money(metricAt(s, pi, "imports"))}</td></tr>
-          <tr><td>Balance</td><td>${money(metricAt(s, pi, "balance"), { sign: true })}</td></tr>
-          <tr><td>Share of ${fn}'s trade</td><td>${share(metricAt(s, pi, "total"), metricAt(fs, pi, "total")) || "—"}</td></tr>
+          <tr><td>${t("tip.exportsTo", { name: fn })}</td><td>${money(metricAt(s, pi, "exports"))}</td></tr>
+          <tr><td>${t("tip.importsFrom", { name: fn })}</td><td>${money(metricAt(s, pi, "imports"))}</td></tr>
+          <tr><td>${t("metric.balance")}</td><td>${money(metricAt(s, pi, "balance"), { sign: true })}</td></tr>
+          <tr><td>${t("tip.shareOf", { name: fn })}</td><td>${share(metricAt(s, pi, "total"), metricAt(fs, pi, "total")) || "—"}</td></tr>
           ${changeRow(s)}
         </table>
         <div class="chart" id="tip-chart"></div>
-        <div class="hint">Click to focus on ${esc(name)}</div>`;
+        <div class="hint">${t("tip.clickFocus", { name: esc(name) })}</div>`;
     } else {
       body = `<h4>${esc(name)}${memberOf}</h4>
-        <div class="sub">${isGroup(key) ? "Trade with non-members" : "Trade with the world"}, ${label()}</div>
+        <div class="sub">${t(isGroup(key) ? "tip.nonMembers" : "tip.world", { period: label() })}</div>
         <table>
-          <tr><td>Exports</td><td>${money(metricAt(s, pi, "exports"))}</td></tr>
-          <tr><td>Imports</td><td>${money(metricAt(s, pi, "imports"))}</td></tr>
-          <tr><td>Balance</td><td>${money(metricAt(s, pi, "balance"), { sign: true })}</td></tr>
+          <tr><td>${t("metric.exports")}</td><td>${money(metricAt(s, pi, "exports"))}</td></tr>
+          <tr><td>${t("metric.imports")}</td><td>${money(metricAt(s, pi, "imports"))}</td></tr>
+          <tr><td>${t("metric.balance")}</td><td>${money(metricAt(s, pi, "balance"), { sign: true })}</td></tr>
           ${changeRow(s)}
           ${current.byMetric ? `<tr><td>${esc(current.byMetric.name)}</td><td>${fmtUnit(current.byMetric.value(key, year()), current.byMetric.unit)}</td></tr>` : ""}
         </table>
         <div class="chart" id="tip-chart"></div>
-        <div class="hint">Click to see trading partners</div>`;
+        <div class="hint">${t("tip.clickPartners")}</div>`;
     }
   }
   tip.innerHTML = body;
@@ -415,7 +418,7 @@ function changeRow(s) {
   const b = compareN();
   const metric = state.metric === "balance" ? "total" : state.metric;
   const r = changeAt(s, state.pi, metric, b);
-  return `<tr><td>${METRIC_LABEL[metric]} vs ${label(state.pi - b)}</td><td class="${r == null ? "" : r >= 1 ? "up" : "down"}">${ratioPct(r)}</td></tr>`;
+  return `<tr><td>${t("tip.changeVs", { metric: metricLabel(metric), period: label(state.pi - b) })}</td><td class="${r == null ? "" : r >= 1 ? "up" : "down"}">${ratioPct(r)}</td></tr>`;
 }
 
 function moveTip(ev) {
@@ -508,7 +511,7 @@ function syncControls() {
   for (const b of document.querySelectorAll("#freq button")) {
     b.setAttribute("aria-checked", b.dataset.v === state.freq);
     b.disabled = !freqs.includes(b.dataset.v);
-    b.title = b.disabled ? "Monthly data is available for all goods only" : "";
+    b.title = b.disabled ? t("freq.allGoodsOnly") : "";
   }
   $("#product").value = state.product;
   const compare = state.view === "compare";
@@ -542,15 +545,15 @@ function setupControls() {
   $("#play").addEventListener("click", togglePlay);
 
   const productOpts = (kind) => products().filter((p) => p.kind === kind)
-    .map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
-  $("#product").innerHTML = `<option value="TOTAL">All goods</option>${products().length ? `
-    <optgroup label="Sectors">${productOpts("sector")}</optgroup>
-    <optgroup label="Commodities">${productOpts("commodity")}</optgroup>` : ""}`;
+    .map((p) => `<option value="${p.id}">${esc(productName(p.id))}</option>`).join("");
+  $("#product").innerHTML = `<option value="TOTAL">${esc(productName("TOTAL"))}</option>${products().length ? `
+    <optgroup label="${t("product.sectors")}">${productOpts("sector")}</optgroup>
+    <optgroup label="${t("product.commodities")}">${productOpts("commodity")}</optgroup>` : ""}`;
   $("#product").hidden = !products().length;
   $("#product").addEventListener("change", (e) => setProduct(e.target.value));
 
   const freqs = availableFreqs();
-  $("#freq").innerHTML = freqs.map((f) => `<button data-v="${f}" role="radio">${FREQS[f]?.label ?? f}</button>`).join("");
+  $("#freq").innerHTML = freqs.map((f) => `<button data-v="${f}" role="radio">${freqLabel(f)}</button>`).join("");
   $("#freq").hidden = freqs.length < 2;
   $("#freq").addEventListener("click", (e) => {
     const v = e.target.closest("button")?.dataset.v;
@@ -579,8 +582,8 @@ function setupControls() {
     b.type = "button";
     b.className = "chip";
     b.dataset.g = g.id;
-    b.textContent = g.short;
-    b.title = g.name;
+    b.textContent = shortNameOf(g.id);
+    b.title = nameOf(g.id);
     b.addEventListener("click", () => {
       if (state.groupsOn.has(g.id)) {
         state.groupsOn.delete(g.id);
@@ -595,18 +598,19 @@ function setupControls() {
     chips.append(b);
   }
 
-  // search
+  // search: by name in the interface language, the English name or the code
   const options = [
-    ...store.groups.map((g) => ({ code: g.id, name: g.name })),
-    ...Object.entries(store.entities).filter(([, e]) => e.reporter).map(([code, e]) => ({ code, name: e.name })),
-  ].sort((a, b) => a.name.localeCompare(b.name));
+    ...store.groups.map((g) => ({ code: g.id, name: nameOf(g.id), en: g.name })),
+    ...Object.entries(store.entities).filter(([, e]) => e.reporter).map(([code, e]) => ({ code, name: nameOf(code), en: e.name })),
+  ].sort((a, b) => a.name.localeCompare(b.name, getLang()));
   $("#entity-list").innerHTML = options.map((o) => `<option value="${esc(o.name)}"></option>`).join("");
   const search = $("#search");
   const pick = () => {
     const q = search.value.trim().toLowerCase();
     if (!q) return;
-    const hit = options.find((o) => o.name.toLowerCase() === q || o.code.toLowerCase() === q)
-      ?? options.find((o) => o.name.toLowerCase().startsWith(q));
+    const names = (o) => [o.name, o.en].map((n) => n.toLowerCase());
+    const hit = options.find((o) => names(o).includes(q) || o.code.toLowerCase() === q)
+      ?? options.find((o) => names(o).some((n) => n.startsWith(q)));
     if (hit) { setFocus(hit.code); search.value = ""; search.blur(); }
   };
   search.addEventListener("change", pick);
@@ -626,6 +630,11 @@ function setupControls() {
   });
 
   $("#about-btn").addEventListener("click", () => $("#about").showModal());
+  // the button offers the other language (English <-> 中文)
+  const other = Object.keys(LANGS).find((l) => l !== getLang());
+  $("#lang-btn").textContent = LANGS[other];
+  $("#lang-btn").lang = other;
+  $("#lang-btn").addEventListener("click", () => setLang(other));
   dark.addEventListener("change", () => { current = null; update(); });
   new ResizeObserver(() => current && renderSpark()).observe($("#spark"));
 }
@@ -637,65 +646,74 @@ function renderSources() {
   const { imf_imts: imf, un_m49: m49, natural_earth: ne } = src;
   const baci = store.meta.products ? src.cepii_baci : null;
   const wb = src.worldbank_wdi;
+  const link = (url, text) => `<a href="${url}" target="_blank" rel="noopener">${esc(text)}</a>`;
   const span = (f) => `${periodLabel(store.meta.periods[f][0])}–${periodLabel(store.meta.periods[f].at(-1))}`;
-  const coverage = availableFreqs().map((f) => `${FREQS[f]?.label.toLowerCase() ?? f} ${span(f)}`).join("; ");
-  $("#source-line").innerHTML = `Sources: <a href="${imf.url}" target="_blank" rel="noopener">IMF, International Trade in Goods by partner country (IMTS)</a>, accessed ${imf.accessed}${baci ? `; by product: <a href="${baci.url}" target="_blank" rel="noopener">CEPII BACI</a> (${esc(baci.terms)})` : ""}.
-    ${wb ? ` Economic indicators: <a href="${wb.url}" target="_blank" rel="noopener">World Bank WDI</a> (${esc(wb.terms)}).` : ""}
-    Regions: <a href="${m49.url}" target="_blank" rel="noopener">UN M49</a>. Boundaries: <a href="${ne.url}" target="_blank" rel="noopener">Natural Earth</a>.`;
+  const coverage = availableFreqs().map((f) => `${freqLabel(f).toLowerCase()} ${span(f)}`).join(t("listSep"));
+  // Source names, citations and licences stay in their original language.
+  $("#source-line").innerHTML = t("footer.sources", {
+    imf: link(imf.url, "IMF, International Trade in Goods by partner country (IMTS)"), accessed: imf.accessed,
+    baci: baci ? t("footer.baci", { link: link(baci.url, "CEPII BACI"), terms: esc(baci.terms) }) : "",
+    wb: wb ? t("footer.wb", { link: link(wb.url, "World Bank WDI"), terms: esc(wb.terms) }) : "",
+    m49: link(m49.url, "UN M49"), ne: link(ne.url, "Natural Earth"),
+  });
   const memberLabel = (m) => {
-    const name = store.entities[m.id]?.name ?? m.id;
+    const name = nameOf(m.id);
     if (m.from && m.to) return `${name} (${m.from}–${m.to})`;
-    if (m.from) return `${name} (from ${m.from})`;
-    if (m.to) return `${name} (until ${m.to})`;
+    if (m.from) return t("about.memberFrom", { name, year: m.from });
+    if (m.to) return t("about.memberUntil", { name, year: m.to });
     return name;
   };
-  const groups = store.groups.map((g) => `<li><b>${esc(g.name)}</b>: ${esc(g.members.map(memberLabel).join(", "))}${g.note ? `. <i>${esc(g.note)}</i>` : ""}</li>`).join("");
+  const groups = store.groups.map((g) => {
+    const note = groupNote(g.id);
+    return `<li><b>${esc(nameOf(g.id))}</b>: ${esc(g.members.map(memberLabel).join(t("listSep")))}${note ? t("about.groupNote", { note: esc(note) }) : ""}</li>`;
+  }).join("");
   $("#about-body").innerHTML = `
-    <h2>About the data</h2>
-    <h3>Trade values</h3>
-    <p>Bilateral merchandise (goods) trade from the <a href="${imf.url}" target="_blank" rel="noopener">${esc(imf.name)}</a>, formerly the ${esc(imf.formerly)}. Coverage: ${esc(coverage)}, in current US dollars (not adjusted for inflation or seasonality). Services trade is not included.</p>
+    <h2>${t("about.title")}</h2>
+    <h3>${t("about.trade.title")}</h3>
+    <p>${t("about.trade.intro", { imf: link(imf.url, imf.name), formerly: esc(imf.formerly), coverage: esc(coverage) })}</p>
     <ul>
-      <li>Exports: <code>${esc(imf.series.exports)}</code></li>
-      <li>Imports: <code>${esc(imf.series.imports)}</code></li>
+      <li>${t("about.series", { name: t("metric.exports"), code: esc(imf.series.exports) })}</li>
+      <li>${t("about.series", { name: t("metric.imports"), code: esc(imf.series.imports) })}</li>
     </ul>
-    <p>Each country's figures are <b>as reported by that country</b> (the selected focus). Because exports are valued FOB and imports CIF, and because of timing, re-exports and confidentiality, A's reported exports to B rarely equal B's reported imports from A. The IMF fills gaps for non-reporting economies with estimates derived from partner data. Taiwan is not published as a reporter by the IMF, so its figures here are built from partners' reports ("mirror" data). Recent periods are shown only once most countries have reported them, and may still be revised.</p>
-    <p>Monthly values are not seasonally adjusted. The Δ 1 yr mode compares each month with the same month a year earlier, which removes most of the seasonal pattern.</p>
-    ${baci ? productsAbout(baci) : ""}
-    ${wb ? indicatorsAbout(wb) : ""}
-    <h3>Groupings</h3>
-    <p>When a grouping is “treated as one”, its members' flows are summed and trade <i>between</i> members is excluded, so the group is shown trading only with the outside world. Membership is applied as of each year: for example, the UK is part of the EU through 2020 and Croatia from 2013. Groups are defined from <a href="${m49.url}" target="_blank" rel="noopener">UN M49 regions</a> or explicit member lists:</p>
+    <p>${t("about.trade.reported")}</p>
+    <p>${t("about.trade.monthly")}</p>
+    ${baci ? productsAbout(baci, link) : ""}
+    ${wb ? indicatorsAbout(wb, link) : ""}
+    <h3>${t("about.groups.title")}</h3>
+    <p>${t("about.groups.text", { m49: link(m49.url, t("about.groups.m49")) })}</p>
     <ul>${groups}</ul>
-    <h3>Change modes</h3>
-    <p>Δ 1/5/10 yr colors each partner by the ratio between the selected period and the same period that many years earlier (shown as % change, log scale from −75% to +300%). For the balance metric, change is the difference in US dollars.</p>
-    <h3>Stories</h3>
-    <p>Stories are guided replays of past events. Figures quoted in a story are computed from the data on this site; other facts link to their sources in the story card.</p>
-    <h3>Map</h3>
-    <p>Boundaries from Natural Earth (1:50m, public domain) via the world-atlas package. Their use does not imply any position on the legal status of any territory. Areas with no matching trade data are grey.</p>
-    <h3>Citation</h3>
+    <h3>${t("about.change.title")}</h3>
+    <p>${t("about.change.text")}</p>
+    <h3>${t("about.stories.title")}</h3>
+    <p>${t("about.stories.text")}</p>
+    <h3>${t("about.map.title")}</h3>
+    <p>${t("about.map.text")}</p>
+    <h3>${t("about.citation")}</h3>
     <p>${esc(imf.citation)}</p>
-    <p>Terms of use for IMF data: <a href="${imf.terms}" target="_blank" rel="noopener">${imf.terms}</a>.</p>
-    ${wb ? `<p>${esc(wb.citation)} Licence: <a href="${wb.terms_url}" target="_blank" rel="noopener">${esc(wb.terms)}</a>.</p>` : ""}
-    ${baci ? `<p>${esc(baci.citation)} Licence: <a href="${baci.terms_url}" target="_blank" rel="noopener">${esc(baci.terms)}</a>.</p>` : ""}
-    <p class="note">Data files generated ${store.meta.generated} by the pipeline in <code>pipeline/</code>.</p>`;
+    <p>${t("about.imfTerms", { link: link(imf.terms, imf.terms) })}</p>
+    ${wb ? `<p>${t("about.licence", { citation: esc(wb.citation), link: link(wb.terms_url, wb.terms) })}</p>` : ""}
+    ${baci ? `<p>${t("about.licence", { citation: esc(baci.citation), link: link(baci.terms_url, baci.terms) })}</p>` : ""}
+    ${getLang() !== "en" ? `<p>${t("about.translation", { m49: link(m49.url, "UN M49") })}</p>` : ""}
+    <p class="note">${t("about.generated", { date: store.meta.generated })}</p>`;
 }
 
-function indicatorsAbout(wb) {
+function indicatorsAbout(wb, link) {
   return `
-    <h3>Economic indicators and correlations</h3>
-    <p>GDP, population, inflation, unemployment, foreign direct investment, the current account and trade as a share of GDP come from the <a href="${wb.url}" target="_blank" rel="noopener">${esc(wb.name)}</a> (annual). GDP per capita is GDP divided by population; real GDP growth is the change in GDP at constant prices. The World Bank does not cover Taiwan.</p>
-    <p>For merged groups, GDP, population, FDI and the current account are summed over the members of each year, and only shown when members with data hold at least 95% of the group's population. Group growth compares the same members in both years. Unlike group trade, these sums include flows between members (for example, investment from one EU country into another counts as EU FDI inflow). Inflation, unemployment and trade % of GDP are not computed for groups.</p>
-    <p><b>Compare</b> plots one dot per economy for the selected year. Pearson's r is computed on the plotted scale (log10 for log axes, which suits values spanning many orders of magnitude); Spearman's ρ uses ranks, so it does not depend on the scale and is less sensitive to outliers. The dashed line is a least-squares fit on the plotted scale. A country panel's "Do exports move with GDP?" chart correlates year-on-year % changes rather than levels, because any two series that grow over time look correlated. Correlation does not show cause and effect.</p>`;
+    <h3>${t("about.ind.title")}</h3>
+    <p>${t("about.ind.source", { wb: link(wb.url, wb.name) })}</p>
+    <p>${t("about.ind.groups")}</p>
+    <p>${t("about.ind.compare")}</p>`;
 }
 
-function productsAbout(baci) {
+function productsAbout(baci, link) {
   const ps = store.meta.products;
   const span = `${ps.periods.A[0]}–${ps.periods.A.at(-1)}`;
-  const row = (p) => `<li>${esc(p.name)}: HS ${p.hs.length ? esc(p.hs.join(", ")) : "codes not in any other sector"}</li>`;
+  const row = (p) => `<li>${esc(productName(p.id))}: HS ${p.hs.length ? esc(p.hs.join(", ")) : t("about.products.other")}</li>`;
   return `
-    <h3>Trade by product</h3>
-    <p>When a product is selected, figures come from <a href="${baci.url}" target="_blank" rel="noopener">${esc(baci.name)}</a>: annual, ${span}. BACI reconciles what exporters and importers report into one value per flow, valued FOB, so its totals differ somewhat from the IMF figures shown for all goods. Products are groups of HS 1992 codes:</p>
-    <details><summary>Sectors</summary><ul>${ps.sectors.map(row).join("")}</ul></details>
-    <details><summary>Commodities</summary><ul>${ps.commodities.map(row).join("")}</ul></details>`;
+    <h3>${t("about.products.title")}</h3>
+    <p>${t("about.products.text", { baci: link(baci.url, baci.name), span })}</p>
+    <details><summary>${t("product.sectors")}</summary><ul>${ps.sectors.map(row).join("")}</ul></details>
+    <details><summary>${t("product.commodities")}</summary><ul>${ps.commodities.map(row).join("")}</ul></details>`;
 }
 
 // ------------------------------------------------------------------ views & URL state
@@ -713,7 +731,7 @@ async function applyView(view) {
   }
   const ti = view.t ? nearestIndex(store.periods, view.t) : -1;
   state.pi = ti >= 0 ? ti : defaultPeriodIndex();
-  state.metric = METRIC_LABEL[view.metric] ? view.metric : "total";
+  state.metric = METRICS.includes(view.metric) ? view.metric : "total";
   state.back = [1, 5, 10].includes(+view.change) ? +view.change : 0;
   state.groupsOn = view.groups != null
     ? new Set(view.groups.split(",").filter((g) => store.groupById.has(g)))
@@ -759,11 +777,12 @@ async function readHash() {
 // ------------------------------------------------------------------ boot
 
 async function boot() {
+  await initI18n();
   try {
     await loadBase();
     await setSlice("TOTAL", "A");
   } catch (e) {
-    $("#loading").textContent = "Could not load data files. If you opened index.html directly, serve the site folder over HTTP instead.";
+    $("#loading").textContent = t("loadError");
     throw e;
   }
   map = createMap($("#map"), {
