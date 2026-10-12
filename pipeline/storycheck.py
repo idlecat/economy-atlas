@@ -119,6 +119,17 @@ class Site:
         b = sum(s[k][i] or 0 for q, s in p.items() if q not in mem)
         return a, b
 
+    # -- trade by product (the panel's "What X trades" list)
+    @cache
+    def breakdown(self, code):
+        return json.loads((self.d / "products" / "breakdown" / f"{code}.json").read_text())
+
+    def mix(self, code, product, period, flow="x"):
+        """Product's share (%) of code's trade summed over all sectors."""
+        bd, i, k = self.breakdown(code), self.periods("A", "SECTORS").index(period), 0 if flow == "x" else 1
+        total = sum(bd[p["id"]][k][i] or 0 for p in self.meta["products"]["sectors"] if p["id"] in bd)
+        return 100 * bd[product][k][i] / total
+
     def list_share(self, code, period, flow="x", product="TOTAL", lst="BRI"):
         a, b = self.list_split(code, period, flow, product, lst)
         return 100 * a / (a + b)
@@ -411,6 +422,42 @@ CLAIMS = [
     C("china-rise", 5, "88%", "pct", lambda s: s.metric("exports_gdp", "SGP", 2024)),
     C("china-rise", 5, "7%", "pct", lambda s: s.metric("exports_gdp", "USA", 2024)),
     C("china-rise", 5, "r = 0.27", "num", lambda s: s.compare("gdp", "exports_gdp", 2024)[1]),
+    # What China sells and buys (BACI; shares of the sum over sectors, as in the panel)
+    C("china-goods-mix", 1, "30% of", "pct", lambda s: s.mix("CHN", "TEXTILES", "1995")),
+    C("china-goods-mix", 1, "22%", "pct", lambda s: s.mix("CHN", "MACHINERY", "1995")),
+    C("china-goods-mix", 1, "13%", "pct", lambda s: s.mix("CHN", "INSTRUMENTS", "1995")),
+    C("china-goods-mix", 2, "1998", "num", lambda s: _first_year_mix_above(s, "CHN", "MACHINERY", "TEXTILES")),
+    C("china-goods-mix", 2, "43%", "pct", lambda s: s.mix("CHN", "MACHINERY", "2008")),
+    C("china-goods-mix", 2, "peaked at 50%", "pct", lambda s: s.mix("CHN", "MACHINERY", "2020")),
+    C("china-goods-mix", 2, "in 2020 and", "num", lambda s: int(max(s.periods("A", "SECTORS"), key=lambda y: s.mix("CHN", "MACHINERY", y)))),
+    C("china-goods-mix", 2, "47% in 2024", "pct", lambda s: s.mix("CHN", "MACHINERY", "2024")),
+    C("china-goods-mix", 2, "from 7%", "pct", lambda s: s.mix("CHN", "CHEM", "1995")),
+    C("china-goods-mix", 2, "to 11%", "pct", lambda s: s.mix("CHN", "CHEM", "2024")),
+    C("china-goods-mix", 2, "9% of exports", "pct", lambda s: s.mix("CHN", "TEXTILES", "2024")),
+    C("china-goods-mix", 2, "$70 billion", "usd", lambda s: s.v("CHN", "1995", product="TEXTILES")),
+    C("china-goods-mix", 2, "$327 billion", "usd", lambda s: s.v("CHN", "2024", product="TEXTILES")),
+    C("china-goods-mix", 3, "$8.9 billion", "usd", lambda s: s.v("CHN", "2020", product="CARS")),
+    C("china-goods-mix", 3, "$87.7 billion", "usd", lambda s: s.v("CHN", "2024", product="CARS")),
+    C("china-goods-mix", 3, "17%", "pct", lambda s: s.share("CHN", "RUS", "2024", product="CARS")),
+    C("china-goods-mix", 3, "from 4%", "pct", lambda s: s.mix("CHN", "VEHICLES", "2020")),
+    C("china-goods-mix", 3, "to 7%", "pct", lambda s: s.mix("CHN", "VEHICLES", "2024")),
+    C("china-goods-mix", 4, "35%", "pct", lambda s: s.mix("CHN", "MACHINERY", "1995", "m")),
+    C("china-goods-mix", 4, "textiles 12%", "pct", lambda s: s.mix("CHN", "TEXTILES", "1995", "m")),
+    C("china-goods-mix", 4, "energy only 4%", "pct", lambda s: s.mix("CHN", "ENERGY", "1995", "m")),
+    C("china-goods-mix", 4, "ores 1%", "pct", lambda s: s.mix("CHN", "ORES", "1995", "m")),
+    C("china-goods-mix", 4, "22%", "pct", lambda s: s.mix("CHN", "ENERGY", "2024", "m")),
+    C("china-goods-mix", 4, "minerals 11%", "pct", lambda s: s.mix("CHN", "ORES", "2024", "m")),
+    C("china-goods-mix", 4, "33% of the total", "pct", lambda s: s.mix("CHN", "ENERGY", "2024", "m") + s.mix("CHN", "ORES", "2024", "m")),
+    C("china-goods-mix", 4, "fell to 25%", "pct", lambda s: s.mix("CHN", "MACHINERY", "2024", "m")),
+    C("china-goods-mix", 4, "textiles to 2%", "pct", lambda s: s.mix("CHN", "TEXTILES", "2024", "m")),
+    C("china-goods-mix", 5, "$302.5 billion", "usd", lambda s: s.v("CHN", "2024", "m", product="CRUDE")),
+    C("china-goods-mix", 5, "14% of", "pct", lambda s: s.mix("CHN", "CRUDE", "2024", "m")),
+    C("china-goods-mix", 5, "$2.3 billion", "usd", lambda s: s.v("CHN", "1995", "m", product="CRUDE")),
+    C("china-goods-mix", 5, "21%", "pct", lambda s: s.share("CHN", "RUS", "2024", "m", product="CRUDE")),
+    C("china-goods-mix", 5, "16%", "pct", lambda s: s.share("CHN", "SAU", "2024", "m", product="CRUDE")),
+    C("china-goods-mix", 5, "12%", "pct", lambda s: s.share("CHN", "IRQ", "2024", "m", product="CRUDE")),
+    C("china-goods-mix", 6, "64%", "pct", lambda s: s.share("CHN", "AUS", "2024", "m", product="IRONORE")),
+    C("china-goods-mix", 6, "18%", "pct", lambda s: s.share("CHN", "BRA", "2024", "m", product="IRONORE")),
 ]
 
 
@@ -446,6 +493,13 @@ def _first_year_above(s, a, b):
         if all(ok[i:]):
             return int(years[i])
     return None
+
+
+def _first_year_mix_above(s, code, a, b):
+    """First year from which product a's share of code's exports exceeds b's in every later year."""
+    years = s.periods("A", "SECTORS")
+    ok = [s.mix(code, a, y) > s.mix(code, b, y) for y in years]
+    return next((int(years[i]) for i in range(len(years)) if all(ok[i:])), None)
 
 
 # --------------------------------------------------------------------------- matching

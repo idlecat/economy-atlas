@@ -1,0 +1,111 @@
+{
+  "title": "What China sells and buys",
+  "markers": [
+    {
+      "t": "2001",
+      "label": "WTO approves China's accession (10 November 2001)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "WTO press release 252: WTO Ministerial Conference approves China's accession (10 November 2001)",
+      "url": "https://www.wto.org/english/news_e/pres01_e/pr252_e.htm"
+    },
+    {
+      "name": "CEPII BACI (trade by product)",
+      "url": "https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37"
+    }
+  ],
+  "steps": [
+    {
+      "title": "1995: clothes, shoes and toys",
+      "text": [
+        "In 1995, textiles, clothing and footwear made up **30%** of [mainland China](CHN)'s goods exports. Machinery and electronics were 22%, and furniture, toys and other manufactures 13%.",
+        "The map shows where China's textile and clothing exports went; the panel gives their share of its exports, and its \"by product\" list (further down) has every sector. These figures come from CEPII BACI, which reconciles what exporters and importers report, so they don't add up exactly to the IMF all-goods totals."
+      ],
+      "view": {
+        "product": "TEXTILES",
+        "t": "1995",
+        "focus": "CHN",
+        "metric": "exports"
+      }
+    },
+    {
+      "title": "Machines take over",
+      "text": [
+        "Machinery and electronics overtook textiles in 1998, three years before China joined the WTO. Their share reached **43%** by 2008, peaked at 50% in 2020 and was 47% in 2024. Chemicals and plastics rose from 7% to 11%.",
+        "Textiles fell to **9%** of exports, but not because China sold fewer of them: textile and clothing exports still grew, from about $70 billion in 1995 to $327 billion in 2024. Everything else grew faster. Watch the machinery share in the panel climb as the timeline plays."
+      ],
+      "view": {
+        "product": "MACHINERY",
+        "t": "1995",
+        "focus": "CHN",
+        "metric": "exports"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 700
+      }
+    },
+    {
+      "title": "Cars, suddenly",
+      "text": [
+        "[China](CHN)'s passenger car exports were worth only **$8.9 billion** in 2020. Four years later they reached **$87.7 billion**. [Russia](RUS) became the largest buyer, with 17%.",
+        "Vehicles, ships and aircraft went from 4% of China's exports in 2020 to 7% in 2024."
+      ],
+      "view": {
+        "product": "CARS",
+        "t": "2020",
+        "focus": "CHN",
+        "metric": "exports"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 1400
+      }
+    },
+    {
+      "title": "Imports: from machines to raw materials",
+      "text": [
+        "In 1995, machinery and electronics were **35%** of [China](CHN)'s imports, textiles 12%, energy only 4% and ores 1%.",
+        "Over the next three decades its imports turned to fuel and raw materials. In 2024, energy was **22%** of imports and ores and minerals 11%: together 33% of the total. Machinery and electronics fell to 25%, textiles to 2%. The map shows where China's energy imports come from."
+      ],
+      "view": {
+        "product": "ENERGY",
+        "t": "1995",
+        "focus": "CHN",
+        "metric": "imports"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 700
+      }
+    },
+    {
+      "title": "Oil from many suppliers",
+      "text": [
+        "[China](CHN) imported **$302.5 billion** of crude oil in 2024, 14% of its goods imports, up from $2.3 billion in 1995.",
+        "No single supplier dominates: [Russia](RUS) supplied 21%, [Saudi Arabia](SAU) 16% and [Iraq](IRQ) 12%."
+      ],
+      "view": {
+        "product": "CRUDE",
+        "t": "2024",
+        "focus": "CHN",
+        "metric": "imports"
+      }
+    },
+    {
+      "title": "Iron ore, and exploring further",
+      "text": [
+        "Iron ore is different: [Australia](AUS) supplied **64%** of [China](CHN)'s imports in 2024 and [Brazil](BRA) 18%.",
+        "Click any sector or commodity in the panel's list to see where China sells it or buys it. Semiconductors & integrated circuits, for example, come mostly from [South Korea](KOR) and [Taiwan, China](TWN)."
+      ],
+      "view": {
+        "product": "IRONORE",
+        "t": "2024",
+        "focus": "CHN",
+        "metric": "imports"
+      }
+    }
+  ]
+}
