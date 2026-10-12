@@ -327,10 +327,14 @@ def publish():
     ents = {}
     for eid in sorted(listed):
         e = registry.entities[eid]
-        ents[eid] = {"name": e.name, "region": e.region_name or None, "subregion": e.subregion_name or None,
+        # territories outside UN M49 (Taiwan) take the region of the country they are part of
+        geo = e if e.region_name or not e.part_of else registry.entities[e.part_of]
+        ents[eid] = {"name": e.name, "region": geo.region_name or None, "subregion": geo.subregion_name or None,
                      "reporter": eid in has_totals}
         if eid in mirrored:
             ents[eid]["mirror"] = True
+        if e.part_of:
+            ents[eid]["part_of"] = e.part_of
         if eid in memberships:
             ents[eid]["groups"] = memberships[eid]
     used_sources = []

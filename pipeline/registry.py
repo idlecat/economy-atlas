@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from .paths import CONFIG
 
 WORLD = "WLD"
-NON_SCHEME_COLUMNS = {"id", "name", "m49", "valid_from", "valid_to", "derive", "note"}
+NON_SCHEME_COLUMNS = {"id", "name", "m49", "valid_from", "valid_to", "derive", "part_of", "note"}
 
 
 @dataclass
@@ -23,6 +23,7 @@ class Entity:
     valid_from: int | None = None
     valid_to: int | None = None
     derive: str = ""  # "mirror": rebuild from partner reports when the entity is not a reporter
+    part_of: str = ""  # entity id of the country this territory belongs to (e.g. HKG -> CHN); shown in the UI
     note: str = ""
     # filled from UN M49 reference data
     region: str = ""
@@ -68,7 +69,7 @@ def load_entities(path=CONFIG / "entities.csv") -> dict[str, Entity]:
             codes = {k: v for k, v in row.items() if k not in NON_SCHEME_COLUMNS and v}
             e = Entity(id=row["id"], name=row["name"], m49=row["m49"], codes=codes,
                        valid_from=_int(row["valid_from"]), valid_to=_int(row["valid_to"]),
-                       derive=row["derive"], note=row["note"])
+                       derive=row["derive"], part_of=row.get("part_of", ""), note=row["note"])
             if e.id in out:
                 raise ValueError(f"duplicate entity id {e.id}")
             out[e.id] = e

@@ -24,7 +24,7 @@
     {
       "title": "Bigger economies export more",
       "text": [
-        "Each dot is an economy in 2024, sized by population, with the EU counted as one. Across **184** economies, goods exports and GDP line up almost perfectly on log scales: Pearson **r = 0.93**.",
+        "Each dot is an economy in 2024, sized by population, with the EU counted as one. Across **168** economies, goods exports and GDP line up almost perfectly on log scales: Pearson **r = 0.93**.",
         "That is mostly about size. Large economies make more of everything, including things to sell abroad."
       ],
       "view": {
@@ -39,8 +39,9 @@
     {
       "title": "Rich is not the same as big",
       "text": [
-        "Swap GDP for GDP **per person** and the pattern weakens to **r = 0.34**. Wealth tells you much less than size about how much a country exports.",
-        "China is the clearest case: the world's largest goods exporter in 2024 (**$3.58 trillion**), yet only 67th in GDP per person, at about **$13,300**."
+        "Swap GDP for GDP **per person** and the pattern weakens to **r = 0.29**. Wealth tells you much less than size about how much a country exports.",
+        "China is the clearest case: the world's largest goods exporter in 2024 (**$3.58 trillion**), yet only 51st in GDP per person, at about **$13,300**.",
+        "Here China means the Chinese mainland; Hong Kong SAR and Macao SAR are separate dots. Turn on “China + HK & Macao” to combine them."
       ],
       "view": {
         "view": "compare",
@@ -54,7 +55,7 @@
     {
       "title": "1995: a poor country, already a big exporter",
       "text": [
-        "In 1995 China's GDP per person was about **$610**, lower than in 121 other economies. It still ranked 7th by exports, at **$149 billion**.",
+        "In 1995 China's GDP per person was about **$610**, lower than in 117 other economies. It still ranked 6th by exports, at **$149 billion**.",
         "The EU ($815 billion of exports outside the EU), the US and Japan led."
       ],
       "view": {
@@ -71,7 +72,7 @@
       "text": [
         "The WTO approved China's membership in November 2001. Watch China's dot climb up and to the right.",
         "China's exports overtook the US in **2007** and the EU's exports to the rest of the world in **2014**. By 2024 they were **24 times** their 1995 value, and GDP per person had risen about **22 times** in current dollars.",
-        "Vietnam follows a similar path a step behind: from 48th to 15th by exports."
+        "Vietnam follows a similar path a step behind: from 44th to 15th by exports."
       ],
       "view": {
         "view": "compare",
@@ -90,7 +91,7 @@
       "title": "Exports matter less to China than they did",
       "text": [
         "As a share of GDP, China's goods exports peaked at **35%** in 2006. By 2019 they were down to **17%**, and in 2024 they stood at **19%**: the domestic economy grew even faster than exports.",
-        "Some economies depend far more on goods exports: Vietnam at **82%** of GDP and Singapore at **88%**, against **7%** for the US. But small does not simply mean open: across all economies the link is weak and, if anything, positive (r = 0.30 in 2024), because many of the smallest, such as the Pacific island states on the left, export few goods at all."
+        "Some economies depend far more on goods exports: Vietnam at **82%** of GDP and Singapore at **88%**, against **7%** for the US. But small does not simply mean open: across all economies the link is weak and, if anything, positive (r = 0.27 in 2024), because many of the smallest, such as the Pacific island states on the left, export few goods at all."
       ],
       "view": {
         "view": "compare",

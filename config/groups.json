@@ -20,6 +20,13 @@
       "note": "Membership as of each year (European Communities before 1993). The UK is counted as a member through 2020, the end of the Brexit transition period."
     },
     {
+      "id": "CHINA",
+      "name": "China (incl. Hong Kong & Macao)",
+      "short": "China + HK & Macao",
+      "members": ["CHN", {"id": "HKG", "from": 1997}, {"id": "MAC", "from": 1999}],
+      "note": "The Chinese mainland with Hong Kong SAR (from 1997) and Macao SAR (from 1999), combined; trade between them is excluded. Taiwan, China is shown separately because its trade statistics are compiled separately."
+    },
+    {
       "id": "ASEAN",
       "name": "ASEAN",
       "short": "ASEAN",

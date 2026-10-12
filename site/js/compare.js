@@ -9,13 +9,11 @@ export const REGION_COLORS = {
 };
 const GROUP_COLOR = "#5d6878";
 
-/** Countries (unless merged into a group) and merged groups, as on the map at period index `pi`. */
+/** Countries (unless merged into a group in that year) and merged groups, as on the map at period index `pi`.
+ *  displayTotals also lists countries that are merged only in some years, e.g. Croatia before it joined the EU. */
 function candidates(groupsOn, pi, ind) {
-  const keys = new Set(displayTotals(groupsOn).keys());
-  for (const code of Object.keys(ind?.values.gdp ?? {})) {
-    if (isGroup(code) ? groupsOn.has(code) : store.entities[code] && displayOf(code, groupsOn, pi) === code) keys.add(code);
-  }
-  return keys;
+  const shown = (code) => (isGroup(code) ? groupsOn.has(code) : !!store.entities[code] && displayOf(code, groupsOn, pi) === code);
+  return new Set([...displayTotals(groupsOn).keys(), ...Object.keys(ind?.values.gdp ?? {})].filter(shown));
 }
 
 /**

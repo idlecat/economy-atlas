@@ -134,7 +134,7 @@
   "panel.worldChart": "World exports &amp; imports",
   "panel.largest": "Largest by {metric}, {period}",
   "panel.changeVs": "Change vs. {period}.",
-  "panel.members": "{n} members in {year}: {names}",
+  "panel.members": "Members in {year} ({n}): {names}",
   "panel.groupFigures": "Figures are trade with countries outside the group. Dashed line: exports between members.",
   "panel.byProduct": "What {name} trades, by product",
   "panel.productShare.total": "Share of trade in {year}",
@@ -186,13 +186,13 @@
   "about.title": "About the data",
   "about.trade.title": "Trade values",
   "about.trade.intro": "Bilateral merchandise (goods) trade from the {imf}, formerly the {formerly}. Coverage: {coverage}, in current US dollars (not adjusted for inflation or seasonality). Services trade is not included.",
-  "about.trade.reported": "Each country's figures are <b>as reported by that country</b> (the selected focus). Because exports are valued FOB and imports CIF, and because of timing, re-exports and confidentiality, A's reported exports to B rarely equal B's reported imports from A. The IMF fills gaps for non-reporting economies with estimates derived from partner data. Taiwan is not published as a reporter by the IMF, so its figures here are built from partners' reports (\"mirror\" data). Recent periods are shown only once most countries have reported them, and may still be revised.",
+  "about.trade.reported": "Each country's figures are <b>as reported by that country</b> (the selected focus). Because exports are valued FOB and imports CIF, and because of timing, re-exports and confidentiality, A's reported exports to B rarely equal B's reported imports from A. The IMF fills gaps for non-reporting economies with estimates derived from partner data. Taiwan, China is not published as a reporter by the IMF, so its figures here are built from partners' reports (\"mirror\" data). Recent periods are shown only once most countries have reported them, and may still be revised.",
   "about.trade.monthly": "Monthly values are not seasonally adjusted. The Δ 1 yr mode compares each month with the same month a year earlier, which removes most of the seasonal pattern.",
   "about.products.title": "Trade by product",
   "about.products.text": "When a product is selected, figures come from {baci}: annual, {span}. BACI reconciles what exporters and importers report into one value per flow, valued FOB, so its totals differ somewhat from the IMF figures shown for all goods. Products are groups of HS 1992 codes:",
   "about.products.other": "codes not in any other sector",
   "about.ind.title": "Economic indicators and correlations",
-  "about.ind.source": "GDP, population, inflation, unemployment, foreign direct investment, the current account and trade as a share of GDP come from the {wb} (annual). GDP per capita is GDP divided by population; real GDP growth is the change in GDP at constant prices. The World Bank does not cover Taiwan.",
+  "about.ind.source": "GDP, population, inflation, unemployment, foreign direct investment, the current account and trade as a share of GDP come from the {wb} (annual). GDP per capita is GDP divided by population; real GDP growth is the change in GDP at constant prices. The World Bank does not cover Taiwan, China.",
   "about.ind.groups": "For merged groups, GDP, population, FDI and the current account are summed over the members of each year, and only shown when members with data hold at least 95% of the group's population. Group growth compares the same members in both years. Unlike group trade, these sums include flows between members (for example, investment from one EU country into another counts as EU FDI inflow). Inflation, unemployment and trade % of GDP are not computed for groups.",
   "about.ind.compare": "<b>Compare</b> plots one dot per economy for the selected year. Pearson's r is computed on the plotted scale (log10 for log axes, which suits values spanning many orders of magnitude); Spearman's ρ uses ranks, so it does not depend on the scale and is less sensitive to outliers. The dashed line is a least-squares fit on the plotted scale. A country panel's \"Do exports move with GDP?\" chart correlates year-on-year % changes rather than levels, because any two series that grow over time look correlated. Correlation does not show cause and effect.",
   "about.groups.title": "Groupings",
@@ -214,6 +214,9 @@
   "about.generated": "Data files generated {date} by the pipeline in <code>pipeline/</code>.",
   "title.indicator": "{name}, {year}",
   "about.series": "{name}: <code>{code}</code>",
-  "panel.statLabel": "{name}"
+  "panel.statLabel": "{name}",
+  "panel.partOf.CHN": "Part of China. Its trade statistics are compiled separately, so it is shown separately here.",
+  "panel.partOfMerge.CHN": "Part of China, shown separately here. Turn on “{group}” under “Treat as one” to combine it with the Chinese mainland.",
+  "panel.groupHint.CHINA": "Chinese mainland only. Turn on “{group}” under “Treat as one” to include Hong Kong and Macao."
  }
 }

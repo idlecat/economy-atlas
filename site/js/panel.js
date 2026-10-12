@@ -1,9 +1,9 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import { store, nameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName, groupNote, regionName } from "./data.js";
+import { store, nameOf, shortNameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName, groupNote, regionName } from "./data.js";
 import { periodLabel, yearOf, yearTicks } from "./time.js";
 import { money, ratioPct, share, fmtUnit, escapeHTML as esc } from "./format.js";
 import { pearson, describe } from "./stats.js";
-import { t } from "./i18n.js";
+import { has, t } from "./i18n.js";
 
 export const METRICS = ["total", "exports", "imports", "balance"];
 /** "total trade", "exports", … for use inside a sentence. */
@@ -236,11 +236,18 @@ export function renderPanel(el, ctx) {
   const inGroup = !group && groupOf(focus, yi);
   const memberNote = inGroup && ctx.groupsOn.has(inGroup)
     ? `<p class="note">${t("panel.mergedNote", { name: esc(nameOf(inGroup)) })}</p>` : "";
+  // Territories that are part of a country (e.g. Hong Kong, Taiwan) say so, and say how to combine them
+  // when a group does that; a group can also carry a hint for its core member (the Chinese mainland).
+  const mergeable = inGroup && !ctx.groupsOn.has(inGroup);
+  const chip = mergeable ? esc(shortNameOf(inGroup)) : "";
+  const partOf = ent?.part_of
+    ? `<p class="note">${t(mergeable && has(`panel.partOfMerge.${ent.part_of}`) ? `panel.partOfMerge.${ent.part_of}` : `panel.partOf.${ent.part_of}`, { group: chip })}</p>`
+    : mergeable && has(`panel.groupHint.${inGroup}`) ? `<p class="note">${t(`panel.groupHint.${inGroup}`, { group: chip })}</p>` : "";
 
   el.innerHTML = `
     <div class="kicker">${group ? t("panel.group") : esc(ent?.subregion ? regionName(ent.subregion) : t("panel.economy"))} · ${year}</div>
     <h2>${esc(nameOf(focus))}</h2>
-    ${group ? groupBlurb(focus, yi) : ""}${ctx.product === "TOTAL" ? mirrorNote : ""}${noData}${memberNote}
+    ${group ? groupBlurb(focus, yi) : ""}${partOf}${ctx.product === "TOTAL" ? mirrorNote : ""}${noData}${memberNote}
     ${productShare(ctx, yi)}
     ${stats(fs, yi, compare)}
     ${pair ? `

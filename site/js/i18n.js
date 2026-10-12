@@ -55,6 +55,11 @@ export function t(key, vars = {}) {
   return s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m));
 }
 
+/** Whether interface string `key` exists (for optional, data-specific notes). */
+export function has(key) {
+  return (dict.ui?.[key] ?? base.ui?.[key]) != null;
+}
+
 /** Translated name of a data item (e.g. names("entities", "CHN")), or undefined to use the data's English. */
 export function names(kind, id) {
   return dict.names?.[kind]?.[id];
