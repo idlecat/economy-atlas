@@ -1,0 +1,89 @@
+{
+  "title": "The euro area debt crisis",
+  "markers": [
+    {
+      "t": "2010",
+      "label": "First Greek support programme, €110 billion (May 2010)"
+    },
+    {
+      "t": "2012",
+      "label": "ECB President Draghi: “whatever it takes” (26 July 2012)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "European Court of Auditors, Special report 17/2017: The Commission's intervention in the Greek financial crisis",
+      "url": "https://op.europa.eu/webpub/eca/special-reports/greek-crisis-17-2017/en"
+    },
+    {
+      "name": "ECB: Speech by Mario Draghi at the Global Investment Conference, London, 26 July 2012",
+      "url": "https://www.ecb.europa.eu/press/key/date/2012/html/sp120726.en.html"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2008: deficits on the periphery",
+      "text": [
+        "Before the crisis, southern Europe bought far more than it sold. In 2008 Greece imported **$95.0 billion** of goods and exported $30.8 billion; its current-account deficit was **$51.3 billion**. Spain's was **$144 billion**.",
+        "Groups are split here, so each EU country is shown on its own, colored by its trade balance with the world."
+      ],
+      "view": {
+        "t": "2008",
+        "metric": "balance",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "2010: Greece needs a rescue",
+      "text": [
+        "In May 2010 euro area governments and the IMF agreed a **€110 billion** support programme for Greece, the first of three.",
+        "Greece's goods imports fell from $95.0 billion in 2008 to **$61.4 billion** in 2012 (−35%). Its exports grew a little."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2012",
+        "focus": "GRC",
+        "metric": "imports",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "Austerity and unemployment",
+      "text": [
+        "Greece's economy shrank every year from 2009 to 2013, by as much as **9.9%** in 2011. Unemployment rose from 7.7% in 2008 to **27.7%** in 2013; in Spain from 11.2% to **26.1%**.",
+        "The map is colored by unemployment in 2013."
+      ],
+      "view": {
+        "t": "2013",
+        "mapby": "unemployment",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "From deficit to surplus",
+      "text": [
+        "By 2013 the deficits were gone. Spain's current account went from −$144 billion in 2008 to **+$28.3 billion**, Italy's from −$65.0 billion to +$22.4 billion and Portugal's from −$31.2 billion to +$3.5 billion. Greece's deficit shrank to $5.0 billion.",
+        "Germany's surplus kept growing, from $206 billion to **$250 billion**."
+      ],
+      "view": {
+        "t": "2013",
+        "mapby": "current_account",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "“Whatever it takes”",
+      "text": [
+        "On 26 July 2012 ECB President Mario Draghi said the ECB was “ready to do whatever it takes to preserve the euro”.",
+        "Exports helped the recovery: Spain's goods exports rose from $221 billion in 2009 to **$306 billion** in 2013, above their 2008 level. Switch to Log to compare growth across countries."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2013",
+        "metric": "exports",
+        "groups": "none",
+        "set": "ESP,ITA,PRT,GRC,IRL"
+      }
+    }
+  ]
+}

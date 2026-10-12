@@ -65,6 +65,12 @@ export function productName(id) {
   return names("products", id) ?? products().find((p) => p.id === id)?.name ?? id;
 }
 
+/** Product name for use inside a sentence: "crude oil", "natural gas (incl. LNG)" (acronyms keep their case). */
+export function productNameLower(id) {
+  const n = productName(id);
+  return /^\p{Lu}\p{Ll}/u.test(n) ? n[0].toLowerCase() + n.slice(1) : n;
+}
+
 /** {product: series} of an entity's annual trade with the world, by product (CEPII BACI). */
 export function loadBreakdown(code) {
   if (!store.meta.products) return Promise.resolve(null);

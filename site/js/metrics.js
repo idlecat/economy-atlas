@@ -1,6 +1,6 @@
 // Metrics that can be plotted against each other in the Compare view or colored on the map:
 // trade values from the active product's annual totals, World Bank indicators, and ratios of both.
-import { metricAt, productName } from "./data.js";
+import { metricAt, productName, productNameLower } from "./data.js";
 import { names, t } from "./i18n.js";
 
 /** Units that are positive and span orders of magnitude get log axes. */
@@ -19,7 +19,7 @@ function wantsLog(unit, id) {
 export function buildMetrics(ind, totals, tPeriods, product) {
   const metrics = new Map();
   const yearIdx = new Map(tPeriods.map((p, i) => [+p.slice(0, 4), i]));
-  const goods = product === "TOTAL" ? t("goods") : productName(product).toLowerCase();
+  const goods = product === "TOTAL" ? t("goods") : productNameLower(product);
   const trade = (kind) => (key, year) => {
     const i = yearIdx.get(year);
     return i == null ? null : metricAt(totals[key], i, kind);

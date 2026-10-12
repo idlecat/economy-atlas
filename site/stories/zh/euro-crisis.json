@@ -1,0 +1,89 @@
+{
+  "title": "欧元区债务危机",
+  "markers": [
+    {
+      "t": "2010",
+      "label": "第一轮希腊援助计划，1100亿欧元（2010年5月）"
+    },
+    {
+      "t": "2012",
+      "label": "欧洲央行行长德拉吉：“不惜一切代价”（2012年7月26日）"
+    }
+  ],
+  "sources": [
+    {
+      "name": "European Court of Auditors, Special report 17/2017: The Commission's intervention in the Greek financial crisis",
+      "url": "https://op.europa.eu/webpub/eca/special-reports/greek-crisis-17-2017/en"
+    },
+    {
+      "name": "ECB: Speech by Mario Draghi at the Global Investment Conference, London, 26 July 2012",
+      "url": "https://www.ecb.europa.eu/press/key/date/2012/html/sp120726.en.html"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2008年：外围国家的逆差",
+      "text": [
+        "危机之前，南欧的买入远多于卖出。2008年，希腊进口货物**950亿美元**，出口308亿美元；经常账户逆差达**513亿美元**。西班牙为**1443亿美元**。",
+        "这里拆分了各集团，因此每个欧盟国家单独显示，按其与世界的贸易差额着色。"
+      ],
+      "view": {
+        "t": "2008",
+        "metric": "balance",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "2010年：希腊需要救助",
+      "text": [
+        "2010年5月，欧元区各国政府和IMF为希腊达成了**1100亿欧元**的援助计划，这是三轮援助中的第一轮。",
+        "希腊的货物进口从2008年的950亿美元降至2012年的**614亿美元**（−35%），出口则略有增长。"
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2012",
+        "focus": "GRC",
+        "metric": "imports",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "紧缩与失业",
+      "text": [
+        "2009至2013年，希腊经济年年萎缩，2011年降幅高达**9.9%**。失业率从2008年的7.7%升至2013年的**27.7%**；西班牙从11.2%升至**26.1%**。",
+        "地图按2013年的失业率着色。"
+      ],
+      "view": {
+        "t": "2013",
+        "mapby": "unemployment",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "由逆差转为顺差",
+      "text": [
+        "到2013年，逆差已经消失。西班牙经常账户从2008年的−1443亿美元变为**+283亿美元**，意大利从−650亿美元变为+224亿美元，葡萄牙从−312亿美元变为+35亿美元。希腊的逆差缩小到50亿美元。",
+        "德国的顺差则继续扩大，从2059亿美元增至**2496亿美元**。"
+      ],
+      "view": {
+        "t": "2013",
+        "mapby": "current_account",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "“不惜一切代价”",
+      "text": [
+        "2012年7月26日，欧洲央行行长马里奥·德拉吉表示，欧洲央行“准备不惜一切代价保卫欧元”。",
+        "出口推动了复苏：西班牙货物出口从2009年的2212亿美元增至2013年的**3059亿美元**，超过2008年的水平。切换到“对数”可比较各国的增长。"
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2013",
+        "metric": "exports",
+        "groups": "none",
+        "set": "ESP,ITA,PRT,GRC,IRL"
+      }
+    }
+  ]
+}

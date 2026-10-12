@@ -1,5 +1,5 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import { store, nameOf, shortNameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName, groupNote, regionName } from "./data.js";
+import { store, nameOf, shortNameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName, productNameLower, groupNote, regionName } from "./data.js";
 import { periodLabel, yearOf, yearTicks } from "./time.js";
 import { money, ratioPct, share, fmtUnit, escapeHTML as esc } from "./format.js";
 import { pearson, describe } from "./stats.js";
@@ -184,7 +184,7 @@ function economySection(ctx) {
   }
   const pairs = growthPairs(ctx);
   const r = pearson(pairs.map((p) => p.e), pairs.map((p) => p.g));
-  const goods = t("econ.exportsOf", { goods: ctx.product === "TOTAL" ? t("goods") : productName(ctx.product).toLowerCase() });
+  const goods = t("econ.exportsOf", { goods: ctx.product === "TOTAL" ? t("goods") : productNameLower(ctx.product) });
   return `
     <h3>${t("econ.titleYear", { year: ctx.year })}</h3>
     <table class="econ">${rows.filter((r) => r.v != null).map(({ m, v }) =>

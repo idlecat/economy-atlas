@@ -2,7 +2,7 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import {
   store, loadBase, setSlice, availableFreqs, loadFlows, loadBreakdown, hasFlows, nameOf, shortNameOf,
   isGroup, partnerSeries, displayTotals, worldSeries, metricAt, changeAt, defaultPeriodIndex, emptySeries,
-  products, productName, loadIndicators, loadTotals, groupNote, regionName,
+  products, productName, productNameLower, loadIndicators, loadTotals, groupNote, regionName,
 } from "./data.js";
 import { buildMetrics } from "./metrics.js";
 import { createScatter } from "./scatter.js";
@@ -111,8 +111,11 @@ function indicatorColors(metric, keys) {
   const all = [];
   for (const k of keys) for (let y = 1990; y <= 2030; y++) { const v = metric.value(k, y); if (v != null) all.push(v); }
   const fmtV = (v, sign = false) => fmtUnit(v, metric.unit, { sign });
-  const scale = metric.log ? buildScale(all.filter((v) => v > 0), "total", 0, fmtV) : buildScale(all, "balance", 0, fmtV);
-  return scale;
+  if (metric.log) return buildScale(all.filter((v) => v > 0), "total", 0, fmtV);
+  // diverging: a few extreme years (e.g. +123% growth) would wash out everything else, so the range is the
+  // 98th percentile of absolute values and anything beyond gets the end colors
+  const q = d3.quantile(all.map(Math.abs).sort(d3.ascending), 0.98) || 1;
+  return buildScale([-q, q], "balance", 0, fmtV);
 }
 
 function valueAt(s, i) {
@@ -293,7 +296,7 @@ function renderTitle(byMetric = null) {
   }
   const { focus, metric, back, product } = state;
   // "China: crude oil exports to each partner, 2024" / "Total trade with the world, 2024"
-  const prod = product === "TOTAL" ? "" : productName(product).toLowerCase();
+  const prod = product === "TOTAL" ? "" : productNameLower(product);
   const what = prod ? t(`title.what.${metric}`, { product: prod }) : metricLabel(metric);
   const head = focus
     ? t(`title.focus.${metric}`, { name: esc(nameOf(focus)), what: esc(what), period: label() })
@@ -372,7 +375,7 @@ function renderSpark() {
   }
   svg.append("circle").attr("cx", x(state.pi)).attr("cy", y(vals[state.pi] ?? 0)).attr("r", 3).attr("fill", "var(--accent)");
   svg.append("text").attr("x", 8).attr("y", 11).text(t(state.product === "TOTAL" ? "spark.total" : "spark.product", {
-    name: state.focus ? nameOf(state.focus) : t("world"), product: productName(state.product).toLowerCase(),
+    name: state.focus ? nameOf(state.focus) : t("world"), product: productNameLower(state.product),
   }));
 }
 

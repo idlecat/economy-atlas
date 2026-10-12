@@ -2,7 +2,7 @@
 //   With a focus: its exports, imports and balance, and its top partners (one line each).
 //   Always: a set of economies side by side, which the reader can edit.
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import { store, metricAt, nameOf, shortNameOf, isGroup, productName } from "./data.js";
+import { store, metricAt, nameOf, shortNameOf, isGroup, productName, productNameLower } from "./data.js";
 import { periodLabel, yearOf, yearTicks } from "./time.js";
 import { money, escapeHTML as esc } from "./format.js";
 import { t } from "./i18n.js";
@@ -62,7 +62,7 @@ export function renderTrends(el, ctx) {
     const name = esc(nameOf(focus));
     sections.push(`
       <section class="trend">
-        <h3>${t(`trends.focusTitle${isGroup(focus) ? "Group" : ""}${store.product === "TOTAL" ? "" : "Product"}`, { name, product: esc(productName(store.product).toLowerCase()) })}</h3>
+        <h3>${t(`trends.focusTitle${isGroup(focus) ? "Group" : ""}${store.product === "TOTAL" ? "" : "Product"}`, { name, product: esc(productNameLower(store.product)) })}</h3>
         <p class="note">${t(scale === "log" ? "trends.unitLog" : "trends.unitUsd")}</p>
         <div class="trend-chart" id="tr-focus"></div>
       </section>

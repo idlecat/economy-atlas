@@ -1,0 +1,88 @@
+{
+  "title": "US tariffs, 2025",
+  "markers": [
+    {
+      "t": "2025-04",
+      "label": "US announces “reciprocal” tariffs (2 April 2025)"
+    },
+    {
+      "t": "2025-05",
+      "label": "US–China Geneva statement suspends most tariff increases for 90 days (12 May 2025)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "The White House: Regulating Imports with a Reciprocal Tariff… (Executive Order, 2 April 2025)",
+      "url": "https://www.whitehouse.gov/presidential-actions/2025/04/regulating-imports-with-a-reciprocal-tariff-to-rectify-trade-practices-that-contribute-to-large-and-persistent-annual-united-states-goods-trade-deficits/"
+    },
+    {
+      "name": "The White House: Joint Statement on U.S.-China Economic and Trade Meeting in Geneva (12 May 2025)",
+      "url": "https://www.whitehouse.gov/briefings-statements/2025/05/joint-statement-on-u-s-china-economic-and-trade-meeting-in-geneva/"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Early 2025: buying ahead",
+      "text": [
+        "Expecting new tariffs, US importers rushed to bring goods in. US imports were **25%** higher in January 2025 than a year earlier and **32%** higher in March.",
+        "March 2025's **$343 billion** is the highest monthly figure in this data. The map shows the change in imports from each partner."
+      ],
+      "view": {
+        "freq": "M",
+        "t": "2025-03",
+        "focus": "USA",
+        "metric": "imports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "April 2025: “reciprocal” tariffs",
+      "text": [
+        "On **2 April 2025** the US announced an additional tariff of at least 10% on imports from all trading partners, with higher rates for some. Tariffs between the US and China escalated until a 12 May statement in Geneva suspended most of the increases for 90 days.",
+        "US imports from the Chinese mainland were **42% lower** in May 2025 than a year earlier, and 44% lower in June. The panel compares US trade with China over time."
+      ],
+      "view": {
+        "freq": "M",
+        "t": "2025-04",
+        "focus": "USA",
+        "metric": "imports",
+        "change": "1",
+        "groups": "EU",
+        "with": "CHN"
+      },
+      "play": {
+        "to": "2025-12",
+        "ms": 700
+      }
+    },
+    {
+      "title": "Who supplied instead",
+      "text": [
+        "For 2025 as a whole, US imports from the Chinese mainland fell **30%** to $308 billion, just **9.0%** of US imports and fourth behind the EU, Mexico and Canada.",
+        "Imports from Taiwan, China rose 73% to $201 billion and from Vietnam 42% to $194 billion. Total US imports still grew 4.6%, to $3.42 trillion."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2025",
+        "focus": "USA",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "China's exports keep growing",
+      "text": [
+        "The Chinese mainland's exports still grew **5.5%** in 2025, to $3.78 trillion. Its exports to the US fell 20%, but exports to Vietnam (+22%), the EU and Hong Kong SAR, China rose.",
+        "Recent months are the first estimates and may be revised."
+      ],
+      "view": {
+        "t": "2025",
+        "focus": "CHN",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
+    }
+  ]
+}

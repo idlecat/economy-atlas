@@ -100,6 +100,7 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
   - `update()` loads flows (with an `updateToken` race guard), builds a color scale whose domain covers **all periods** (cached by `scaleKey`), renders everything, and writes the URL hash with `replaceState`.
   - Views: `applyView(view)` sets the whole state from an object with the URL-hash keys (`product`, `freq`, `t`, `focus`, `metric`, `change`, `groups`, `with`, `view`, `x`, `y`, `mapby`, `scale`, `set`). It is used by `readHash` and by stories. `playTo(index, ms)` animates the timeline and resolves when done or stopped.
   - A `hashchange` listener re-reads the hash for pasted links and back/forward. Old `year=` links still work.
+  - Map coloring by an indicator uses a domain over all years; diverging indicators (growth, balances) use the 98th percentile of |value| so outliers don't wash out the map.
   - It also owns the tooltip, the controls and the About dialog.
 - **`stories.js`:** the story player.
   - Loads `stories/index.json` and `stories/<id>.json`. Each step calls `applyView`, then optionally `playTo`. Step changes bump a `token`, so a replay that is still running can't overwrite a later step.

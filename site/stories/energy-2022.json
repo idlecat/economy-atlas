@@ -1,0 +1,79 @@
+{
+  "title": "Europe's energy crisis",
+  "markers": [
+    {
+      "t": "2022",
+      "label": "Russian pipeline gas to Europe falls by about half"
+    }
+  ],
+  "sources": [
+    {
+      "name": "IEA: Gas Market Lessons from the 2022–2023 Energy Crisis — Anatomy of a natural gas crisis",
+      "url": "https://www.iea.org/reports/gas-market-lessons-from-the-2022-2023-energy-crisis/anatomy-of-a-natural-gas-crisis"
+    },
+    {
+      "name": "CEPII BACI (trade by product)",
+      "url": "https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2021: Russia and Norway supply the EU",
+      "text": [
+        "In 2021 the EU imported **$109 billion** of natural gas from outside the EU. Norway supplied 35% and Russia **28%**; the United States, 8%.",
+        "Arcs show where the EU's gas came from (CEPII BACI; pipeline gas and LNG)."
+      ],
+      "view": {
+        "t": "2021",
+        "product": "GAS",
+        "focus": "EU",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2022: the bill nearly triples",
+      "text": [
+        "After Russia invaded Ukraine, its pipeline gas exports to Europe fell by about half in 2022, and Europe replaced them mainly with liquefied natural gas (LNG), whose imports rose by more than 60%.",
+        "Prices soared, so the EU paid **$314 billion** for gas imports in 2022, 2.9 times as much as in 2021. Russia's share fell to 18%; US gas brought in $37.6 billion."
+      ],
+      "view": {
+        "t": "2022",
+        "product": "GAS",
+        "focus": "EU",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "New suppliers",
+      "text": [
+        "By 2024 the bill was back to **$112 billion**. The United States supplied **17%** of the EU's gas imports, more than Russia (16%); Norway remained the largest at 35%.",
+        "Lines show each supplier's share of the EU's gas imports over time."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2024",
+        "product": "GAS",
+        "focus": "EU",
+        "metric": "imports",
+        "scale": "share",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "A record deficit",
+      "text": [
+        "Expensive energy turned the EU's trade with the rest of the world from a **$50 billion** surplus in 2021 to a **$492 billion** deficit in 2022; its energy imports rose 85% to $829 billion. By 2024 it was back to a $102 billion surplus.",
+        "Germany's own surplus fell from $213 billion to $84 billion in 2022, then recovered."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2022",
+        "metric": "balance",
+        "groups": "EU",
+        "set": "EU,DEU"
+      }
+    }
+  ]
+}

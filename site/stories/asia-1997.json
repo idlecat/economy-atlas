@@ -1,0 +1,87 @@
+{
+  "title": "The Asian financial crisis",
+  "markers": [
+    {
+      "t": "1997",
+      "label": "Thailand devalues the baht (2 July 1997)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "Federal Reserve History: Asian Financial Crisis",
+      "url": "https://www.federalreservehistory.org/essays/asian-financial-crisis"
+    }
+  ],
+  "steps": [
+    {
+      "title": "1996: deficits in a boom",
+      "text": [
+        "In 1996 Thailand imported **$74.9 billion** of goods but exported only $56.5 billion, a trade deficit of **$18.5 billion**. South Korea's deficit was $12.5 billion.",
+        "The map shows Thailand's trade balance with each partner: red where it bought more than it sold."
+      ],
+      "view": {
+        "t": "1996",
+        "focus": "THA",
+        "metric": "balance",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "July 1997: the baht falls",
+      "text": [
+        "On **2 July 1997** Thailand devalued its currency against the US dollar, and the crisis spread across the region. International lenders, including the IMF, mobilized **$118 billion** of loans for Thailand, Indonesia and South Korea.",
+        "The map now shows how each economy's imports changed from the year before. Watch East Asia turn orange in 1998."
+      ],
+      "view": {
+        "t": "1997",
+        "metric": "imports",
+        "change": "1",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "1998",
+        "ms": 1600
+      }
+    },
+    {
+      "title": "Imports collapse",
+      "text": [
+        "In 1998 imports fell by about a third: **−35%** in South Korea, −31% in Thailand, −34% in Indonesia and −26% in Malaysia.",
+        "Exports barely moved: Korea's fell 8% and Thailand's 5%."
+      ],
+      "view": {
+        "t": "1998",
+        "focus": "KOR",
+        "metric": "imports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "Deficits turn into surpluses",
+      "text": [
+        "Because imports fell far more than exports, trade balances swung sharply. South Korea went from a **$12.5 billion** deficit in 1996 to a **$39.4 billion** surplus in 1998; Thailand from −$18.5 billion to +$11.7 billion.",
+        "Each line is one economy's balance with the world."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "1998",
+        "metric": "balance",
+        "groups": "EU",
+        "set": "KOR,THA,IDN,MYS,PHL"
+      }
+    },
+    {
+      "title": "The cost in output",
+      "text": [
+        "Real GDP shrank by **13.1%** in Indonesia in 1998, 7.6% in Thailand, 7.4% in Malaysia and 4.9% in South Korea.",
+        "Measured in US dollars, Indonesia's GDP fell from $227 billion in 1996 to $95.5 billion in 1998. Korea rebounded fastest, growing 11.6% in 1999."
+      ],
+      "view": {
+        "t": "1998",
+        "mapby": "gdp_growth",
+        "groups": "EU"
+      }
+    }
+  ]
+}

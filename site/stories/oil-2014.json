@@ -1,0 +1,78 @@
+{
+  "title": "The oil price collapse",
+  "markers": [
+    {
+      "t": "2014",
+      "label": "Brent crude at $111.80 a barrel (June 2014)"
+    },
+    {
+      "t": "2016",
+      "label": "Brent crude at $30.70 a barrel (January 2016)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "FRED: Brent crude oil spot price, monthly (US EIA series MCOILBRENTEU)",
+      "url": "https://fred.stlouisfed.org/series/MCOILBRENTEU"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2014: oil above $100",
+      "text": [
+        "In June 2014 Brent crude cost **$111.80** a barrel. That year the world's economies exported **$1.49 trillion** of crude oil.",
+        "The map shows each country's crude oil exports (CEPII BACI)."
+      ],
+      "view": {
+        "t": "2014",
+        "product": "CRUDE",
+        "metric": "exports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "The price collapses",
+      "text": [
+        "By January 2016 Brent had fallen to **$30.70**. World crude oil exports fell to $808 billion in 2015 (−46%) and **$689 billion** in 2016, less than half their 2014 value.",
+        "The map shows the change from the year before."
+      ],
+      "view": {
+        "t": "2014",
+        "product": "CRUDE",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2016",
+        "ms": 1600
+      }
+    },
+    {
+      "title": "Oil exporters' earnings halve",
+      "text": [
+        "Total goods exports fell **53%** in Saudi Arabia from 2014 to 2016 ($443 billion to $207 billion), 65% in Nigeria, 64% in Venezuela, 43% in Russia and 39% in Norway.",
+        "Switch to Log to see that the falls were similar in proportion, whatever the country's size."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2016",
+        "metric": "exports",
+        "groups": "EU",
+        "set": "SAU,RUS,NOR,NGA,VEN,AGO"
+      }
+    },
+    {
+      "title": "Venezuela's collapse",
+      "text": [
+        "Countries that depended most on oil suffered most. Venezuela's real GDP shrank 6.2% in 2015 and **17.1%** in 2016.",
+        "World goods exports as a whole fell from $18.9 trillion in 2014 to $15.9 trillion in 2016 (−16%), in part because lower oil prices cut the value of trade."
+      ],
+      "view": {
+        "t": "2016",
+        "mapby": "gdp_growth",
+        "groups": "EU"
+      }
+    }
+  ]
+}

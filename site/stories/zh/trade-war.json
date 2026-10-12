@@ -1,0 +1,86 @@
+{
+  "title": "中美贸易战",
+  "markers": [
+    {
+      "t": "2018",
+      "label": "美国对340亿美元中国商品加征25%关税生效（2018年7月6日）"
+    },
+    {
+      "t": "2020",
+      "label": "中美第一阶段经贸协议签署（2020年1月15日）"
+    }
+  ],
+  "sources": [
+    {
+      "name": "USTR: USTR Issues Tariffs on Chinese Products in Response to Unfair Trade Practices (June 2018)",
+      "url": "https://www.ustr.gov/about-us/policy-offices/press-office/press-releases/2018/june/ustr-issues-tariffs-chinese-products"
+    },
+    {
+      "name": "USDA ERS: Retaliatory Tariffs Reduced U.S. States' Exports of Agricultural Commodities (2022)",
+      "url": "https://www.ers.usda.gov/amber-waves/2022/march/retaliatory-tariffs-reduced-u-s-states-exports-of-agricultural-commodities"
+    },
+    {
+      "name": "USTR: Phase One agreement",
+      "url": "https://ustr.gov/phase-one"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2017年：中国是美国最大的供应国",
+      "text": [
+        "2017年，美国自中国内地进口货物**5052亿美元**，占其全部进口的**21.6%**，超过自整个欧盟的进口（4350亿美元）。",
+        "地图显示美国进口的来源。"
+      ],
+      "view": {
+        "t": "2017",
+        "focus": "USA",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2018年：关税与反制",
+      "text": [
+        "从**2018年7月6日**起，美国对340亿美元的中国进口商品加征25%关税，随后又扩大到更多商品。中国以对美国商品加征关税作为回应，其中包括对大豆加征25%。",
+        "美国自中国的进口从2018年的5385亿美元降至2019年的**4491亿美元**（−17%）。地图显示与2018年相比的变化。"
+      ],
+      "view": {
+        "t": "2019",
+        "focus": "USA",
+        "metric": "imports",
+        "change": "1",
+        "groups": "EU",
+        "with": "CHN"
+      }
+    },
+    {
+      "title": "大豆转向巴西",
+      "text": [
+        "中国是全球最大的大豆进口国。美国对中国的大豆出口从2016年的**139亿美元**降至2018年的71亿美元，而中国自巴西的大豆进口从145亿美元增至**270亿美元**。",
+        "每条线代表中国的一个大豆供应国（CEPII BACI）。"
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2018",
+        "product": "SOYBEANS",
+        "focus": "CHN",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "供应链转移",
+      "text": [
+        "美国买家转向其他供应国。2017至2024年，美国自墨西哥的进口增长**62%**至5059亿美元，自越南的进口增至近三倍，达1366亿美元。2023年，墨西哥超过中国内地，成为美国最大的单一国家进口来源。",
+        "中国在美国进口中的份额从2017年的21.6%降至2024年的**13.4%**。点击某条线，可在面板中与美国对比。"
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2024",
+        "focus": "USA",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    }
+  ]
+}

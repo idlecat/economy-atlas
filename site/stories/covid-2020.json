@@ -1,0 +1,93 @@
+{
+  "title": "COVID-19 and world trade",
+  "markers": [
+    {
+      "t": "2020-03",
+      "label": "WHO characterizes COVID-19 as a pandemic (11 March 2020)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "WHO Director-General's opening remarks at the media briefing on COVID-19, 11 March 2020",
+      "url": "https://www.who.int/news-room/speeches/item/who-director-general-s-opening-remarks-at-the-media-briefing-on-covid-19---11-march-2020"
+    }
+  ],
+  "steps": [
+    {
+      "title": "March 2020: a pandemic",
+      "text": [
+        "On 11 March 2020 the World Health Organization said COVID-19 could be characterized as a pandemic.",
+        "The map shows each economy's exports compared with the same month a year earlier. In March world exports were already **10.5%** lower."
+      ],
+      "view": {
+        "freq": "M",
+        "t": "2020-03",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "April–May: the plunge",
+      "text": [
+        "World exports were **26% lower** in April 2020 than a year earlier, and **27% lower** in May. India's exports fell 61% in April, Mexico's 57% in May, and US exports 36% in May.",
+        "China's exports, after falling early in the year, were 3% higher in April than a year before."
+      ],
+      "view": {
+        "freq": "M",
+        "t": "2020-03",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2020-05",
+        "ms": 1100
+      }
+    },
+    {
+      "title": "A fast rebound",
+      "text": [
+        "The recovery was much faster than after 2008. By December 2020 world exports were **8%** higher than a year earlier.",
+        "For 2020 as a whole they fell 7.0% to $17.6 trillion, then rose **27%** in 2021 to a record $22.3 trillion. The very large increases in spring 2021 partly reflect the low months of 2020."
+      ],
+      "view": {
+        "freq": "M",
+        "t": "2020-05",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2021-06",
+        "ms": 600
+      }
+    },
+    {
+      "title": "What grew",
+      "text": [
+        "Some trade grew through the crisis. World exports of pharmaceuticals rose **9.2%** in 2020, to $682 billion, and of semiconductors 8.8%, to $867 billion.",
+        "The map shows the change in pharmaceutical exports from 2019 (CEPII BACI). Try Semiconductors & integrated circuits too."
+      ],
+      "view": {
+        "t": "2020",
+        "product": "PHARMA",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "The cost in output",
+      "text": [
+        "Real GDP fell **6.4%** in the EU in 2020, 5.8% in India, 2.1% in the US and 10.1% in the UK. The Chinese mainland was among the few large economies to grow, by 2.3%.",
+        "The map is colored by real GDP growth in 2020."
+      ],
+      "view": {
+        "t": "2020",
+        "mapby": "gdp_growth",
+        "groups": "EU"
+      }
+    }
+  ]
+}

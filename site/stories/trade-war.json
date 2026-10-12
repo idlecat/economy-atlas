@@ -1,0 +1,86 @@
+{
+  "title": "The US–China trade war",
+  "markers": [
+    {
+      "t": "2018",
+      "label": "US 25% tariffs on $34 billion of Chinese imports take effect (6 July 2018)"
+    },
+    {
+      "t": "2020",
+      "label": "US–China Phase One agreement signed (15 January 2020)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "USTR: USTR Issues Tariffs on Chinese Products in Response to Unfair Trade Practices (June 2018)",
+      "url": "https://www.ustr.gov/about-us/policy-offices/press-office/press-releases/2018/june/ustr-issues-tariffs-chinese-products"
+    },
+    {
+      "name": "USDA ERS: Retaliatory Tariffs Reduced U.S. States' Exports of Agricultural Commodities (2022)",
+      "url": "https://www.ers.usda.gov/amber-waves/2022/march/retaliatory-tariffs-reduced-u-s-states-exports-of-agricultural-commodities"
+    },
+    {
+      "name": "USTR: Phase One agreement",
+      "url": "https://ustr.gov/phase-one"
+    }
+  ],
+  "steps": [
+    {
+      "title": "2017: China, America's largest supplier",
+      "text": [
+        "In 2017 the United States imported **$505 billion** of goods from the Chinese mainland, **21.6%** of all its imports and more than from the whole EU ($435 billion).",
+        "The map shows where US imports came from."
+      ],
+      "view": {
+        "t": "2017",
+        "focus": "USA",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2018: tariffs and retaliation",
+      "text": [
+        "From **6 July 2018** the US charged an extra 25% on $34 billion of Chinese imports, and later extended tariffs to more goods. China answered with tariffs on US goods, including 25% on soybeans.",
+        "US imports from China fell from $538 billion in 2018 to **$449 billion** in 2019 (−17%). The map shows the change from 2018."
+      ],
+      "view": {
+        "t": "2019",
+        "focus": "USA",
+        "metric": "imports",
+        "change": "1",
+        "groups": "EU",
+        "with": "CHN"
+      }
+    },
+    {
+      "title": "Soybeans go to Brazil",
+      "text": [
+        "China imports more soybeans than any other economy. US soybean exports to China fell from **$13.9 billion** in 2016 to $7.1 billion in 2018, while China's soybean imports from Brazil rose from $14.5 billion to **$27.0 billion**.",
+        "Each line is one of China's soybean suppliers (CEPII BACI)."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2018",
+        "product": "SOYBEANS",
+        "focus": "CHN",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "Supply chains move",
+      "text": [
+        "US buyers turned to other suppliers. From 2017 to 2024 imports from Mexico rose **62%** to $506 billion, and from Vietnam nearly tripled to $137 billion. In 2023 Mexico overtook the Chinese mainland as the largest single-country source of US imports.",
+        "China's share of US imports fell from 21.6% in 2017 to **13.4%** in 2024. Click a line to compare it with the US in the panel."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2024",
+        "focus": "USA",
+        "metric": "imports",
+        "groups": "EU"
+      }
+    }
+  ]
+}
