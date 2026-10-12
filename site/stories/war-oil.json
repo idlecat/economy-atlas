@@ -1,0 +1,122 @@
+{
+  "title": "Wars and oil exporters",
+  "markers": [
+    {
+      "t": "1990",
+      "label": "Iraq invades Kuwait (2 August 1990)"
+    },
+    {
+      "t": "2003",
+      "label": "War in Iraq ends the Oil-for-Food Programme (20 March 2003)"
+    },
+    {
+      "t": "2011",
+      "label": "UN Security Council authorizes a no-fly zone over Libya (17 March 2011)"
+    },
+    {
+      "t": "2015",
+      "label": "Saudi-led coalition campaign in Yemen begins (March 2015)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "UN Peacekeeping: UNIKOM background (Iraq–Kuwait, 1990–91)",
+      "url": "https://peacekeeping.un.org/en/mission/past/unikom/background.html"
+    },
+    {
+      "name": "UN Office of the Iraq Programme: Oil-for-Food background",
+      "url": "https://www.un.org/Depts/oip/background/index.html"
+    },
+    {
+      "name": "UN News: Security Council authorizes 'all necessary measures' to protect civilians in Libya (17 March 2011)",
+      "url": "https://news.un.org/en/story/2011/03/369382"
+    },
+    {
+      "name": "Council on Foreign Relations: Global Conflict Tracker, War in Yemen",
+      "url": "https://www.cfr.org/global-conflict-tracker/conflict/war-yemen"
+    },
+    {
+      "name": "CEPII BACI (trade by product)",
+      "url": "https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37"
+    },
+    {
+      "name": "IMF International Trade in Goods (exports)",
+      "url": "https://data.imf.org/en/datasets/IMF.STA:IMTS"
+    },
+    {
+      "name": "World Bank World Development Indicators (real GDP growth)",
+      "url": "https://databank.worldbank.org/source/world-development-indicators"
+    }
+  ],
+  "steps": [
+    {
+      "title": "1990: Iraq invades Kuwait",
+      "text": [
+        "On 2 August 1990 [Iraq](IRQ) invaded and occupied [Kuwait](KWT). A few days later the UN Security Council imposed economic sanctions on Iraq.",
+        "In 1991 Kuwait's goods exports fell to **$0.8 billion**, from $8.4 billion in 1990, a year already cut short by the invasion. Iraq's fell to **$0.5 billion**, from $10.3 billion. Fuels made up **95%** of Kuwait's exports in 1995, the first year with product data. The map shows the change in each economy's exports from the year before."
+      ],
+      "view": {
+        "t": "1991",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "Kuwait rebuilds",
+      "text": [
+        "Offensive operations were suspended on 28 February 1991, with Kuwait City liberated. [Kuwait](KWT)'s real GDP shrank **41%** in 1991 and grew 83% in 1992.",
+        "By 1993 its exports, $9.0 billion, were back above their 1990 level. The highlighted panel section shows Kuwait's economy in the selected year."
+      ],
+      "view": {
+        "t": "1991",
+        "focus": "KWT",
+        "metric": "exports",
+        "groups": "EU"
+      },
+      "panel": "economy"
+    },
+    {
+      "title": "Iraq under sanctions",
+      "text": [
+        "[Iraq](IRQ)'s exports stayed at no more than **$0.6 billion** a year from 1991 to 1996. The first Iraqi oil under the UN Oil-for-Food Programme was exported in December 1996, and by 2000 Iraq's exports had reached $15.8 billion, 99.7% of them fuels.",
+        "The war that began on 20 March 2003 ended oil exports under the programme. Iraq's real GDP fell **37%** in 2003; its exports reached $16.6 billion in 2004. The lines compare Iraq with [Kuwait](KWT)."
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2003",
+        "metric": "exports",
+        "groups": "EU",
+        "set": "IRQ,KWT"
+      }
+    },
+    {
+      "title": "Libya, 2011",
+      "text": [
+        "On 17 March 2011 the UN Security Council authorized “all necessary measures” to protect civilians in [Libya](LBY) and established a no-fly zone over the country.",
+        "Libya's exports, 96% fuels in 2010, fell from $49.2 billion that year to **$18.2 billion** in 2011 (−63%), and its real GDP halved (**−50%**). Exports to [Italy](ITA), its largest customer (26% in 2010), fell from $12.7 billion to $4.4 billion. In 2012 exports rebounded to $56.6 billion."
+      ],
+      "view": {
+        "t": "2011",
+        "focus": "LBY",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "Yemen, since 2015",
+      "text": [
+        "[Yemen](YEM)'s civil war began in 2014, when Houthi insurgents took the capital, Sanaa. From March 2015 a coalition of Gulf states led by [Saudi Arabia](SAU) launched a campaign of economic isolation and air strikes.",
+        "Yemen's exports, 90% fuels in 2013, fell from $7.2 billion that year to **$0.4 billion** in 2015, and its real GDP shrank 28% that year. Unlike Kuwait's and Libya's, its exports have not come back: they were $59 million in 2024. The highlighted panel section shows Yemen's trade with the world over time."
+      ],
+      "view": {
+        "t": "2015",
+        "focus": "YEM",
+        "metric": "exports",
+        "groups": "EU"
+      },
+      "panel": "trade"
+    }
+  ]
+}

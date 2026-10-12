@@ -1,6 +1,7 @@
 {
   "tags": [
     "crises",
+    "wars",
     "china",
     "energy",
     "policy"
@@ -68,6 +69,7 @@
       "summary": "How sanctions redirected Russia's crude oil exports from Europe to China and India, using trade-by-product data.",
       "start": 2021,
       "tags": [
+        "wars",
         "energy",
         "policy"
       ]
@@ -78,6 +80,7 @@
       "summary": "When Russia cut pipeline gas in 2022, the EU's gas import bill nearly tripled and its trade surplus became a record deficit.",
       "start": 2022,
       "tags": [
+        "wars",
         "energy"
       ]
     },
@@ -117,6 +120,25 @@
       "start": 1995,
       "tags": [
         "china"
+      ]
+    },
+    {
+      "id": "war-oil",
+      "title": "Wars and oil exporters, 1990–2015",
+      "summary": "Kuwait, Iraq, Libya and Yemen: how invasion, sanctions and civil war cut the exports of economies that live on oil, and which ones recovered.",
+      "start": 1990,
+      "tags": [
+        "wars",
+        "energy"
+      ]
+    },
+    {
+      "id": "ukraine-war",
+      "title": "War in Ukraine, 2022–24",
+      "summary": "Exports halved in the first months of Russia's invasion; grain found new routes, steel collapsed and the EU became Ukraine's main market.",
+      "start": 2022,
+      "tags": [
+        "wars"
       ]
     }
   ]

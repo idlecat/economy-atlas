@@ -1,0 +1,122 @@
+{
+  "title": "战争与石油出口国",
+  "markers": [
+    {
+      "t": "1990",
+      "label": "伊拉克入侵科威特（1990年8月2日）"
+    },
+    {
+      "t": "2003",
+      "label": "伊拉克战争终止“石油换食品”计划（2003年3月20日）"
+    },
+    {
+      "t": "2011",
+      "label": "联合国安理会授权在利比亚设立禁飞区（2011年3月17日）"
+    },
+    {
+      "t": "2015",
+      "label": "沙特领导的联军在也门开始行动（2015年3月）"
+    }
+  ],
+  "sources": [
+    {
+      "name": "UN Peacekeeping: UNIKOM background (Iraq–Kuwait, 1990–91)",
+      "url": "https://peacekeeping.un.org/en/mission/past/unikom/background.html"
+    },
+    {
+      "name": "UN Office of the Iraq Programme: Oil-for-Food background",
+      "url": "https://www.un.org/Depts/oip/background/index.html"
+    },
+    {
+      "name": "UN News: Security Council authorizes 'all necessary measures' to protect civilians in Libya (17 March 2011)",
+      "url": "https://news.un.org/en/story/2011/03/369382"
+    },
+    {
+      "name": "Council on Foreign Relations: Global Conflict Tracker, War in Yemen",
+      "url": "https://www.cfr.org/global-conflict-tracker/conflict/war-yemen"
+    },
+    {
+      "name": "CEPII BACI (trade by product)",
+      "url": "https://www.cepii.fr/CEPII/en/bdd_modele/bdd_modele_item.asp?id=37"
+    },
+    {
+      "name": "IMF International Trade in Goods (exports)",
+      "url": "https://data.imf.org/en/datasets/IMF.STA:IMTS"
+    },
+    {
+      "name": "World Bank World Development Indicators (real GDP growth)",
+      "url": "https://databank.worldbank.org/source/world-development-indicators"
+    }
+  ],
+  "steps": [
+    {
+      "title": "1990年：伊拉克入侵科威特",
+      "text": [
+        "1990年8月2日，[伊拉克](IRQ)入侵并占领[科威特](KWT)。几天后，联合国安理会对伊拉克实施经济制裁。",
+        "1991年，科威特的货物出口从1990年的84亿美元（这一年已因入侵而中断）降至**8.3亿美元**。伊拉克的出口从103亿美元降至**4.9亿美元**。1995年（有产品数据的第一年），燃料占科威特出口的**95%**。地图显示各经济体出口与上一年相比的变化。"
+      ],
+      "view": {
+        "t": "1991",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "科威特重建",
+      "text": [
+        "1991年2月28日，进攻行动暂停，科威特城获得解放。[科威特](KWT)的实际GDP在1991年萎缩**41%**，1992年增长83%。",
+        "到1993年，其出口达到90亿美元，回到1990年的水平之上。面板中突出显示的部分是科威特所选年份的经济情况。"
+      ],
+      "view": {
+        "t": "1991",
+        "focus": "KWT",
+        "metric": "exports",
+        "groups": "EU"
+      },
+      "panel": "economy"
+    },
+    {
+      "title": "制裁下的伊拉克",
+      "text": [
+        "1991至1996年，[伊拉克](IRQ)的出口每年不超过**6.1亿美元**。1996年12月，第一批伊拉克石油在联合国“石油换食品”计划下出口；到2000年，伊拉克出口达到158亿美元，其中99.7%是燃料。",
+        "2003年3月20日开始的战争终止了该计划下的石油出口。伊拉克实际GDP在2003年下降**37%**；2004年其出口达到166亿美元。折线对比了伊拉克和[科威特](KWT)。"
+      ],
+      "view": {
+        "view": "trends",
+        "t": "2003",
+        "metric": "exports",
+        "groups": "EU",
+        "set": "IRQ,KWT"
+      }
+    },
+    {
+      "title": "2011年的利比亚",
+      "text": [
+        "2011年3月17日，联合国安理会授权采取“一切必要措施”保护[利比亚](LBY)平民，并在该国上空设立禁飞区。",
+        "利比亚的出口（2010年96%为燃料）从2010年的492亿美元降至2011年的**182亿美元**（−63%），实际GDP减半（**−50%**）。对其最大买家[意大利](ITA)（2010年占26%）的出口从127亿美元降至44亿美元。2012年出口反弹至566亿美元。"
+      ],
+      "view": {
+        "t": "2011",
+        "focus": "LBY",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "2015年以来的也门",
+      "text": [
+        "[也门](YEM)内战始于2014年，当时胡塞武装夺取了首都萨那。从2015年3月起，[沙特阿拉伯](SAU)领导的海湾国家联军对其展开经济孤立和空袭。",
+        "也门的出口（2013年90%为燃料）从2013年的72亿美元降至2015年的**3.7亿美元**，当年实际GDP萎缩28%。与科威特和利比亚不同，它的出口没有恢复：2024年仅为5920万美元。面板中突出显示的部分是也门与世界的贸易随时间的变化。"
+      ],
+      "view": {
+        "t": "2015",
+        "focus": "YEM",
+        "metric": "exports",
+        "groups": "EU"
+      },
+      "panel": "trade"
+    }
+  ]
+}
