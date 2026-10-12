@@ -1,0 +1,14 @@
+{
+  "_comment": "Country-to-counterpart measures (annual). For each measure, `counterparts` maps an entity id to the source's code for it; WLD is the total over all counterparts (used for shares). `precedence` (fdi) picks, for each country and counterpart, the first basis with any data, so one series never mixes sources: host = reported by the receiving economy, investor = reported by the investing economy. Group values sum members (as of each year) when members with data hold >= 95% of the group's population.",
+  "start": 1990,
+  "measures": [
+    {"id": "debt", "unit": "usd", "source": "worldbank_ids", "source_code": "DT.DOD.DPPG.CD",
+     "name": "Public external debt owed to",
+     "description": "Public and publicly guaranteed external debt outstanding, by creditor country (official, commercial-bank and other lenders), current US dollars. Low- and middle-income countries only.",
+     "counterparts": {"CHN": "730", "JPN": "701", "USA": "302", "DEU": "005", "FRA": "004", "WLD": "WLD"}},
+    {"id": "fdi", "unit": "usd", "source": "imf_dip", "precedence": ["host", "investor"],
+     "name": "Direct investment from",
+     "description": "Inward direct investment position (stock, net), by immediate investing economy, current US dollars.",
+     "counterparts": {"CHN": "CHN", "HKG": "HKG", "USA": "USA", "JPN": "JPN", "WLD": "G001"}}
+  ]
+}

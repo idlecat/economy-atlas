@@ -219,3 +219,53 @@ def test_group_growth_uses_constant_membership():
     assert round(out["gdp_growth"]["G"][2001], 6) == 5.0
     assert out["gdp"]["G"] == {2000: 100.0, 2001: 210.0}
     assert out["gdp_pc"]["AAA"][2001] == 110.0 / 50
+
+
+# --------------------------------------------------------------------------- bilateral measures
+
+from pipeline import bilateral as bil  # noqa: E402
+
+BIL_CFG = {"start": 2000, "measures": [
+    {"id": "debt", "counterparts": {"CCC": "x", "WLD": "w"}},
+    {"id": "fdi", "precedence": ["host", "investor"], "counterparts": {"CCC": "x", "WLD": "w"}},
+]}
+
+
+def test_bilateral_series_keep_one_basis():
+    reg = make_registry([])
+    rows = [  # host reports only 2001; the investor reports 2000-2001: the host series wins whole
+        ("fdi", "AAA", "CCC", "2001", 5.0, "host"),
+        ("fdi", "AAA", "CCC", "2000", 9.0, "investor"), ("fdi", "AAA", "CCC", "2001", 9.0, "investor"),
+        ("fdi", "BBB", "CCC", "2001", 7.0, "investor"),  # no host report: use the investor's
+    ]
+    values, basis, years = bil.compute(rows, BIL_CFG, reg, {})
+    assert values["fdi"]["CCC"]["AAA"] == {2001: 5.0}
+    assert values["fdi"]["CCC"]["BBB"] == {2001: 7.0}
+    assert basis == {"fdi": {"CCC": {"BBB": "investor"}}}
+    assert years == [2000, 2001]
+
+
+def test_bilateral_group_counts_reporters_and_skips_own_counterpart():
+    reg = make_registry([{"id": "G", "name": "G", "members": ["AAA", "BBB"]},
+                         {"id": "H", "name": "H", "members": ["CCC", "DDD"]}])
+    pop = {"AAA": {2000: 50}, "BBB": {2000: 50}, "CCC": {2000: 50}, "DDD": {2000: 50}}
+    rows = [
+        ("debt", "AAA", "CCC", "2000", 4.0, ""), ("debt", "AAA", "WLD", "2000", 10.0, ""),
+        ("debt", "BBB", "WLD", "2000", 6.0, ""),  # reports, but owes CCC nothing: counts as 0
+        ("debt", "DDD", "CCC", "2000", 3.0, ""), ("debt", "DDD", "WLD", "2000", 3.0, ""),
+    ]
+    values, _, _ = bil.compute(rows, BIL_CFG, reg, pop)
+    assert values["debt"]["CCC"]["G"] == {2000: 4.0}
+    assert values["debt"]["WLD"]["G"] == {2000: 16.0}
+    assert "H" not in values["debt"]["CCC"]  # H contains the creditor CCC itself
+    assert values["debt"]["WLD"].get("H") is None  # CCC doesn't report: only 50% coverage
+
+
+def test_bilateral_group_uses_host_reports_only():
+    reg = make_registry([{"id": "G", "name": "G", "members": ["AAA", "BBB"]}])
+    pop = {"AAA": {2000: 90}, "BBB": {2000: 10}}
+    rows = [("fdi", "AAA", "CCC", "2000", 5.0, "host"), ("fdi", "AAA", "WLD", "2000", 50.0, "host"),
+            ("fdi", "BBB", "CCC", "2000", 400.0, "investor")]  # offshore centre in the investor's report only
+    values, _, _ = bil.compute(rows, BIL_CFG, reg, pop)
+    assert values["fdi"]["CCC"]["G"] == {2000: 5.0}
+    assert values["fdi"]["CCC"]["BBB"] == {2000: 400.0}  # still shown for the country itself

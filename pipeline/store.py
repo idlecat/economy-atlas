@@ -33,8 +33,21 @@ IND_COLUMNS = {
     "unit": "VARCHAR",       # usd, usd_pc, people, pct (raw source units; usd is not scaled here)
 }
 
+BIL_COLUMNS = {
+    "source": "VARCHAR",
+    "measure": "VARCHAR",      # id from config/bilateral.json
+    "entity": "VARCHAR",       # the country the value is about (debtor, investment host)
+    "counterpart": "VARCHAR",  # creditor / investor entity id, or WLD for the total
+    "freq": "VARCHAR",
+    "period": "VARCHAR",
+    "value": "DOUBLE",
+    "unit": "VARCHAR",
+    "basis": "VARCHAR",        # who reported it: host, investor, or "" when there is only one
+}
+
 OBS_DIR = STORE / "observations"
 IND_DIR = STORE / "indicators"
+BIL_DIR = STORE / "bilateral"
 REF_DIR = STORE / "reference"
 REPORT_DIR = STORE / "reports"
 
@@ -94,4 +107,23 @@ def create_indicator_view(con) -> bool:
     if not files:
         return False
     con.execute(f"CREATE OR REPLACE VIEW ind AS SELECT * FROM read_parquet('{IND_DIR / '*.parquet'}', union_by_name = true)")
+    return True
+
+
+def write_bilateral(con, source_id: str, rows: list[tuple]) -> int:
+    """rows: tuples in BIL_COLUMNS order."""
+    con.execute(f"CREATE OR REPLACE TEMP TABLE _bil ({', '.join(f'{c} {t}' for c, t in BIL_COLUMNS.items())})")
+    if rows:
+        con.executemany(f"INSERT INTO _bil VALUES ({', '.join('?' * len(BIL_COLUMNS))})", rows)
+    BIL_DIR.mkdir(parents=True, exist_ok=True)
+    con.execute(f"COPY _bil TO '{BIL_DIR / (source_id + '.parquet')}' (FORMAT parquet)")
+    con.execute("DROP TABLE _bil")
+    return len(rows)
+
+
+def create_bilateral_view(con) -> bool:
+    files = list(BIL_DIR.glob("*.parquet")) if BIL_DIR.exists() else []
+    if not files:
+        return False
+    con.execute(f"CREATE OR REPLACE VIEW bil AS SELECT * FROM read_parquet('{BIL_DIR / '*.parquet'}', union_by_name = true)")
     return True

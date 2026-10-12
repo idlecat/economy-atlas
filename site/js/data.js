@@ -254,6 +254,15 @@ export function loadIndicators() {
   return indicatorsPromise;
 }
 
+let bilateralPromise = null;
+
+/** Country-to-counterpart measures (debt by creditor, direct investment by investor), or null:
+ *  {periods, measures: [{id, unit, source, counterparts}], basis: {m: {cp: {entity: "investor"}}}, values: {m: {cp: {entity: [..]}}}} */
+export function loadBilateral() {
+  bilateralPromise ??= getJSON("data/bilateral.json").catch(() => null);
+  return bilateralPromise;
+}
+
 /** Annual totals of a slice regardless of the active one (e.g. annual exports while viewing monthly data). */
 export function loadTotals(product, freq) {
   const key = `${product}/${freq}`;

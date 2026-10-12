@@ -152,6 +152,9 @@ a { color: var(--accent); }
 @media (max-width: 760px) { .map-wrap.compare .legend { display: none; } .map-wrap.compare .map-title { max-width: calc(100% - 28px); } }
 .econ { width: 100%; border-collapse: collapse; font-size: 13px; }
 .econ td { padding: 3px 0; border-bottom: 1px solid var(--surface-2); }
+.econ.lend th { font-weight: 500; color: var(--muted); font-size: 11.5px; text-align: right; padding: 0 0 4px 8px; }
+.econ.lend td + td { text-align: right; padding-left: 8px; white-space: nowrap; }
+.econ.lend .share { color: var(--muted); font-size: 11px; margin-left: 3px; }
 .econ td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .chart .line.g { stroke: var(--accent); }
 .chart .zero { stroke: var(--border); }

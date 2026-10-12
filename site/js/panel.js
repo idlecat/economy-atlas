@@ -201,6 +201,75 @@ function chartKey() {
   return `<div class="chart-key"><span class="x">${t("metric.exports")}</span><span class="m">${t("metric.imports")}</span></div>`;
 }
 
+// ------------------------------------------------------------------ lending & investment (bilateral.json)
+
+/** Index of `year` in the bilateral periods, or the latest year when `year` is later (the data ends earlier). */
+function bilIndex(bil, year) {
+  const ps = bil.periods;
+  let i = ps.indexOf(String(year));
+  if (i < 0 && year > +ps.at(-1)) i = ps.length - 1;
+  return i < 0 ? null : { i, year: ps[i], exact: ps[i] === String(year) };
+}
+
+/** As a lender/investor: the economies that owe the focus money, and where it has invested. */
+function abroadLists(ctx, at) {
+  const { bil, focus } = ctx;
+  return bil.measures.filter((m) => m.counterparts.includes(focus)).map((m) => {
+    const rows = Object.entries(bil.values[m.id][focus] ?? {})
+      .filter(([k]) => !isGroup(k))
+      .map(([key, s]) => ({ key, v: s[at.i], investor: !!bil.basis[m.id]?.[focus]?.[key] }))
+      .filter((r) => r.v > 0)
+      .sort((a, b) => b.v - a.v);
+    if (!rows.length) return "";
+    const total = rows.reduce((sum, r) => sum + r.v, 0);
+    const top = rows.slice(0, 10);
+    return `
+      <h3>${t(`lend.${m.id}.abroad`, { name: esc(nameOf(focus)), year: at.year })}</h3>
+      <p class="note">${t(`lend.${m.id}.abroadNote`, { n: rows.length, total: money(total), name: esc(nameOf(focus)) })}</p>
+      <ul class="partners lend-list">${top.map((r, i) => `
+        <li data-focus="${esc(r.key)}" tabindex="0">
+          <span class="rank">${i + 1}</span>
+          <span class="nm">${esc(nameOf(r.key))}${r.investor ? " *" : ""}</span>
+          <span class="val">${money(r.v)}<span class="share">${share(r.v, total)}</span></span>
+          <span class="bar"><i style="width:${(r.v / top[0].v) * 100}%"></i></span>
+        </li>`).join("")}</ul>`;
+  }).join("");
+}
+
+/** As a borrower/host: what the focus owes each lender, and who has invested in it. */
+function receivedTable(ctx, at) {
+  const { bil, focus } = ctx;
+  const measures = bil.measures;
+  const cps = [...new Set(measures.flatMap((m) => m.counterparts))].filter((c) => c !== "WLD" && c !== focus);
+  const cell = (m, cp) => {
+    const v = bil.values[m.id]?.[cp]?.[focus]?.[at.i];
+    if (v == null) return "—";
+    const total = bil.values[m.id]?.WLD?.[focus]?.[at.i];
+    const investor = bil.basis[m.id]?.[cp]?.[focus];
+    const pct = cp !== "WLD" && !investor && total > 0 && v >= 0 ? ` <span class="share">${share(v, total)}</span>` : "";
+    return `${money(v)}${investor ? " *" : ""}${pct}`;
+  };
+  const rows = [...cps, "WLD"].filter((cp) => measures.some((m) => bil.values[m.id]?.[cp]?.[focus]?.[at.i] != null));
+  if (!rows.length) return "";
+  return `
+    <h3>${t("lend.received", { name: esc(nameOf(focus)), year: at.year })}</h3>
+    <table class="econ lend">
+      <tr><th></th>${measures.map((m) => `<th>${t(`lend.${m.id}.col`)}</th>`).join("")}</tr>
+      ${rows.map((cp) => `<tr><td>${cp === "WLD" ? t("lend.total") : esc(nameOf(cp))}</td>${measures.map((m) => `<td>${cell(m, cp)}</td>`).join("")}</tr>`).join("")}
+    </table>`;
+}
+
+function lendingSection(ctx) {
+  if (!ctx.bil) return "";
+  const at = bilIndex(ctx.bil, ctx.year);
+  if (!at) return "";
+  const body = abroadLists(ctx, at) + receivedTable(ctx, at);
+  if (!body) return "";
+  const investorNote = body.includes(" *") ? ` ${t("lend.investorNote")}` : "";
+  return `${body}
+    <p class="note">${t("lend.note")}${at.exact ? "" : ` ${t("lend.latestYear", { year: at.year })}`}${investorNote}</p>`;
+}
+
 export function renderPanel(el, ctx) {
   const { focus, pi: yi, metric, compare, label: year } = ctx;
   el.innerHTML = "";
@@ -266,6 +335,7 @@ export function renderPanel(el, ctx) {
     ${rows.length ? rankList(rows, focusTotal, metric, ctx.pair) : `<p class="note">${t("panel.noPartners", { period: year })}</p>`}
     <p class="note">${t("panel.clickPartner")}</p>
     ${economySection(ctx)}
+    ${lendingSection(ctx)}
     ${productsSection(ctx, yi)}`;
 
   lineChart(el.querySelector("#p-chart"), fs, yi, { intra: group ? ctx.intra : null });
@@ -277,6 +347,11 @@ export function renderPanel(el, ctx) {
   bindList(el, ctx.onPair);
   const gc = el.querySelector("#growth-chart");
   if (gc) growthChart(gc, growthPairs(ctx), ctx.year);
+  el.querySelectorAll(".lend-list li[data-focus]").forEach((li) => {
+    const pick = () => ctx.onFocus(li.dataset.focus);
+    li.addEventListener("click", pick);
+    li.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
+  });
   el.querySelectorAll(".products-list li[data-product]").forEach((li) => {
     const pick = () => ctx.onProduct(li.dataset.product);
     li.addEventListener("click", pick);

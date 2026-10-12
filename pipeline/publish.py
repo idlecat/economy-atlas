@@ -306,10 +306,13 @@ def publish():
     from .indicators import publish_indicators
     log("Publishing indicators")
     indicators = publish_indicators(con, registry)
-    if indicators:
-        used_extra = ["worldbank_wdi"]
-    else:
-        used_extra = []
+    used_extra = ["worldbank_wdi"] if indicators else []
+
+    from .bilateral import publish_bilateral
+    log("Publishing bilateral measures")
+    bilateral = publish_bilateral(con, registry)
+    if bilateral:
+        used_extra += [m["source"] for m in bilateral["measures"] if m["source"] not in used_extra]
 
     topo, unmatched_shapes = world_topology(registry)
     dump(SITE_DATA / "world.json", topo)

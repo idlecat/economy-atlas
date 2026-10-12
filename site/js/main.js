@@ -2,7 +2,7 @@ import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
 import {
   store, loadBase, setSlice, availableFreqs, loadFlows, loadBreakdown, hasFlows, nameOf, shortNameOf,
   isGroup, partnerSeries, displayTotals, worldSeries, metricAt, changeAt, defaultPeriodIndex, emptySeries,
-  products, productName, productNameLower, loadIndicators, loadTotals, groupNote, regionName,
+  products, productName, productNameLower, loadIndicators, loadTotals, loadBilateral, groupNote, regionName,
 } from "./data.js";
 import { buildMetrics } from "./metrics.js";
 import { createScatter } from "./scatter.js";
@@ -96,12 +96,12 @@ function buildScale(allValues, metric, back, fmtV = null) {
 
 /** Metrics for the Compare view and indicator map colors, built from annual data of the active product. */
 async function getMetrics() {
-  const ind = await loadIndicators();
+  const [ind, bil] = await Promise.all([loadIndicators(), loadBilateral()]);
   const key = state.product;
   if (metricsCache.key !== key) {
     const annual = await loadTotals(state.product, "A");
     const periods = state.product === "TOTAL" ? store.meta.periods.A : store.meta.products.periods.A;
-    metricsCache = { key, metrics: buildMetrics(ind, annual, periods, state.product), ind };
+    metricsCache = { key, metrics: buildMetrics(ind, annual, periods, state.product, bil), ind, bil };
   }
   return metricsCache;
 }
@@ -155,7 +155,7 @@ async function update() {
     current = { scaleKey, scale: buildScale(all, metric, back) };
   }
   Object.assign(current, { seriesMap, focusSeries, intra, world: worldSeries() });
-  const { metrics, ind } = await getMetrics();
+  const { metrics, ind, bil } = await getMetrics();
   if (token !== updateToken) return;
   current.metrics = metrics;
   syncMetricSelects(metrics);
@@ -184,7 +184,7 @@ async function update() {
   }
   renderSpark();
   renderPanel($("#panel"), {
-    ind, metrics, year: year(),
+    ind, bil, metrics, year: year(),
     focus, pi, metric, compare: compareN(), label: label(), groupsOn, product,
     seriesMap, partners: seriesMap, focusSeries, intra, pair: state.pair, breakdown,
     world: current.world, hasData: !focus || hasFlows(focus),
@@ -696,6 +696,7 @@ function renderSources() {
   const { imf_imts: imf, un_m49: m49, natural_earth: ne } = src;
   const baci = store.meta.products ? src.cepii_baci : null;
   const wb = src.worldbank_wdi;
+  const ids = src.worldbank_ids, dip = src.imf_dip;
   const link = (url, text) => `<a href="${url}" target="_blank" rel="noopener">${esc(text)}</a>`;
   const span = (f) => `${periodLabel(store.meta.periods[f][0])}–${periodLabel(store.meta.periods[f].at(-1))}`;
   const coverage = availableFreqs().map((f) => `${freqLabel(f).toLowerCase()} ${span(f)}`).join(t("listSep"));
@@ -703,7 +704,8 @@ function renderSources() {
   $("#source-line").innerHTML = t("footer.sources", {
     imf: link(imf.url, "IMF, International Trade in Goods by partner country (IMTS)"), accessed: imf.accessed,
     baci: baci ? t("footer.baci", { link: link(baci.url, "CEPII BACI"), terms: esc(baci.terms) }) : "",
-    wb: wb ? t("footer.wb", { link: link(wb.url, "World Bank WDI"), terms: esc(wb.terms) }) : "",
+    wb: (wb ? t("footer.wb", { link: link(wb.url, "World Bank WDI"), terms: esc(wb.terms) }) : "")
+      + (ids && dip ? t("footer.lend", { ids: link(ids.url, "World Bank IDS"), dip: link(dip.url, "IMF DIP") }) : ""),
     m49: link(m49.url, "UN M49"), ne: link(ne.url, "Natural Earth"),
   });
   const memberLabel = (m) => {
@@ -729,6 +731,10 @@ function renderSources() {
     <p>${t("about.trade.monthly")}</p>
     ${baci ? productsAbout(baci, link) : ""}
     ${wb ? indicatorsAbout(wb, link) : ""}
+    ${ids && dip ? `<h3>${t("about.lend.title")}</h3>
+      <p>${t("about.lend.debt", { ids: link(ids.url, ids.name) })}</p>
+      <p>${t("about.lend.fdi", { dip: link(dip.url, dip.name) })}</p>
+      <p>${t("about.lend.groups")}</p>` : ""}
     <h3>${t("about.groups.title")}</h3>
     <p>${t("about.groups.text", { m49: link(m49.url, t("about.groups.m49")) })}</p>
     <ul>${groups}</ul>
@@ -742,6 +748,8 @@ function renderSources() {
     <p>${esc(imf.citation)}</p>
     <p>${t("about.imfTerms", { link: link(imf.terms, imf.terms) })}</p>
     ${wb ? `<p>${t("about.licence", { citation: esc(wb.citation), link: link(wb.terms_url, wb.terms) })}</p>` : ""}
+    ${ids ? `<p>${t("about.licence", { citation: esc(ids.citation), link: link(ids.terms_url, ids.terms) })}</p>` : ""}
+    ${dip ? `<p>${esc(dip.citation)}</p>` : ""}
     ${baci ? `<p>${t("about.licence", { citation: esc(baci.citation), link: link(baci.terms_url, baci.terms) })}</p>` : ""}
     ${getLang() !== "en" ? `<p>${t("about.translation", { m49: link(m49.url, "UN M49") })}</p>` : ""}
     <p class="note">${t("about.generated", { date: store.meta.generated })}</p>`;
