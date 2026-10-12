@@ -297,7 +297,9 @@ def publish():
         log("Publishing goods_trade")
         cfg = datasets["goods_trade"]
         for freq, fc in cfg["freqs"].items():
-            results[("goods_trade", freq)] = publish_freq(con, registry, "goods_trade", cfg, freq, fc["start"], SITE_DATA / freq)
+            r = publish_freq(con, registry, "goods_trade", cfg, freq, fc["start"], SITE_DATA / freq)
+            if r is not None:  # a frequency with no data yet is left out of meta.periods
+                results[("goods_trade", freq)] = r
     if "goods_by_product" in datasets:
         log("Publishing goods_by_product")
         prod_results, products_meta = publish_products(con, registry, datasets["goods_by_product"])
@@ -318,6 +320,8 @@ def publish():
     dump(SITE_DATA / "world.json", topo)
 
     trade = {f: r for (d, *rest), r in results.items() if d == "goods_trade" for f in rest}
+    if not trade:
+        raise RuntimeError("no goods_trade data to publish: run fetch + normalize first")
     reporters = set().union(*(r["reporters"] for r in results.values()))
     partners = set().union(*(r["partners"] for r in results.values()))
     mirrored = set().union(*(r["mirrored"] for r in results.values()))

@@ -19,12 +19,12 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false  # queue: a push must not cancel the monthly refresh
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180  # a cold build downloads BACI (2.4 GB, often 30+ min) and ~450 IMF files
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -32,22 +32,26 @@ jobs:
         run: uv run pytest -q
       # Raw downloads are cached so pushes don't re-download (IMF ~1.5 GB, BACI 2.4 GB).
       # The monthly scheduled run (or a manual run with refresh) fetches everything again.
-      - id: month
-        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - id: keys
+        run: |
+          echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+          echo "baci=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' pipeline/sources/cepii_baci.py)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
         with:
           path: |
             data_raw
             !data_raw/cepii_baci
-          key: data-raw-${{ steps.month.outputs.month }}-${{ github.run_id }}
+          # one entry per month: a per-run key would store another ~1.5 GB every run and, at
+          # GitHub's 10 GB cache limit, evict the BACI cache below
+          key: data-raw-${{ steps.keys.outputs.month }}
           restore-keys: |
-            data-raw-${{ steps.month.outputs.month }}-
             data-raw-
-      # BACI (2.4 GB) is a fixed release: cached until the source module (and its VERSION) changes.
+      # BACI (2.4 GB) is a fixed release: cached until VERSION in sources/cepii_baci.py changes
+      # (not on every edit of that file).
       - uses: actions/cache@v4
         with:
           path: data_raw/cepii_baci
-          key: baci-${{ hashFiles('pipeline/sources/cepii_baci.py') }}
+          key: baci-${{ steps.keys.outputs.baci }}
       - name: Build data files
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.refresh }}" = "true" ]; then

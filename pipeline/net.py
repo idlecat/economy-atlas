@@ -40,14 +40,34 @@ def http_get(url, accept=None, retries=4, timeout=120):
     raise RuntimeError(f"GET {url} failed: {err}")
 
 
-def download(path: Path, url, refresh=False, accept=None) -> bytes:
-    """Download to `path` unless it is already cached."""
+def download(path: Path, url, refresh=False, accept=None, validate=None) -> bytes:
+    """Download to `path` unless it is already cached.
+
+    `validate(data)` may raise to reject a response (e.g. an API error message returned with status
+    200, or an empty body from a 404): nothing is cached then, so the next run retries. The file is
+    written atomically, so an interrupted run never leaves a truncated file behind."""
     if path.exists() and not refresh:
         return path.read_bytes()
     data = http_get(url, accept)
+    if validate:
+        try:
+            validate(data)
+        except Exception as e:
+            raise RuntimeError(f"GET {url}: unexpected response ({e}); not cached") from e
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(data)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_bytes(data)
+    tmp.replace(path)
     return data
+
+
+def json_check(shape):
+    """A `validate` for JSON APIs: the body must parse and `shape(doc)` must be true."""
+    def check(data):
+        doc = json.loads(data)
+        if not shape(doc):
+            raise ValueError(f"unexpected JSON: {data[:200]!r}")
+    return check
 
 
 def download_large(path: Path, url, refresh=False, chunk_mb=16, workers=4, retries=8, chunk_deadline=300):

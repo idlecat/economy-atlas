@@ -6,7 +6,7 @@ are not entities and are dropped. Taiwan is not covered by the World Bank.
 """
 import json
 
-from ..net import download, read_manifest, write_manifest
+from ..net import download, json_check, read_manifest, write_manifest
 from ..paths import CONFIG, RAW
 from ..store import write_indicators
 
@@ -33,7 +33,9 @@ def fetch(refresh=False):
     for ind in inds:
         url = (f"{API}/country/all/indicator/{ind['source_code']}"
                f"?format=json&per_page=20000&date={start}:2100")
-        download(FOLDER / f"{ind['source_code']}.json", url, refresh)
+        # the API answers errors with HTTP 200 and a one-element message list
+        download(FOLDER / f"{ind['source_code']}.json", url, refresh,
+                 validate=json_check(lambda d: isinstance(d, list) and len(d) == 2 and isinstance(d[1], list)))
     if refresh or not read_manifest(FOLDER):
         write_manifest(FOLDER, url=API)
 

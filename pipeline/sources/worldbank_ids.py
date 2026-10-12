@@ -6,7 +6,7 @@ all debtor countries and years. Debtor codes are ISO3 = entity ids; World Bank a
 """
 import json
 
-from ..net import download, read_manifest, write_manifest
+from ..net import download, json_check, read_manifest, write_manifest
 from ..paths import CONFIG, RAW
 from ..store import write_bilateral
 
@@ -38,7 +38,8 @@ def fetch(refresh=False):
         for code in m["counterparts"].values():
             url = (f"{API}/sources/6/country/all/series/{m['source_code']}/counterpart-area/{code}"
                    f"/time/all?format=json&per_page=30000")
-            download(_path(m, code), url, refresh)
+            download(_path(m, code), url, refresh,
+                     validate=json_check(lambda d: isinstance(d, dict) and isinstance(d.get("source", {}).get("data"), list)))
     if refresh or not read_manifest(FOLDER):
         write_manifest(FOLDER, url=API)
 

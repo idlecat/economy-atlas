@@ -37,15 +37,20 @@ def wanted():
     return cfg["start"], [m for m in cfg["measures"] if m["source"] == ID]
 
 
+def _csv_check(data):
+    if not data.startswith(b"DATAFLOW,"):
+        raise ValueError(f"not SDMX CSV: {data[:120]!r}")
+
+
 def fetch(refresh=False):
     _, measures = wanted()
     for m in measures:
         codes = m["counterparts"].values()
         investors = "+".join(c for c in codes if c != WORLD)
         download(FOLDER / f"{m['id']}_inward.csv",
-                 f"{API}/data/IMF.STA,DIP/.O.{INWARD}.{'+'.join(codes)}.A?detail=dataonly", refresh, accept=CSV)
+                 f"{API}/data/IMF.STA,DIP/.O.{INWARD}.{'+'.join(codes)}.A?detail=dataonly", refresh, accept=CSV, validate=_csv_check)
         download(FOLDER / f"{m['id']}_outward.csv",
-                 f"{API}/data/IMF.STA,DIP/{investors}.O.{OUTWARD}..A?detail=dataonly", refresh, accept=CSV)
+                 f"{API}/data/IMF.STA,DIP/{investors}.O.{OUTWARD}..A?detail=dataonly", refresh, accept=CSV, validate=_csv_check)
     if refresh or not read_manifest(FOLDER):
         write_manifest(FOLDER, url=f"{API}/data/IMF.STA,DIP")
 

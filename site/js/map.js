@@ -1,5 +1,5 @@
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
-import * as topojson from "https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/+esm";
+import * as d3 from "../vendor/d3.js";
+import * as topojson from "../vendor/topojson-client.js";
 import { store, displayOf, groupOf, membersAt } from "./data.js";
 import { t } from "./i18n.js";
 

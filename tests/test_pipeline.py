@@ -280,3 +280,16 @@ def test_lists_reject_unknown_members(tmp_path):
         load_lists(reg.entities, path)
     path.write_text('{"lists": [{"id": "L", "counterpart": "AAA", "members": ["BBB", "CCC"]}]}')
     assert load_lists(reg.entities, path)[0]["members"] == ["BBB", "CCC"]
+
+
+def test_download_does_not_cache_rejected_responses(tmp_path, monkeypatch):
+    from pipeline import net
+    monkeypatch.setattr(net, "http_get", lambda url, accept=None: b'[{"message": "error"}]')
+    check = net.json_check(lambda d: isinstance(d, list) and len(d) == 2)
+    with pytest.raises(RuntimeError, match="not cached"):
+        net.download(tmp_path / "x.json", "http://example", validate=check)
+    assert not (tmp_path / "x.json").exists()
+    monkeypatch.setattr(net, "http_get", lambda url, accept=None: b'[{"page": 1}, []]')
+    net.download(tmp_path / "x.json", "http://example", validate=check)
+    assert (tmp_path / "x.json").read_bytes() == b'[{"page": 1}, []]'
+    assert not list(tmp_path.glob("*.tmp"))

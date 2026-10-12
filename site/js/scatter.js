@@ -1,5 +1,5 @@
 // Compare view: one dot per country or merged group, x and y from two metrics for one year.
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
+import * as d3 from "../vendor/d3.js";
 import { fmtUnit } from "./format.js";
 import { getLang, t } from "./i18n.js";
 

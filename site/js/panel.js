@@ -1,4 +1,4 @@
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
+import * as d3 from "../vendor/d3.js";
 import {
   store, nameOf, shortNameOf, isGroup, metricAt, changeAt, groupOf, membersAt, products, productName, productNameLower,
   groupNote, regionName, listById, listName, listNote, listMembers,

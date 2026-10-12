@@ -1,4 +1,4 @@
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
+import * as d3 from "../vendor/d3.js";
 import {
   store, loadBase, setSlice, availableFreqs, loadFlows, loadBreakdown, hasFlows, nameOf, shortNameOf,
   isGroup, partnerSeries, displayTotals, worldSeries, metricAt, changeAt, defaultPeriodIndex, emptySeries,
@@ -162,7 +162,8 @@ async function update() {
     }
     current = { scaleKey, scale: buildScale(all, metric, back) };
   }
-  Object.assign(current, { seriesMap, focusSeries, intra, world: worldSeries(), flows: focus ? await loadFlows(focus, freq, product) : null });
+  if (current.worldKey !== `${product}/${freq}`) Object.assign(current, { worldKey: `${product}/${freq}`, world: worldSeries() });
+  Object.assign(current, { seriesMap, focusSeries, intra, flows: focus ? await loadFlows(focus, freq, product) : null });
   const highlight = state.list ? listMembers(state.list) : null;
   current.listSplit = highlight && focus ? splitByList(current.flows, highlight) : null;
   const { metrics, ind, bil } = await getMetrics();

@@ -1,7 +1,7 @@
 // Trends view: trade over time as line charts instead of a map.
 //   With a focus: its exports, imports and balance, and its top partners (one line each).
 //   Always: a set of economies side by side, which the reader can edit.
-import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm";
+import * as d3 from "../vendor/d3.js";
 import { store, metricAt, nameOf, shortNameOf, isGroup, productName, productNameLower, listName } from "./data.js";
 import { periodLabel, yearOf, yearTicks } from "./time.js";
 import { money, escapeHTML as esc } from "./format.js";
