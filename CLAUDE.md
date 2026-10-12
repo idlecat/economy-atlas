@@ -99,15 +99,16 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
   - `update()` loads flows (with an `updateToken` race guard), builds a color scale whose domain covers **all periods** (cached by `scaleKey`), renders everything, and writes the URL hash with `replaceState`.
   - Views: `applyView(view)` sets the whole state from an object with the URL-hash keys (`product`, `freq`, `t`, `focus`, `metric`, `change`, `groups`, `with`, `view`, `x`, `y`, `mapby`). It is used by `readHash` and by stories. `playTo(index, ms)` animates the timeline and resolves when done or stopped.
   - A `hashchange` listener re-reads the hash for pasted links and back/forward. Old `year=` links still work.
+  - It also owns the tooltip, the controls and the About dialog.
 - **`stories.js`:** the story player.
   - Loads `stories/index.json` and `stories/<id>.json`. Each step calls `applyView`, then optionally `playTo`. Step changes bump a `token`, so a replay that is still running can't overwrite a later step.
   - While a story is active, the URL is `#story=<id>&step=<n>`. The format is in `site/stories/README.md`. Numbers quoted in stories must come from site data, and other facts must be cited in the story's `sources`.
-  - It also owns the tooltip, the controls and the About dialog.
+  - To get or check a story's numbers, open the step's view as a URL hash (e.g. `#view=compare&x=gdp&y=exports&t=2024`) and read `#map-title` and the dots' `__data__` in a headless browser; Compare-view r values depend on the dot set (merged groups) and on the axis scales, so they must be re-checked when either changes.
 - **`map.js`:** `render({focus, pi, groupsOn, colorOf, arcs})`.
   - Group outlines come from `topojson.mesh` and are recomputed when merged groups or that year's membership change.
   - Arc endpoints use the centroids of the largest polygons. Group centroids use all-time members, so arcs don't jump between years.
 - **`panel.js`:** the side panel and `lineChart`, which is reused in tooltips. The Economy section shows indicators for the focus and correlates year-on-year % changes of exports and nominal GDP (`growthPairs`); levels are deliberately not correlated.
-- **Compare view:** `metrics.js` `buildMetrics` defines every plottable metric (`value(key, year)`): trade from the active product's **annual** totals, World Bank indicators, and trade/GDP ratios. `compare.js` picks the dots (same display keys as the map, respecting merged groups) and computes Pearson r on the plotted scale (log10 on log axes), Spearman ρ and a least-squares fit (`stats.js`). `scatter.js` draws it. Entering Compare forces annual data. State keys: `view`, `sx`, `sy`; the map's world view can be colored by a metric via `mapBy`.
+- **Compare view:** `metrics.js` `buildMetrics` defines every plottable metric (`value(key, year)`): trade from the active product's **annual** totals, World Bank indicators, and trade/GDP ratios. `compare.js` picks the dots (same display keys as the map, respecting merged groups) and computes Pearson r on the plotted scale (log10 on log axes), Spearman ρ and a least-squares fit (`stats.js`). `scatter.js` draws it. Metrics with units usd, usd_pc or people get log axes (except signed ones: balance, FDI, current account), and so do the trade/GDP ratios, which span 0.1% to over 300%; points ≤0 are dropped on log axes. Entering Compare forces annual data. State keys: `view`, `sx`, `sy`; the map's world view can be colored by a metric via `mapBy`.
 
 Theming uses CSS variables with a `prefers-color-scheme` dark mode, and the JS palettes in `palettes()` follow it. On screens ≤980px, `.layout` uses `display: contents` so blocks can be reordered with `order`.
 
