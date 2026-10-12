@@ -29,7 +29,8 @@ function loadIndex() {
   return index;
 }
 
-/** hooks: {applyView(view), playTo(period, ms), stopPlay(), setMarkers(list), onChange()} */
+/** hooks: {applyView(view), playTo(period, ms), stopPlay(), setMarkers(list), onChange(),
+ *          knows(code), focus(code), outline(code|null)} */
 export function initStories(h) {
   hooks = h;
   const dialog = $("#stories-dialog");
@@ -96,9 +97,13 @@ function setPlaying(on) {
   if (el) el.textContent = on ? t("stories.replaying") : `↻ ${t("stories.replay", { from: periodLabel(story.steps[step].view.t), to: periodLabel(story.steps[step].play.to) })}`;
 }
 
-/** Captions are plain text; **bold** is the only markup. */
+/** Captions are plain text with two kinds of markup: **bold**, and [name](CODE) for a country or group
+ *  link that focuses it like a click on the map. Unknown codes are shown as plain text. */
 function inline(text) {
-  return esc(text).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  return esc(text)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/\[([^\]]+)\]\(([A-Z][A-Z0-9_]{1,9})\)/g, (m, label, code) =>
+      (hooks.knows(code) ? `<a href="#" class="ent" data-key="${code}">${label}</a>` : label));
 }
 
 function render(s) {
@@ -127,4 +132,9 @@ function render(s) {
   el.querySelectorAll("[data-step]").forEach((b) => { b.onclick = () => goTo(+b.dataset.step); });
   el.querySelector("[data-end]")?.addEventListener("click", stopStory);
   el.querySelector(".story-replay")?.addEventListener("click", () => goTo(step));
+  for (const a of el.querySelectorAll("a.ent")) {
+    a.addEventListener("click", (e) => { e.preventDefault(); hooks.outline(null); hooks.focus(a.dataset.key); });
+    a.addEventListener("mouseenter", () => hooks.outline(a.dataset.key));
+    a.addEventListener("mouseleave", () => hooks.outline(null));
+  }
 }

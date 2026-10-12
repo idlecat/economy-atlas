@@ -105,11 +105,9 @@ export function createMap(container, { onHover, onMove, onClick }) {
 
   function drawHover() {
     if (!hoverKey) return hoverOutline.attr("d", null);
-    hoverOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => {
-      const ia = a.id && displayOf(a.id, groupsOn, pi) === hoverKey;
-      const ib = b.id && displayOf(b.id, groupsOn, pi) === hoverKey;
-      return a === b ? ia : ia !== ib;
-    })));
+    // a shape belongs to the key if it is that country, or is drawn as it (a merged group)
+    const inKey = (g) => !!g.id && (g.id === hoverKey || displayOf(g.id, groupsOn, pi) === hoverKey);
+    hoverOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => (a === b ? inKey(a) : inKey(a) !== inKey(b)))));
   }
 
   function centroidOf(key) {
@@ -178,5 +176,11 @@ export function createMap(container, { onHover, onMove, onClick }) {
   new ResizeObserver(() => resize()).observe(container);
   resize();
 
-  return { render, zoomBy, reset, hasShape: (key) => !!centroidOf(key) };
+  /** Outline an entity or group from outside the map (e.g. hovering a country name in a story). */
+  function outline(key) {
+    hoverKey = key;
+    drawHover();
+  }
+
+  return { render, zoomBy, reset, outline, hasShape: (key) => !!centroidOf(key) };
 }

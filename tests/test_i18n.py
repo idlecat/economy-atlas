@@ -61,3 +61,14 @@ def test_stories_are_translated_with_the_same_views(lang):
         en = load(SITE / f"stories/{s['id']}.json")
         tr = load(SITE / f"stories/{lang}/{s['id']}.json")
         assert skeleton(tr) == skeleton(en), s["id"]
+
+
+def test_story_links_point_to_known_entities():
+    with open(CONFIG / "entities.csv", newline="", encoding="utf-8") as f:
+        known = {row["id"] for row in csv.DictReader(f)}
+    known |= {g["id"] for g in load(CONFIG / "groups.json")["groups"]}
+    for path in [p for p in (SITE / "stories").rglob("*.json") if p.name != "index.json"]:
+        for step in load(path)["steps"]:
+            for text in step["text"] if isinstance(step["text"], list) else [step["text"]]:
+                for code in re.findall(r"\[[^\]]+\]\(([A-Z0-9_]+)\)", text):
+                    assert code in known, f"{path.name}: unknown link target {code}"

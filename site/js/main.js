@@ -921,6 +921,9 @@ async function boot() {
     stopPlay,
     setMarkers: (m) => { markers = m; if (current) renderSpark(); },
     onChange: () => { if (!activeStory()) groupChoices = null; writeHash(); },
+    knows: (code) => !!store.entities[code] || isGroup(code),
+    focus: (code) => { stopPlay(); setFocus(code); },
+    outline: (code) => map.outline(code),
   });
   // Links pasted into the address bar or back/forward (writeHash uses replaceState, which doesn't fire this).
   addEventListener("hashchange", readHash);

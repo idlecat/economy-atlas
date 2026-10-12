@@ -46,6 +46,8 @@ If the reader changes "Treat as one" during a story, that choice is kept for the
 
 Omitted keys take their defaults: annual data, the latest period, world view, total trade, levels, and the EU merged.
 
+Caption markup: `**bold**`, and `[name](CODE)` for a country or group link (an entity id from `config/entities.csv` or a group id). Clicking a link focuses that entity, like a click on the map (the named country itself, even if its group is merged); hovering outlines it on the map. Link the first mention of each country in a step, in every language; `tests/test_i18n.py` checks that link targets exist.
+
 Rules for content on a public site:
 - Every number quoted in `text` must come from this site's data, so readers can check it on the map. Recompute these numbers whenever the data is refreshed.
 - Every other fact needs an entry in `sources`.

@@ -1,25 +1,53 @@
 {
   "title": "The great trade collapse",
   "markers": [
-    { "t": "2007-12", "label": "US recession begins" },
-    { "t": "2008-09", "label": "Lehman Brothers files for bankruptcy" },
-    { "t": "2009-04", "label": "G20 London summit pledges $250 billion for trade finance" },
-    { "t": "2009-06", "label": "US recession ends" }
+    {
+      "t": "2007-12",
+      "label": "US recession begins"
+    },
+    {
+      "t": "2008-09",
+      "label": "Lehman Brothers files for bankruptcy"
+    },
+    {
+      "t": "2009-04",
+      "label": "G20 London summit pledges $250 billion for trade finance"
+    },
+    {
+      "t": "2009-06",
+      "label": "US recession ends"
+    }
   ],
   "sources": [
-    { "name": "Federal Reserve History: The Great Recession and Its Aftermath", "url": "https://www.federalreservehistory.org/essays/great-recession-and-its-aftermath" },
-    { "name": "WTO press release 598 (2010): Trade to expand by 9.5% in 2010 after a dismal 2009", "url": "https://www.wto.org/english/news_e/pres10_e/pr598_e.htm" },
-    { "name": "G20 London Summit communiqué, 2 April 2009", "url": "https://www.g20.utoronto.ca/2009/2009communique0402.html" },
-    { "name": "US EIA: Europe Brent spot price", "url": "https://www.eia.gov/dnav/pet/hist/RBRTED.htm" }
+    {
+      "name": "Federal Reserve History: The Great Recession and Its Aftermath",
+      "url": "https://www.federalreservehistory.org/essays/great-recession-and-its-aftermath"
+    },
+    {
+      "name": "WTO press release 598 (2010): Trade to expand by 9.5% in 2010 after a dismal 2009",
+      "url": "https://www.wto.org/english/news_e/pres10_e/pr598_e.htm"
+    },
+    {
+      "name": "G20 London Summit communiqué, 2 April 2009",
+      "url": "https://www.g20.utoronto.ca/2009/2009communique0402.html"
+    },
+    {
+      "name": "US EIA: Europe Brent spot price",
+      "url": "https://www.eia.gov/dnav/pet/hist/RBRTED.htm"
+    }
   ],
   "steps": [
     {
       "title": "Summer 2008: trade at a record",
       "text": [
         "In July 2008 the world's economies exported about **$1.6 trillion** of goods in a single month. No month would be higher until March 2011.",
-        "Trouble had already started: the US economy entered recession in December 2007, and losses on mortgage-related assets were straining financial markets. But trade was still booming, helped by high commodity prices."
+        "Trouble had already started: the [US](USA) economy entered recession in December 2007, and losses on mortgage-related assets were straining financial markets. But trade was still booming, helped by high commodity prices."
       ],
-      "view": { "freq": "M", "t": "2008-07", "groups": "EU" }
+      "view": {
+        "freq": "M",
+        "t": "2008-07",
+        "groups": "EU"
+      }
     },
     {
       "title": "September 2008: Lehman Brothers fails",
@@ -27,7 +55,12 @@
         "In September 2008 the investment bank Lehman Brothers filed for bankruptcy, and the financial crisis went global.",
         "The map now shows the change from the same month a year earlier. In September, world exports were still about **19% higher** than in September 2007, so most of the map is green."
       ],
-      "view": { "freq": "M", "t": "2008-09", "change": "1", "groups": "EU" }
+      "view": {
+        "freq": "M",
+        "t": "2008-09",
+        "change": "1",
+        "groups": "EU"
+      }
     },
     {
       "title": "The free fall",
@@ -35,41 +68,79 @@
         "Within a few months the map turns orange. By February 2009 world exports were **33% lower** than a year earlier, and the drop reached about **36%** in April 2009.",
         "These are values in US dollars, which also fell because prices, especially oil, dropped. Measured by volume, the WTO put the 2009 decline at 12.2%, the largest since the Second World War."
       ],
-      "view": { "freq": "M", "t": "2008-10", "change": "1", "groups": "EU" },
-      "play": { "to": "2009-04", "ms": 900 }
+      "view": {
+        "freq": "M",
+        "t": "2008-10",
+        "change": "1",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2009-04",
+        "ms": 900
+      }
     },
     {
       "title": "Manufacturing exporters hit hardest",
       "text": [
-        "Countries that sell cars, machinery and electronics saw orders vanish. Japan's exports in February 2009 were **41% lower** than a year earlier, and fell 44% by March.",
-        "Germany's exports were down about a third (**−34%** in February). Hover over a partner to see how each market shrank."
+        "Countries that sell cars, machinery and electronics saw orders vanish. [Japan](JPN)'s exports in February 2009 were **41% lower** than a year earlier, and fell 44% by March.",
+        "[Germany](DEU)'s exports were down about a third (**−34%** in February). Hover over a partner to see how each market shrank."
       ],
-      "view": { "freq": "M", "t": "2009-02", "focus": "JPN", "metric": "exports", "change": "1", "groups": "EU" }
+      "view": {
+        "freq": "M",
+        "t": "2009-02",
+        "focus": "JPN",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU"
+      }
     },
     {
       "title": "Oil exporters: the steepest drop",
       "text": [
         "The price of oil collapsed from its mid-2008 peak, and with it the export earnings of oil producers.",
-        "Exports from the Gulf Cooperation Council states to the rest of the world were **56% lower** in May 2009 than a year earlier. Russia's were about half (**−50%**)."
+        "Exports from the [Gulf Cooperation Council](GCC) states to the rest of the world were **56% lower** in May 2009 than a year earlier. [Russia](RUS)'s were about half (**−50%**)."
       ],
-      "view": { "freq": "M", "t": "2009-05", "focus": "GCC", "metric": "exports", "change": "1", "groups": "EU,GCC" }
+      "view": {
+        "freq": "M",
+        "t": "2009-05",
+        "focus": "GCC",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU,GCC"
+      }
     },
     {
       "title": "China and the United States",
       "text": [
-        "China's exports fell less steeply, by about a quarter at the worst point (**−26%** in May 2009).",
-        "Its biggest single customer cut back sharply: US imports from all countries were **36% lower** in May 2009 than a year earlier. The panel compares China's trade with the US over time."
+        "[China](CHN)'s exports fell less steeply, by about a quarter at the worst point (**−26%** in May 2009).",
+        "Its biggest single customer cut back sharply: [US](USA) imports from all countries were **36% lower** in May 2009 than a year earlier. The panel compares China's trade with the US over time."
       ],
-      "view": { "freq": "M", "t": "2009-05", "focus": "CHN", "metric": "exports", "change": "1", "groups": "EU", "with": "USA" }
+      "view": {
+        "freq": "M",
+        "t": "2009-05",
+        "focus": "CHN",
+        "metric": "exports",
+        "change": "1",
+        "groups": "EU",
+        "with": "USA"
+      }
     },
     {
       "title": "Rescue and rebound",
       "text": [
-        "In April 2009, G20 leaders meeting in London pledged **$250 billion** of support for trade finance as part of a wider rescue package. The US recession officially ended in June 2009.",
+        "In April 2009, G20 leaders meeting in London pledged **$250 billion** of support for trade finance as part of a wider rescue package. The [US](USA) recession officially ended in June 2009.",
         "Trade bottomed out in the first half of 2009. By November 2009 world exports were above their level a year earlier again (+6%), partly because the end of 2008 was already depressed."
       ],
-      "view": { "freq": "M", "t": "2009-05", "change": "1", "groups": "EU" },
-      "play": { "to": "2010-06", "ms": 700 }
+      "view": {
+        "freq": "M",
+        "t": "2009-05",
+        "change": "1",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2010-06",
+        "ms": 700
+      }
     },
     {
       "title": "The long view",
@@ -77,7 +148,12 @@
         "In annual terms, world goods exports fell from **$16.3 trillion** in 2008 to **$12.4 trillion** in 2009 (−24%). They recovered to $15.3 trillion in 2010 and passed the 2008 level in 2011 ($18.3 trillion).",
         "Press ▶ or drag the slider to see how trade developed after the crisis, or pick any country to explore its own story."
       ],
-      "view": { "freq": "A", "t": "2009", "change": "1", "groups": "EU" }
+      "view": {
+        "freq": "A",
+        "t": "2009",
+        "change": "1",
+        "groups": "EU"
+      }
     }
   ]
 }

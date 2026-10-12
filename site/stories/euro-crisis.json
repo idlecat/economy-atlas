@@ -24,8 +24,8 @@
     {
       "title": "2008: deficits on the periphery",
       "text": [
-        "Before the crisis, southern Europe bought far more than it sold. In 2008 Greece imported **$95.0 billion** of goods and exported $30.8 billion; its current-account deficit was **$51.3 billion**. Spain's was **$144 billion**.",
-        "Groups are split here, so each EU country is shown on its own, colored by its trade balance with the world."
+        "Before the crisis, southern Europe bought far more than it sold. In 2008 [Greece](GRC) imported **$95.0 billion** of goods and exported $30.8 billion; its current-account deficit was **$51.3 billion**. [Spain](ESP)'s was **$144 billion**.",
+        "Groups are split here, so each [EU](EU) country is shown on its own, colored by its trade balance with the world."
       ],
       "view": {
         "t": "2008",
@@ -36,7 +36,7 @@
     {
       "title": "2010: Greece needs a rescue",
       "text": [
-        "In May 2010 euro area governments and the IMF agreed a **€110 billion** support programme for Greece, the first of three.",
+        "In May 2010 euro area governments and the IMF agreed a **€110 billion** support programme for [Greece](GRC), the first of three.",
         "Greece's goods imports fell from $95.0 billion in 2008 to **$61.4 billion** in 2012 (−35%). Its exports grew a little."
       ],
       "view": {
@@ -50,7 +50,7 @@
     {
       "title": "Austerity and unemployment",
       "text": [
-        "Greece's economy shrank every year from 2009 to 2013, by as much as **9.9%** in 2011. Unemployment rose from 7.7% in 2008 to **27.7%** in 2013; in Spain from 11.2% to **26.1%**.",
+        "[Greece](GRC)'s economy shrank every year from 2009 to 2013, by as much as **9.9%** in 2011. Unemployment rose from 7.7% in 2008 to **27.7%** in 2013; in [Spain](ESP) from 11.2% to **26.1%**.",
         "The map is colored by unemployment in 2013."
       ],
       "view": {
@@ -62,8 +62,8 @@
     {
       "title": "From deficit to surplus",
       "text": [
-        "By 2013 the deficits were gone. Spain's current account went from −$144 billion in 2008 to **+$28.3 billion**, Italy's from −$65.0 billion to +$22.4 billion and Portugal's from −$31.2 billion to +$3.5 billion. Greece's deficit shrank to $5.0 billion.",
-        "Germany's surplus kept growing, from $206 billion to **$250 billion**."
+        "By 2013 the deficits were gone. [Spain](ESP)'s current account went from −$144 billion in 2008 to **+$28.3 billion**, [Italy](ITA)'s from −$65.0 billion to +$22.4 billion and [Portugal](PRT)'s from −$31.2 billion to +$3.5 billion. [Greece](GRC)'s deficit shrank to $5.0 billion.",
+        "[Germany](DEU)'s surplus kept growing, from $206 billion to **$250 billion**."
       ],
       "view": {
         "t": "2013",
@@ -75,7 +75,7 @@
       "title": "“Whatever it takes”",
       "text": [
         "On 26 July 2012 ECB President Mario Draghi said the ECB was “ready to do whatever it takes to preserve the euro”.",
-        "Exports helped the recovery: Spain's goods exports rose from $221 billion in 2009 to **$306 billion** in 2013, above their 2008 level. Switch to Log to compare growth across countries."
+        "Exports helped the recovery: [Spain](ESP)'s goods exports rose from $221 billion in 2009 to **$306 billion** in 2013, above their 2008 level. Switch to Log to compare growth across countries."
       ],
       "view": {
         "view": "trends",
