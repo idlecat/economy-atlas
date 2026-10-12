@@ -143,7 +143,9 @@ function applySpot() {
   if (spotPin) {
     requestAnimationFrame(() => {
       // el is detached if the panel re-rendered meanwhile; that render scheduled its own scroll
-      if (spotPin && el.isConnected) panel.scrollTop += el.getBoundingClientRect().top - panel.getBoundingClientRect().top - 12;
+      // land the section just below the pinned panel header (.panel-head), if it is shown
+      const below = panel.querySelector(".panel-head")?.offsetHeight ?? 0;
+      if (spotPin && el.isConnected) panel.scrollTop += el.getBoundingClientRect().top - panel.getBoundingClientRect().top - below - 12;
     });
   }
 }

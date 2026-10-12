@@ -95,6 +95,7 @@ for (const lang of LANGS) {
       if (links !== expected) fail(`${where}: ${links} country links, expected ${expected}`);
       if (story.steps[i].panel) {
         await expect(page.$(`#panel .psec.spot[data-sec="${story.steps[i].panel}"]`).then(Boolean), `panel section "${story.steps[i].panel}" highlighted`);
+        await expect(page.isVisible("#panel .panel-head"), "panel header pinned on a spotlight step");
       }
     }
   }

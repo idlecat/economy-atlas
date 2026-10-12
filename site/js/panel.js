@@ -341,6 +341,9 @@ function lendingSection(ctx) {
 
 /** A panel section that a story step can point at (`panel` in stories/README.md). */
 const sec = (id, html) => (html.trim() ? `<div class="psec" data-sec="${id}">${html}</div>` : "");
+/** Whose panel this is, pinned to the panel's top on story steps that scroll it to a section (CSS shows it
+ *  only under .layout[data-spot]), since the name in the summary is then scrolled away. */
+const head = (...parts) => `<div class="panel-head">${parts.filter(Boolean).map(esc).join(" · ")}</div>`;
 
 export function renderPanel(el, ctx) {
   const { focus, pi: yi, metric, compare, label: year } = ctx;
@@ -349,7 +352,7 @@ export function renderPanel(el, ctx) {
   if (!focus) {
     const rows = topRows(ctx.seriesMap, yi, metric);
     const worldTotal = metricAt(ctx.world, yi, metric === "balance" ? "total" : metric);
-    el.innerHTML = sec("summary", `
+    el.innerHTML = head(ctx.product === "TOTAL" ? t("panel.worldTitle") : productName(ctx.product), year) + sec("summary", `
       <div class="kicker">${t("panel.worldKicker", { period: year })}</div>
       <h2>${ctx.product === "TOTAL" ? t("panel.worldTitle") : esc(productName(ctx.product))}</h2>
       <div class="intro">${t("panel.intro")}</div>`) + sec("trade", `
@@ -385,7 +388,7 @@ export function renderPanel(el, ctx) {
     ? `<p class="note">${t(mergeable && has(`panel.partOfMerge.${ent.part_of}`) ? `panel.partOfMerge.${ent.part_of}` : `panel.partOf.${ent.part_of}`, { group: chip })}</p>`
     : mergeable && has(`panel.groupHint.${inGroup}`) ? `<p class="note">${t(`panel.groupHint.${inGroup}`, { group: chip })}</p>` : "";
 
-  el.innerHTML = sec("summary", `
+  el.innerHTML = head(nameOf(focus), ctx.product !== "TOTAL" && productName(ctx.product), year) + sec("summary", `
     <div class="kicker">${group ? t("panel.group") : esc(ent?.subregion ? regionName(ent.subregion) : t("panel.economy"))} · ${year}</div>
     <h2>${esc(nameOf(focus))}</h2>
     ${group ? groupBlurb(focus, yi) : ""}${partOf}${ctx.product === "TOTAL" ? mirrorNote : ""}${noData}${memberNote}

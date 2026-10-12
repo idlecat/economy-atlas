@@ -278,6 +278,14 @@ a { color: var(--accent); }
 .layout[data-spot] .psec:not(.spot):hover { opacity: 1; }
 .psec.spot { margin: 8px -8px 0; padding: 0 8px 8px; border-radius: 8px; box-shadow: 0 0 0 1.5px var(--accent); background: var(--accent-soft); }
 .psec.spot > h3:first-child { margin-top: 10px; }
+.panel-head { display: none; }
+@media (min-width: 981px) {
+  /* the panel scrolls on these screens: keep whose panel it is in view */
+  .layout[data-spot] .panel-head {
+    display: block; position: sticky; top: -16px; z-index: 1; margin: -16px -16px 6px; padding: 9px 16px;
+    background: var(--surface); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14px;
+  }
+}
 
 /* ---------- stories */
 .story {
