@@ -161,13 +161,14 @@ export function isGroup(code) {
 /** Group a country belongs to at period index `pi` (membership is dated by year), or undefined. */
 export function groupOf(code, pi) {
   const spans = store.entities[code]?.groups;
-  if (!spans) return undefined;
+  if (!spans || !store.periods[pi]) return undefined; // pi can be stale for a moment after a frequency switch
   const y = yearOf(store.periods[pi]);
   return spans.find((s) => (s.from ?? -Infinity) <= y && y <= (s.to ?? Infinity))?.g;
 }
 
 /** Members of a group at period index `pi`. */
 export function membersAt(groupId, pi) {
+  if (!store.periods[pi]) return [];
   const y = yearOf(store.periods[pi]);
   return store.groupById.get(groupId).members
     .filter((m) => (m.from ?? -Infinity) <= y && y <= (m.to ?? Infinity))

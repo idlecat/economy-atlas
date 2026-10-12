@@ -84,6 +84,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
     ocean.attr("d", path);
     paths.attr("d", path);
     drawOutlines();
+    lastGroupsKey = ""; // pi may be stale here (e.g. the map reappears after a frequency switch): redraw on next render
     drawList();
     drawHover();
     if (lastView) drawArcs(lastView.arcs);
