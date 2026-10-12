@@ -32,6 +32,7 @@
     <div class="seg" id="view" role="radiogroup" aria-label="View" data-i18n-attr="aria-label:view.label">
       <button data-v="map" role="radio" title="Trade on a world map" data-i18n="view.map" data-i18n-attr="title:view.mapTitle">Map</button>
       <button data-v="compare" role="radio" title="Plot two metrics against each other, e.g. trade vs GDP" data-i18n="view.compare" data-i18n-attr="title:view.compareTitle">Compare</button>
+      <button data-v="trends" role="radio" title="Trade over time as line charts: a country and its partners, or several economies" data-i18n="view.trends" data-i18n-attr="title:view.trendsTitle">Trends</button>
     </div>
     <label class="product-pick">
       <span class="sr-only" data-i18n="product.label">Product</span>
@@ -43,6 +44,11 @@
       <button data-v="exports" role="radio" data-i18n="metric.exports">Exports</button>
       <button data-v="imports" role="radio" data-i18n="metric.imports">Imports</button>
       <button data-v="balance" role="radio" data-i18n="metric.balance">Balance</button>
+    </div>
+    <div class="seg" id="scale" role="radiogroup" aria-label="Scale" data-i18n-attr="aria-label:scale.label" hidden>
+      <button data-v="usd" role="radio" data-i18n="scale.usd" data-i18n-attr="title:scale.usdTitle">US$</button>
+      <button data-v="log" role="radio" data-i18n="scale.log" data-i18n-attr="title:scale.logTitle">Log</button>
+      <button data-v="share" role="radio" data-i18n="scale.share" data-i18n-attr="title:scale.shareTitle">Share</button>
     </div>
     <div id="compare-controls" class="compare-controls" hidden>
       <label>Y <select id="sy" aria-label="Vertical axis" data-i18n-attr="aria-label:compare.yAxis"></select></label>
@@ -66,6 +72,7 @@
     <section class="map-wrap" aria-label="World map" data-i18n-attr="aria-label:map.label">
       <div id="map"></div>
       <div id="compare" hidden></div>
+      <div id="trends" class="trends" hidden></div>
       <div id="map-title" class="map-title"></div>
       <div id="legend" class="legend"></div>
       <div class="zoom">

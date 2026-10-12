@@ -114,6 +114,39 @@ a { color: var(--accent); }
 .scatter .dot.focus { fill-opacity: 1; stroke: var(--text); stroke-width: 2.5; }
 .scatter .labels text { fill: var(--text); font-size: 11px; pointer-events: none; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
 .scatter .labels text.focus { font-weight: 700; }
+.trends { position: absolute; inset: 0; overflow-y: auto; padding: 14px 18px 18px; }
+.trends[hidden], .map-title[hidden], .legend[hidden] { display: none; }
+.trends .trend + .trend { margin-top: 18px; }
+.trends h3 { margin: 0 0 2px; font-size: 15px; }
+.trends .note { margin: 0 0 6px; }
+.trend-hint { padding: 8px 10px; background: var(--surface-2); border-radius: 8px; }
+.trend-chart { position: relative; }
+.trend-svg { display: block; width: 100%; height: auto; }
+.trend-svg .axis text { fill: var(--muted); font-size: 11px; }
+.trend-svg .axis line, .trend-svg .axis path { stroke: var(--border); }
+.trend-svg .grid line { stroke: var(--border); stroke-opacity: .5; }
+.trend-svg .zero { stroke: var(--muted); stroke-opacity: .6; }
+.trend-svg .yr { stroke: var(--accent); stroke-dasharray: 3 3; opacity: .7; }
+.trend-svg .cursor { stroke: var(--text); stroke-opacity: .35; }
+.trend-svg .tl { fill: none; stroke-width: 1.8; stroke-linejoin: round; }
+.trend-svg .tl.strong { stroke-width: 3.2; }
+.trend-svg .hover { fill: transparent; }
+.trend-svg .end-labels text { font-size: 11.5px; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.trend-svg .empty { fill: var(--muted); font-size: 13px; }
+.trend-tip {
+  position: absolute; top: 4px; z-index: 3; pointer-events: none; min-width: 150px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px;
+  font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+}
+.trend-tip[hidden] { display: none; }
+.trend-tip div { display: flex; align-items: center; gap: 6px; }
+.trend-tip i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.trend-tip span { margin-left: auto; padding-left: 10px; font-variant-numeric: tabular-nums; }
+.set-edit { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.set-chip { display: inline-flex; align-items: center; gap: 2px; cursor: default; }
+.set-chip button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1; }
+.set-chip button:hover { color: var(--text); }
+.set-add { font: inherit; font-size: 12.5px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); width: 190px; }
 .map-wrap.compare .legend { left: auto; right: 12px; top: 12px; bottom: auto; max-width: 300px; }
 .map-wrap.compare .map-title { max-width: calc(100% - 340px); }
 @media (max-width: 760px) { .map-wrap.compare .legend { display: none; } .map-wrap.compare .map-title { max-width: calc(100% - 28px); } }
@@ -319,6 +352,8 @@ dialog code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px
   body { display: flex; flex-direction: column; }
   .layout { display: contents; }
   .map-wrap { order: 2; margin: 0 20px; min-height: 0; height: auto; aspect-ratio: 1.45; }
+  .map-wrap.trends { aspect-ratio: auto; }
+  .trends { position: static; overflow: visible; padding: 12px 10px 14px; }
   .timeline { order: 3; }
   .side { display: contents; }
   .story { order: 4; margin: 0 20px; max-height: none; }

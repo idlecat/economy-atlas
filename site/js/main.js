@@ -6,6 +6,7 @@ import {
 } from "./data.js";
 import { buildMetrics } from "./metrics.js";
 import { createScatter } from "./scatter.js";
+import { renderTrends, defaultSet, SCALES } from "./trends.js";
 import { compareData, statsHTML, REGION_COLORS } from "./compare.js";
 import { createMap } from "./map.js";
 import { renderPanel, lineChart, METRICS, metricLabel } from "./panel.js";
@@ -27,10 +28,12 @@ const state = {
   back: 0,        // change mode, in years (0 = levels)
   groupsOn: new Set(DEFAULT_GROUPS),
   pair: null,
-  view: "map",       // "map" or "compare" (scatter of two metrics)
+  view: "map",       // "map", "compare" (scatter of two metrics) or "trends" (line charts over time)
   sx: "gdp",         // Compare view axes: metric ids from metrics.js
   sy: "exports",
   mapBy: "trade",    // world-view map colors: "trade" or a metric id (e.g. gdp_pc)
+  scale: "usd",      // Trends view: "usd", "log" or "share"
+  set: null,         // Trends view: economies side by side; null = the largest ones at the selected period
 };
 
 let map, scatter, current = null, playTimer = null, updateToken = 0, markers = [];
@@ -156,6 +159,8 @@ async function update() {
 
   if (state.view === "compare") {
     renderCompare(metrics, ind);
+  } else if (state.view === "trends") {
+    renderTrendsView(seriesMap, focusSeries);
   } else {
     const byMetric = !focus && state.mapBy !== "trade" ? metrics.get(state.mapBy) : null;
     let colorOf;
@@ -200,6 +205,19 @@ function renderCompare(metrics, ind) {
   $("#legend").innerHTML = `<div class="region-key">${Object.entries(REGION_COLORS).filter(([r]) => regions.includes(r))
     .map(([r, c]) => `<span><i style="background:${c}"></i>${esc(regionName(r))}</span>`).join("")}${regions.includes("Group") ? `<span><i style="background:#5d6878"></i>${t("compare.mergedGroup")}</span>` : ""}</div>
     <div>${t("compare.legendNote")}</div>`;
+}
+
+// ------------------------------------------------------------------ trends view
+
+function renderTrendsView(partners, focusSeries) {
+  renderTrends($("#trends"), {
+    pi: state.pi, metric: state.metric, scale: state.scale, focus: state.focus, focusSeries, partners,
+    pair: state.pair, world: current.world, findEntity,
+    set: state.set ?? defaultSet(displayTotals(state.groupsOn), state.pi),
+    onPair: (k) => { state.pair = state.pair === k ? null : k; update(); },
+    onFocus: setFocus,
+    onSetChange: (keys) => { state.set = keys; update(); },
+  });
 }
 
 function showDotTip(p, ev) {
@@ -514,16 +532,24 @@ function syncControls() {
     b.title = b.disabled ? t("freq.allGoodsOnly") : "";
   }
   $("#product").value = state.product;
-  const compare = state.view === "compare";
+  const compare = state.view === "compare", trends = state.view === "trends", map = state.view === "map";
   $(".map-wrap").classList.toggle("compare", compare);
+  $(".map-wrap").classList.toggle("trends", trends);
   for (const b of document.querySelectorAll("#view button")) b.setAttribute("aria-checked", b.dataset.v === state.view);
   $("#metric").hidden = compare;
-  $("#mode").hidden = compare;
+  $("#mode").hidden = !map;
+  $("#scale").hidden = !trends;
+  for (const b of document.querySelectorAll("#scale button")) {
+    b.setAttribute("aria-checked", b.dataset.v === state.scale);
+    b.disabled = b.dataset.v !== "usd" && state.metric === "balance";
+  }
   $("#compare-controls").hidden = !compare;
-  $("#map-by-wrap").hidden = compare || !!state.focus;
-  $("#map").hidden = compare;
+  $("#map-by-wrap").hidden = !map || !!state.focus;
+  $("#map").hidden = !map;
   $("#compare").hidden = !compare;
-  $(".zoom").hidden = compare;
+  $("#trends").hidden = !trends;
+  for (const el of ["#map-title", "#legend"]) $(el).hidden = trends;
+  $(".zoom").hidden = !map;
   if (compare) for (const b of document.querySelectorAll("#freq button")) if (b.dataset.v !== "A") b.disabled = true;
   for (const b of document.querySelectorAll("#metric button")) b.setAttribute("aria-checked", b.dataset.v === state.metric);
   for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-checked", +b.dataset.v === state.back);
@@ -571,6 +597,10 @@ function setupControls() {
     const v = e.target.closest("button")?.dataset.v;
     if (v) { state.metric = v; syncControls(); update(); }
   });
+  $("#scale").addEventListener("click", (e) => {
+    const v = e.target.closest("button")?.dataset.v;
+    if (v) { state.scale = v; syncControls(); update(); }
+  });
   $("#mode").addEventListener("click", (e) => {
     const v = e.target.closest("button")?.dataset.v;
     if (v != null) { state.back = +v; syncControls(); update(); }
@@ -598,20 +628,11 @@ function setupControls() {
     chips.append(b);
   }
 
-  // search: by name in the interface language, the English name or the code
-  const options = [
-    ...store.groups.map((g) => ({ code: g.id, name: nameOf(g.id), en: g.name })),
-    ...Object.entries(store.entities).filter(([, e]) => e.reporter).map(([code, e]) => ({ code, name: nameOf(code), en: e.name })),
-  ].sort((a, b) => a.name.localeCompare(b.name, getLang()));
-  $("#entity-list").innerHTML = options.map((o) => `<option value="${esc(o.name)}"></option>`).join("");
+  $("#entity-list").innerHTML = searchOptions().map((o) => `<option value="${esc(o.name)}"></option>`).join("");
   const search = $("#search");
   const pick = () => {
-    const q = search.value.trim().toLowerCase();
-    if (!q) return;
-    const names = (o) => [o.name, o.en].map((n) => n.toLowerCase());
-    const hit = options.find((o) => names(o).includes(q) || o.code.toLowerCase() === q)
-      ?? options.find((o) => names(o).some((n) => n.startsWith(q)));
-    if (hit) { setFocus(hit.code); search.value = ""; search.blur(); }
+    const code = findEntity(search.value);
+    if (code) { setFocus(code); search.value = ""; search.blur(); }
   };
   search.addEventListener("change", pick);
   search.addEventListener("keydown", (e) => { if (e.key === "Enter") pick(); });
@@ -637,6 +658,30 @@ function setupControls() {
   $("#lang-btn").addEventListener("click", () => setLang(other));
   dark.addEventListener("change", () => { current = null; update(); });
   new ResizeObserver(() => current && renderSpark()).observe($("#spark"));
+}
+
+// ------------------------------------------------------------------ search
+
+let options = null;
+
+/** Groups and reporting economies, by name in the interface language. */
+function searchOptions() {
+  options ??= [
+    ...store.groups.map((g) => ({ code: g.id, name: nameOf(g.id), en: g.name })),
+    ...Object.entries(store.entities).filter(([, e]) => e.reporter).map(([code, e]) => ({ code, name: nameOf(code), en: e.name })),
+  ].sort((a, b) => a.name.localeCompare(b.name, getLang()));
+  return options;
+}
+
+/** Entity or group id for a typed name (interface language or English) or code, or null. */
+function findEntity(text) {
+  const q = text.trim().toLowerCase();
+  if (!q) return null;
+  const names = (o) => [o.name, o.en].map((n) => n.toLowerCase());
+  const opts = searchOptions();
+  const hit = opts.find((o) => names(o).includes(q) || o.code.toLowerCase() === q)
+    ?? opts.find((o) => names(o).some((n) => n.startsWith(q)));
+  return hit?.code ?? null;
 }
 
 // ------------------------------------------------------------------ sources
@@ -739,7 +784,10 @@ async function applyView(view) {
   state.focus = view.focus && (store.entities[view.focus] || isGroup(view.focus)) ? view.focus : null;
   if (state.focus && isGroup(state.focus)) state.groupsOn.add(state.focus);
   state.pair = state.focus && view.with ? view.with : null;
-  state.view = view.view === "compare" ? "compare" : "map";
+  state.view = ["compare", "trends"].includes(view.view) ? view.view : "map";
+  state.scale = SCALES.includes(view.scale) ? view.scale : "usd";
+  state.set = view.set == null ? null
+    : view.set === "none" ? [] : view.set.split(",").filter((k) => store.entities[k] || isGroup(k));
   state.sx = view.x || "gdp";
   state.sy = view.y || "exports";
   state.mapBy = view.mapby || "trade";
@@ -756,6 +804,11 @@ function currentView() {
   if (state.back) v.change = String(state.back);
   if (state.pair) v.with = state.pair;
   if (state.view === "compare") Object.assign(v, { view: "compare", x: state.sx, y: state.sy });
+  else if (state.view === "trends") {
+    v.view = "trends";
+    if (state.scale !== "usd") v.scale = state.scale;
+    if (state.set) v.set = state.set.join(",") || "none";
+  }
   else if (state.mapBy !== "trade") v.mapby = state.mapBy;
   return v;
 }
