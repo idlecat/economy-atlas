@@ -66,6 +66,15 @@ for (const lang of LANGS) {
   await page.waitForTimeout(300);
   await expect(page.getAttribute('#metric button[data-v="imports"]', "aria-checked").then((v) => v === "true"), "Space activates a focused button");
   await expect(page.evaluate(() => location.hash.includes("t=2024")), "Space doesn't start playback");
+  // the Stories dialog filters by topic
+  await page.click("#stories-btn");
+  await page.waitForSelector("#story-tags [data-tag]");
+  const allStories = await page.$$eval("#stories-list li", (e) => e.length);
+  await page.click('#story-tags [data-tag="energy"]');
+  await page.waitForTimeout(300);
+  await expect(page.$$eval("#stories-list li", (e) => e.length).then((n) => n > 0 && n < allStories), "story tag filter");
+  await page.click('#story-tags [data-tag="all"]');
+  await page.keyboard.press("Escape");
   await page.click("#about-btn");
   await expect(text("#about-body").then((s) => s.length > 2000), "About text");
   await page.keyboard.press("Escape");

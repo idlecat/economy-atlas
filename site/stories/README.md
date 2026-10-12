@@ -4,7 +4,10 @@ Guided replays shown by the "Stories" button. Each story is one JSON file listed
 
 ```jsonc
 // index.json
-{ "stories": [ { "id": "crisis-2008", "title": "…", "summary": "…" } ] }
+{ "tags": ["crises", "china", "energy", "policy"],      // topic filters in the Stories dialog, in chip order
+  "stories": [ { "id": "crisis-2008", "title": "…", "summary": "…",
+                 "start": 2008,                          // first year the story covers; the dialog sorts by it
+                 "tags": ["crises"] } ] }                // one or more of the tags above
 
 // <id>.json
 {
@@ -54,5 +57,7 @@ Caption markup: `**bold**`, and `[name](CODE)` for a country or group link (an e
 Rules for content on a public site:
 - Every number quoted in `text` must come from this site's data, so readers can check it on the map. List each one in `pipeline/storycheck.py` `CLAIMS` (the English snippet and how to compute it); `python -m pipeline check-stories` verifies them in every language after each data refresh, and CI won't deploy while any is out of date.
 - Every other fact needs an entry in `sources`.
+
+Tags: give each story the topics a reader would look for it under (a story can have several); add a new tag only when at least two stories share it, with a `storyTag.<id>` name in every `site/i18n/<lang>.json`.
 
 Translations: every story also needs `<lang>/<id>.json` (and an entry in `<lang>/index.json`), e.g. `zh/`. Only `title`, `text`, `summary` and marker `label`s are translated; views, replays, marker times and sources must be identical to the English file (`tests/test_i18n.py` checks this). Write amounts in the language's own units (Chinese: 1150亿美元, 1.6万亿美元), from the same site data.

@@ -310,6 +310,10 @@ a { color: var(--accent); }
 }
 .stories-list button:hover { border-color: var(--accent); }
 .stories-list span { color: var(--muted); font-size: 13px; }
+.stories-list .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.stories-list .tags i { font-style: normal; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.story-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.story-tags:empty { display: none; }
 .spark .marker { stroke: var(--imports); stroke-width: 1.5; stroke-dasharray: 2 2; }
 .panel h2 { margin: 0; font-size: 18px; }
 .panel .kicker { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 2px; }

@@ -33,6 +33,25 @@ function loadIndex() {
 
 /** hooks: {applyView(view), playTo(period, ms), stopPlay(), setMarkers(list), onChange(),
  *          knows(code), focus(code), outline(code|null)} */
+/** The Stories dialog: tag chips over the list, sorted by the period each story covers. The chosen tag
+ *  is remembered per browser (a convenience only). */
+let tag = (() => { try { return localStorage.getItem("storyTag") ?? "all"; } catch { return "all"; } })();
+
+function renderList({ tags = [], stories }) {
+  if (tag !== "all" && !tags.includes(tag)) tag = "all";
+  $("#story-tags").innerHTML = stories.length && tags.length ? ["all", ...tags].map((id) =>
+    `<button type="button" class="chip" data-tag="${esc(id)}" aria-pressed="${id === tag}">${t(`storyTag.${id}`)}</button>`).join("") : "";
+  const shown = stories.filter((s) => tag === "all" || s.tags?.includes(tag))
+    .sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+  $("#stories-list").innerHTML = shown.length
+    ? shown.map((s) => `
+      <li><button type="button" data-id="${esc(s.id)}">
+        <b>${esc(s.title)}</b><span>${esc(s.summary)}</span>
+        ${s.tags?.length ? `<span class="tags">${tags.filter((x) => s.tags.includes(x)).map((x) => `<i>${t(`storyTag.${x}`)}</i>`).join("")}</span>` : ""}
+      </button></li>`).join("")
+    : `<li>${t("stories.none")}</li>`;
+}
+
 export function initStories(h) {
   hooks = h;
   // the panel is re-rendered on every update, so the highlight is re-applied after each render
@@ -41,14 +60,15 @@ export function initStories(h) {
   for (const ev of ["wheel", "touchstart", "pointerdown", "keydown"]) panel.addEventListener(ev, () => { spotPin = false; }, { passive: true });
   const dialog = $("#stories-dialog");
   $("#stories-btn").addEventListener("click", async () => {
-    const { stories } = await loadIndex();
-    $("#stories-list").innerHTML = stories.length
-      ? stories.map((s) => `
-        <li><button type="button" data-id="${esc(s.id)}">
-          <b>${esc(s.title)}</b><span>${esc(s.summary)}</span>
-        </button></li>`).join("")
-      : `<li>${t("stories.none")}</li>`;
+    renderList(await loadIndex());
     dialog.showModal();
+  });
+  $("#story-tags").addEventListener("click", async (e) => {
+    const id = e.target.closest("[data-tag]")?.dataset.tag;
+    if (!id) return;
+    tag = id;
+    try { localStorage.setItem("storyTag", tag); } catch { /* storage blocked */ }
+    renderList(await loadIndex());
   });
   $("#stories-list").addEventListener("click", (e) => {
     const id = e.target.closest("button")?.dataset.id;

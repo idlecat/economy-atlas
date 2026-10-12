@@ -1,64 +1,123 @@
 {
+  "tags": [
+    "crises",
+    "china",
+    "energy",
+    "policy"
+  ],
   "stories": [
     {
       "id": "asia-1997",
       "title": "The Asian financial crisis, 1997–98",
-      "summary": "How the 1997–98 crisis cut imports in Thailand, Korea and Indonesia by a third, and turned their trade deficits into surpluses."
+      "summary": "How the 1997–98 crisis cut imports in Thailand, Korea and Indonesia by a third, and turned their trade deficits into surpluses.",
+      "start": 1997,
+      "tags": [
+        "crises"
+      ]
     },
     {
       "id": "crisis-2008",
       "title": "The great trade collapse, 2008–09",
-      "summary": "How the global financial crisis cut world goods trade by a third in a few months, month by month."
+      "summary": "How the global financial crisis cut world goods trade by a third in a few months, month by month.",
+      "start": 2008,
+      "tags": [
+        "crises"
+      ]
     },
     {
       "id": "euro-crisis",
       "title": "The euro area debt crisis, 2010–13",
-      "summary": "Greece, Spain, Portugal and Italy cut imports, swung their current accounts into surplus and paid with record unemployment, 2010–13."
+      "summary": "Greece, Spain, Portugal and Italy cut imports, swung their current accounts into surplus and paid with record unemployment, 2010–13.",
+      "start": 2010,
+      "tags": [
+        "crises"
+      ]
     },
     {
       "id": "oil-2014",
       "title": "The oil price collapse, 2014–16",
-      "summary": "When Brent crude fell from $112 to $31 a barrel, 2014–16, the export earnings of oil producers halved."
+      "summary": "When Brent crude fell from $112 to $31 a barrel, 2014–16, the export earnings of oil producers halved.",
+      "start": 2014,
+      "tags": [
+        "crises",
+        "energy"
+      ]
     },
     {
       "id": "trade-war",
       "title": "The US–China trade war, 2018–24",
-      "summary": "Tariffs from 2018 cut US imports from China, sent Chinese soybean buyers to Brazil, and moved supply chains to Mexico and Vietnam."
+      "summary": "Tariffs from 2018 cut US imports from China, sent Chinese soybean buyers to Brazil, and moved supply chains to Mexico and Vietnam.",
+      "start": 2018,
+      "tags": [
+        "policy",
+        "china"
+      ]
     },
     {
       "id": "covid-2020",
       "title": "COVID-19 and world trade, 2020–21",
-      "summary": "Month by month: world exports fell by a quarter in April–May 2020, then rebounded to records within a year."
+      "summary": "Month by month: world exports fell by a quarter in April–May 2020, then rebounded to records within a year.",
+      "start": 2020,
+      "tags": [
+        "crises"
+      ]
     },
     {
       "id": "russia-oil",
       "title": "Russian oil turns east, 2021–24",
-      "summary": "How sanctions redirected Russia's crude oil exports from Europe to China and India, using trade-by-product data."
+      "summary": "How sanctions redirected Russia's crude oil exports from Europe to China and India, using trade-by-product data.",
+      "start": 2021,
+      "tags": [
+        "energy",
+        "policy"
+      ]
     },
     {
       "id": "energy-2022",
       "title": "Europe's energy crisis, 2022–24",
-      "summary": "When Russia cut pipeline gas in 2022, the EU's gas import bill nearly tripled and its trade surplus became a record deficit."
+      "summary": "When Russia cut pipeline gas in 2022, the EU's gas import bill nearly tripled and its trade surplus became a record deficit.",
+      "start": 2022,
+      "tags": [
+        "energy"
+      ]
     },
     {
       "id": "tariffs-2025",
       "title": "US tariffs, 2025",
-      "summary": "Importers rushed ahead of new US tariffs, then imports from China fell by over 40% while Taiwan, China and Vietnam gained."
+      "summary": "Importers rushed ahead of new US tariffs, then imports from China fell by over 40% while Taiwan, China and Vietnam gained.",
+      "start": 2025,
+      "tags": [
+        "policy",
+        "china"
+      ]
     },
     {
       "id": "belt-road",
       "title": "The Belt and Road Initiative, 2013–24",
-      "summary": "Trade, loans and investment between China and the 156 countries on the official partner list, before and after 2013."
+      "summary": "Trade, loans and investment between China and the 156 countries on the official partner list, before and after 2013.",
+      "start": 2013,
+      "tags": [
+        "china",
+        "policy"
+      ]
     },
     {
       "id": "china-rise",
       "title": "China's rise as an exporter, 1995–2024",
-      "summary": "A Compare-view story: what goes with exporting more, and how China climbed from 6th-largest exporter to 1st."
+      "summary": "A Compare-view story: what goes with exporting more, and how China climbed from 6th-largest exporter to 1st.",
+      "start": 1995,
+      "tags": [
+        "china"
+      ]
     },
     {
       "id": "china-goods-mix",
       "title": "What China sells and buys, 1995–2024",
-      "summary": "Product by product: China's exports moved from clothing to machinery and cars, and its imports from machines to oil and iron ore."
+      "summary": "Product by product: China's exports moved from clothing to machinery and cars, and its imports from machines to oil and iron ore.",
+      "start": 1995,
+      "tags": [
+        "china"
+      ]
     }
   ]
 }
