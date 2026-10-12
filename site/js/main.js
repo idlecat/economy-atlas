@@ -760,7 +760,10 @@ function renderSources() {
     <p>${t("about.trade.reported")}</p>
     <p>${t("about.trade.monthly")}</p>
     ${store.meta.provisional ? `<p>${t("about.trade.provisional", { periods: esc(Object.entries(store.meta.provisional)
-      .map(([f, p]) => `${freqLabel(f).toLowerCase()} ${periodLabel(p)}–${periodLabel(store.meta.periods[f].at(-1))}`).join(t("listSep"))) })}</p>` : ""}
+      .map(([f, p]) => {
+        const last = store.meta.periods[f].at(-1);
+        return `${freqLabel(f).toLowerCase()} ${periodLabel(p)}${p === last ? "" : `–${periodLabel(last)}`}`;
+      }).join(t("listSep"))) })}</p>` : ""}
     ${baci ? productsAbout(baci, link) : ""}
     ${wb ? indicatorsAbout(wb, link) : ""}
     ${ids && dip ? `<h3>${t("about.lend.title")}</h3>
