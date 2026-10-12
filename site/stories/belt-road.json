@@ -81,7 +81,7 @@
       "title": "What China buys and sells",
       "text": [
         "Partner countries supply most of [China](CHN)'s raw materials: **96%** of its crude oil imports in 2024, 88% of its copper ore and 73% of its soybeans (the list includes [Russia](RUS), [Saudi Arabia](SAU), [Iraq](IRQ) and [Brazil](BRA)).",
-        "China sells them more manufactured goods: their share of its machinery and electronics exports rose from 32% to 42% between 2012 and 2024, and its car exports to them from $4.0 billion to $53.3 billion."
+        "China sells them more manufactured goods: their share of its machinery and electronics exports rose from 32% to 42% between 2012 and 2024, and its car exports to them from $4.0 billion to $53.3 billion. The highlighted panel section gives the partners' share of China's imports of the selected product, now and in 2012."
       ],
       "view": {
         "t": "2024",
@@ -90,7 +90,8 @@
         "metric": "imports",
         "list": "BRI",
         "groups": "EU"
-      }
+      },
+      "panel": "list"
     },
     {
       "title": "Loans",

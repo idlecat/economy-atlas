@@ -51,6 +51,7 @@
         "groups": "EU",
         "with": "CHN"
       },
+      "panel": "pair",
       "play": {
         "to": "2025-12",
         "ms": 700

@@ -123,7 +123,8 @@
         "change": "1",
         "groups": "EU",
         "with": "USA"
-      }
+      },
+      "panel": "pair"
     },
     {
       "title": "Rescue and rebound",

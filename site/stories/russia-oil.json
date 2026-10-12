@@ -80,7 +80,8 @@
         "metric": "imports",
         "groups": "EU",
         "with": "RUS"
-      }
+      },
+      "panel": "pair"
     },
     {
       "title": "Explore further",
