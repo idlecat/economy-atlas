@@ -41,6 +41,8 @@ Guided replays shown by the "Stories" button. Each story is one JSON file listed
 | `x`, `y` | Compare-view metrics, e.g. `gdp`, `gdp_pc`, `exports`, `exports_gdp` (see `site/js/metrics.js`) |
 | `mapby` | color the world map by a metric instead of trade, e.g. `gdp_pc` |
 
+If the reader changes "Treat as one" during a story, that choice is kept for the following steps (on top of each step's `groups`), so write captions that still make sense with groups split or merged.
+
 Omitted keys take their defaults: annual data, the latest period, world view, total trade, levels, and the EU merged.
 
 Rules for content on a public site:

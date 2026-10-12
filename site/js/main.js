@@ -618,12 +618,14 @@ function setupControls() {
     b.textContent = shortNameOf(g.id);
     b.title = nameOf(g.id);
     b.addEventListener("click", () => {
-      if (state.groupsOn.has(g.id)) {
+      const on = !state.groupsOn.has(g.id);
+      if (on) {
+        state.groupsOn.add(g.id);
+      } else {
         state.groupsOn.delete(g.id);
         if (state.focus === g.id) state.focus = null;
-      } else {
-        state.groupsOn.add(g.id);
       }
+      if (activeStory()) rememberGroupChoice(g.id, on);
       state.pair = null;
       syncControls();
       update();
@@ -764,6 +766,32 @@ function productsAbout(baci, link) {
     <details><summary>${t("product.commodities")}</summary><ul>${ps.commodities.map(row).join("")}</ul></details>`;
 }
 
+// ------------------------------------------------------------------ stories
+
+// "Treat as one" changes made during a story, kept for its later steps (each step sets its own groups).
+let groupChoices = null; // {story, on: Set, off: Set}
+
+function choicesFor(story) {
+  if (groupChoices?.story !== story) groupChoices = { story, on: new Set(), off: new Set() };
+  return groupChoices;
+}
+
+function rememberGroupChoice(g, on) {
+  const c = choicesFor(activeStory().id);
+  (on ? c.on : c.off).add(g);
+  (on ? c.off : c.on).delete(g);
+}
+
+/** A story step's view, with the reader's group choices applied on top of the step's groups. */
+function applyStoryView(view) {
+  const c = choicesFor(activeStory()?.id);
+  if (!c.on.size && !c.off.size) return applyView(view);
+  const groups = new Set(view.groups == null ? DEFAULT_GROUPS : view.groups.split(",").filter((g) => g && g !== "none"));
+  for (const g of c.on) groups.add(g);
+  for (const g of c.off) groups.delete(g);
+  return applyView({ ...view, groups: [...groups].join(",") || "none" });
+}
+
 // ------------------------------------------------------------------ views & URL state
 
 /** A view is the shareable state: {product, freq, t, focus, metric, change, groups, with}, all strings. */
@@ -854,11 +882,11 @@ async function boot() {
   setupControls();
   renderSources();
   initStories({
-    applyView,
+    applyView: applyStoryView,
     playTo: (t, ms) => playTo(nearestIndex(store.periods, t), ms),
     stopPlay,
     setMarkers: (m) => { markers = m; if (current) renderSpark(); },
-    onChange: writeHash,
+    onChange: () => { if (!activeStory()) groupChoices = null; writeHash(); },
   });
   // Links pasted into the address bar or back/forward (writeHash uses replaceState, which doesn't fire this).
   addEventListener("hashchange", readHash);

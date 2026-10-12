@@ -104,6 +104,7 @@ The site's About text reads sources by id (`imf_imts`, `un_m49`, `natural_earth`
   - It also owns the tooltip, the controls and the About dialog.
 - **`stories.js`:** the story player.
   - Loads `stories/index.json` and `stories/<id>.json`. Each step calls `applyView`, then optionally `playTo`. Step changes bump a `token`, so a replay that is still running can't overwrite a later step.
+  - "Treat as one" changes the reader makes during a story are kept for its later steps (`applyStoryView` in `main.js` applies them on top of each step's `groups`; they reset when the story ends).
   - While a story is active, the URL is `#story=<id>&step=<n>`. The format is in `site/stories/README.md`. Numbers quoted in stories must come from site data, and other facts must be cited in the story's `sources`.
   - To get or check a story's numbers, open the step's view as a URL hash (e.g. `#view=compare&x=gdp&y=exports&t=2024`) and read `#map-title` and the dots' `__data__` in a headless browser; Compare-view r values depend on the dot set (merged groups) and on the axis scales, so they must be re-checked when either changes.
 - **`map.js`:** `render({focus, pi, groupsOn, colorOf, arcs})`.
