@@ -17,7 +17,8 @@ Guided replays shown by the "Stories" button. Each story is one JSON file listed
       "text": ["Paragraph one, **bold** allowed.", "Paragraph two."],
       "view": { "freq": "M", "t": "2008-07", "focus": "USA", "metric": "exports",
                 "change": "1", "groups": "EU", "with": "CHN" },
-      "play": { "to": "2009-02", "ms": 450 }            // optional: replay the timeline after showing the view
+      "play": { "to": "2009-02", "ms": 450 },           // optional: replay the timeline after showing the view
+      "panel": "products"                               // optional: the step is about this panel section
     }
   ]
 }
@@ -41,6 +42,8 @@ Guided replays shown by the "Stories" button. Each story is one JSON file listed
 | `x`, `y` | Compare-view metrics, e.g. `gdp`, `gdp_pc`, `exports`, `exports_gdp` (see `site/js/metrics.js`) |
 | `list` | highlight a country list from `config/lists.json`, e.g. `BRI` |
 | `mapby` | color the world map by a metric instead of trade, e.g. `gdp_pc` |
+
+`panel` is for steps where a block in the side panel says more than the map. On wide screens the map gets narrower and the story card moves beside the panel; the named section is highlighted and scrolled into view, and the rest of the panel is dimmed. Sections (`data-sec` in `site/js/panel.js`): `summary` (name, product share and totals), `list` (the highlighted list), `pair` (comparison with `with`), `trade` (trade with the world chart), `partners` (top partners), `economy`, `lending` (debt and investment) and `products` (trade by product). Mention the section in the caption, as it is not always on screen (e.g. on phones).
 
 If the reader changes "Treat as one" during a story, that choice is kept for the following steps (on top of each step's `groups`), so write captions that still make sense with groups split or merged.
 

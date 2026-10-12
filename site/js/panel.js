@@ -339,6 +339,9 @@ function lendingSection(ctx) {
     <p class="note">${t("lend.note")}${at.exact ? "" : ` ${t("lend.latestYear", { year: at.year })}`}${investorNote}</p>`;
 }
 
+/** A panel section that a story step can point at (`panel` in stories/README.md). */
+const sec = (id, html) => (html.trim() ? `<div class="psec" data-sec="${id}">${html}</div>` : "");
+
 export function renderPanel(el, ctx) {
   const { focus, pi: yi, metric, compare, label: year } = ctx;
   el.innerHTML = "";
@@ -346,15 +349,15 @@ export function renderPanel(el, ctx) {
   if (!focus) {
     const rows = topRows(ctx.seriesMap, yi, metric);
     const worldTotal = metricAt(ctx.world, yi, metric === "balance" ? "total" : metric);
-    el.innerHTML = `
+    el.innerHTML = sec("summary", `
       <div class="kicker">${t("panel.worldKicker", { period: year })}</div>
       <h2>${ctx.product === "TOTAL" ? t("panel.worldTitle") : esc(productName(ctx.product))}</h2>
-      <div class="intro">${t("panel.intro")}</div>
+      <div class="intro">${t("panel.intro")}</div>`) + sec("trade", `
       <h3>${t("panel.worldChart")}</h3>
       <div class="chart" id="p-chart"></div>
-      ${chartKey()}
+      ${chartKey()}`) + sec("partners", `
       <h3>${t("panel.largest", { metric: metricLabel(metric), period: year })}</h3>
-      ${rankList(rows, worldTotal, metric)}`;
+      ${rankList(rows, worldTotal, metric)}`);
     lineChart(el.querySelector("#p-chart"), ctx.world, yi);
     bindList(el, ctx.onFocus);
     return;
@@ -382,14 +385,12 @@ export function renderPanel(el, ctx) {
     ? `<p class="note">${t(mergeable && has(`panel.partOfMerge.${ent.part_of}`) ? `panel.partOfMerge.${ent.part_of}` : `panel.partOf.${ent.part_of}`, { group: chip })}</p>`
     : mergeable && has(`panel.groupHint.${inGroup}`) ? `<p class="note">${t(`panel.groupHint.${inGroup}`, { group: chip })}</p>` : "";
 
-  el.innerHTML = `
+  el.innerHTML = sec("summary", `
     <div class="kicker">${group ? t("panel.group") : esc(ent?.subregion ? regionName(ent.subregion) : t("panel.economy"))} · ${year}</div>
     <h2>${esc(nameOf(focus))}</h2>
     ${group ? groupBlurb(focus, yi) : ""}${partOf}${ctx.product === "TOTAL" ? mirrorNote : ""}${noData}${memberNote}
     ${productShare(ctx, yi)}
-    ${stats(fs, yi, compare)}
-    ${listSection(ctx)}
-    ${pair ? `
+    ${stats(fs, yi, compare)}`) + sec("list", listSection(ctx)) + sec("pair", pair ? `
       <h3>${t("panel.with", { name: esc(nameOf(ctx.pair)) })}</h3>
       <div class="pair-box">
         <div class="row"><span>${t("metric.exports")} ${money(metricAt(pair, yi, "exports"))} · ${t("metric.imports")} ${money(metricAt(pair, yi, "imports"))}</span>
@@ -397,16 +398,14 @@ export function renderPanel(el, ctx) {
         <div class="chart" id="pair-chart"></div>
         <div class="row"><span class="note">${t("metric.balance")} ${money(metricAt(pair, yi, "balance"), { sign: true })} · ${t("panel.shareOfTotal", { share: share(metricAt(pair, yi, "total"), metricAt(fs, yi, "total")) })}</span>
           <button type="button" id="pair-focus">${t("panel.focusOn", { name: esc(nameOf(ctx.pair)) })} →</button></div>
-      </div>` : ""}
+      </div>` : "") + sec("trade", `
     <h3>${t(group ? "panel.worldTradeGroup" : "panel.worldTrade")}</h3>
     <div class="chart" id="p-chart"></div>
-    ${chartKey()}
+    ${chartKey()}`) + sec("partners", `
     <h3>${t("panel.topPartners", { metric: metricLabel(metric), period: year })}</h3>
     ${rows.length ? rankList(rows, focusTotal, metric, ctx.pair) : `<p class="note">${t("panel.noPartners", { period: year })}</p>`}
-    <p class="note">${t("panel.clickPartner")}</p>
-    ${economySection(ctx)}
-    ${lendingSection(ctx)}
-    ${productsSection(ctx, yi)}`;
+    <p class="note">${t("panel.clickPartner")}</p>`)
+    + sec("economy", economySection(ctx)) + sec("lending", lendingSection(ctx)) + sec("products", productsSection(ctx, yi));
 
   lineChart(el.querySelector("#p-chart"), fs, yi, { intra: group ? ctx.intra : null });
   if (pair) {

@@ -262,6 +262,23 @@ a { color: var(--accent); }
   padding: 16px; overflow-y: auto; flex: 1; min-height: 0;
 }
 
+/* A story step about a panel section (data-spot): the map gets narrower and, on wide screens, the story
+   card sits beside the panel, which then has the full height; the section is highlighted, the rest dimmed. */
+@media (min-width: 981px) {
+  .layout[data-spot] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (min-width: 1280px) {
+  .layout[data-spot] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); }
+  .layout[data-spot] .side { flex-direction: row; align-items: flex-start; }
+  .layout[data-spot] .story { flex: 0 0 340px; max-height: 100%; }
+  .layout[data-spot] .panel { align-self: stretch; }
+}
+.layout[data-spot] .psec { transition: opacity .3s; }
+.layout[data-spot] .psec:not(.spot) { opacity: .5; }
+.layout[data-spot] .psec:not(.spot):hover { opacity: 1; }
+.psec.spot { margin: 8px -8px 0; padding: 0 8px 8px; border-radius: 8px; box-shadow: 0 0 0 1.5px var(--accent); background: var(--accent-soft); }
+.psec.spot > h3:first-child { margin-top: 10px; }
+
 /* ---------- stories */
 .story {
   background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);

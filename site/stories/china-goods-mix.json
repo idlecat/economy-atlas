@@ -21,20 +21,21 @@
       "title": "1995: clothes, shoes and toys",
       "text": [
         "In 1995, textiles, clothing and footwear made up **30%** of [mainland China](CHN)'s goods exports. Machinery and electronics were 22%, and furniture, toys and other manufactures 13%.",
-        "The map shows where China's textile and clothing exports went; the panel gives their share of its exports, and its \"by product\" list (further down) has every sector. These figures come from CEPII BACI, which reconciles what exporters and importers report, so they don't add up exactly to the IMF all-goods totals."
+        "The map shows where China's textile and clothing exports went; the panel gives their share of its exports, and its highlighted \"by product\" list has every sector. These figures come from CEPII BACI, which reconciles what exporters and importers report, so they don't add up exactly to the IMF all-goods totals."
       ],
       "view": {
         "product": "TEXTILES",
         "t": "1995",
         "focus": "CHN",
         "metric": "exports"
-      }
+      },
+      "panel": "products"
     },
     {
       "title": "Machines take over",
       "text": [
         "Machinery and electronics overtook textiles in 1998, three years before China joined the WTO. Their share reached **43%** by 2008, peaked at 50% in 2020 and was 47% in 2024. Chemicals and plastics rose from 7% to 11%.",
-        "Textiles fell to **9%** of exports, but not because China sold fewer of them: textile and clothing exports still grew, from about $70 billion in 1995 to $327 billion in 2024. Everything else grew faster. Watch the machinery share in the panel climb as the timeline plays."
+        "Textiles fell to **9%** of exports, but not because China sold fewer of them: textile and clothing exports still grew, from about $70 billion in 1995 to $327 billion in 2024. Everything else grew faster. Watch machinery climb the panel's list as the timeline plays."
       ],
       "view": {
         "product": "MACHINERY",
@@ -42,6 +43,7 @@
         "focus": "CHN",
         "metric": "exports"
       },
+      "panel": "products",
       "play": {
         "to": "2024",
         "ms": 700
@@ -68,7 +70,7 @@
       "title": "Imports: from machines to raw materials",
       "text": [
         "In 1995, machinery and electronics were **35%** of [China](CHN)'s imports, textiles 12%, energy only 4% and ores 1%.",
-        "Over the next three decades its imports turned to fuel and raw materials. In 2024, energy was **22%** of imports and ores and minerals 11%: together 33% of the total. Machinery and electronics fell to 25%, textiles to 2%. The map shows where China's energy imports come from."
+        "Over the next three decades its imports turned to fuel and raw materials. In 2024, energy was **22%** of imports and ores and minerals 11%: together 33% of the total. Machinery and electronics fell to 25%, textiles to 2%. The panel's list shows every sector; the map shows where China's energy imports come from."
       ],
       "view": {
         "product": "ENERGY",
@@ -76,6 +78,7 @@
         "focus": "CHN",
         "metric": "imports"
       },
+      "panel": "products",
       "play": {
         "to": "2024",
         "ms": 700

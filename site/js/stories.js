@@ -11,6 +11,8 @@ let index = null;
 let story = null;
 let step = 0;
 let token = 0;
+let spot = null;          // panel section the current step points at (step.panel)
+let spotPin = false;      // keep it scrolled into view (through replays) until the reader scrolls the panel
 
 async function getJSON(url) {
   const r = await fetch(url);
@@ -33,6 +35,10 @@ function loadIndex() {
  *          knows(code), focus(code), outline(code|null)} */
 export function initStories(h) {
   hooks = h;
+  // the panel is re-rendered on every update, so the highlight is re-applied after each render
+  const panel = $("#panel");
+  new MutationObserver(applySpot).observe(panel, { childList: true });
+  for (const ev of ["wheel", "touchstart", "pointerdown", "keydown"]) panel.addEventListener(ev, () => { spotPin = false; }, { passive: true });
   const dialog = $("#stories-dialog");
   $("#stories-btn").addEventListener("click", async () => {
     const { stories } = await loadIndex();
@@ -73,6 +79,7 @@ export function stopStory() {
   token++;
   hooks.stopPlay();
   story = null;
+  setSpot(null);
   $("#story").hidden = true;
   $("#story").innerHTML = "";
   hooks.setMarkers([]);
@@ -85,11 +92,39 @@ async function goTo(i, { replay = true } = {}) {
   step = Math.max(0, Math.min(story.steps.length - 1, i));
   const s = story.steps[step];
   render(s);
+  setSpot(s.panel);
   await hooks.applyView(s.view);
   if (my !== token || !s.play || !replay) return;
   setPlaying(true);
   await hooks.playTo(s.play.to, s.play.ms);
   if (my === token) setPlaying(false);
+}
+
+/** A step about a panel section: the layout gives the panel more room (CSS: .layout[data-spot]),
+ *  and the section is highlighted and scrolled into view. */
+function setSpot(id) {
+  const layout = $(".layout");
+  if (spot && !id) $("#panel").scrollTop = 0; // don't leave the next step's panel scrolled to the old section
+  spot = id ?? null;
+  spotPin = !!spot;
+  if (spot) layout.dataset.spot = spot;
+  else delete layout.dataset.spot;
+  applySpot();
+}
+
+function applySpot() {
+  const panel = $("#panel");
+  for (const el of panel.querySelectorAll(".psec.spot")) el.classList.remove("spot");
+  const el = spot && panel.querySelector(`.psec[data-sec="${spot}"]`);
+  if (!el) return;
+  el.classList.add("spot");
+  // scroll the panel only (not the page), after the layout change has been laid out; sections above
+  // it change height while the timeline replays, so this repeats on every render
+  if (spotPin) {
+    requestAnimationFrame(() => {
+      if (spotPin) panel.scrollTop += el.getBoundingClientRect().top - panel.getBoundingClientRect().top - 12;
+    });
+  }
 }
 
 function setPlaying(on) {

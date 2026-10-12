@@ -48,7 +48,7 @@ def skeleton(story):
     return {
         "markers": [m["t"] for m in story.get("markers", [])],
         "sources": [s["url"] for s in story.get("sources", [])],
-        "steps": [(s["view"], s.get("play")) for s in story["steps"]],
+        "steps": [(s["view"], s.get("play"), s.get("panel")) for s in story["steps"]],
     }
 
 

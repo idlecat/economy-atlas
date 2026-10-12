@@ -84,6 +84,9 @@ for (const lang of LANGS) {
       const links = await page.$$eval("#story a.ent", (e) => e.length);
       const expected = story.steps[i].text.join(" ").match(/\]\([A-Z0-9_]+\)/g)?.length ?? 0;
       if (links !== expected) fail(`${where}: ${links} country links, expected ${expected}`);
+      if (story.steps[i].panel) {
+        await expect(page.$(`#panel .psec.spot[data-sec="${story.steps[i].panel}"]`).then(Boolean), `panel section "${story.steps[i].panel}" highlighted`);
+      }
     }
   }
   // a story link focuses the country
