@@ -122,7 +122,8 @@ function applySpot() {
   // it change height while the timeline replays, so this repeats on every render
   if (spotPin) {
     requestAnimationFrame(() => {
-      if (spotPin) panel.scrollTop += el.getBoundingClientRect().top - panel.getBoundingClientRect().top - 12;
+      // el is detached if the panel re-rendered meanwhile; that render scheduled its own scroll
+      if (spotPin && el.isConnected) panel.scrollTop += el.getBoundingClientRect().top - panel.getBoundingClientRect().top - 12;
     });
   }
 }
