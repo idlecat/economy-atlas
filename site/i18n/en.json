@@ -1,8 +1,8 @@
 {
  "ui": {
-  "site.title": "Trade Atlas",
-  "site.tagline": "Who trades with whom: goods exports and imports over time",
-  "site.description": "Interactive world map of bilateral goods trade between countries and regional groupings, over time. Data: IMF International Trade in Goods (IMTS).",
+  "site.title": "Economy Atlas",
+  "site.tagline": "Trade, growth and how economies connect, 1990 to today",
+  "site.description": "Interactive world map of trade between countries and blocs, with GDP and other economic indicators, from 1990 to today. Data: IMF, CEPII BACI, World Bank.",
   "loading": "Loading data…",
   "loadError": "Could not load data files. If you opened index.html directly, serve the site folder over HTTP instead.",
   "close": "Close",

@@ -1,6 +1,6 @@
-# Trade Atlas
+# Economy Atlas
 
-An interactive world map of bilateral goods trade, built as a static website.
+An interactive world map of trade, growth and how economies connect, built as a static website.
 
 - **Choropleth + flow arcs.** Shows total trade, exports, imports or trade balance for each country, or for each partner of a selected focus.
 - **Time.** Annual data from 1990 and monthly data from 2000, with a time slider and a play button. The Δ 1/5/10-year modes color partners by growth instead of size; on monthly data, Δ 1 yr compares each month with the same month a year earlier.

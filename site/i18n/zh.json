@@ -1,8 +1,8 @@
 {
  "ui": {
-  "site.title": "贸易地图集",
-  "site.tagline": "谁与谁做贸易：货物进出口的历年变化",
-  "site.description": "交互式世界地图，展示各国和区域集团之间的双边货物贸易及其历年变化。数据来源：国际货币基金组织（IMF）国际货物贸易统计（IMTS）。",
+  "site.title": "经济地图集",
+  "site.tagline": "贸易、增长与各经济体之间的联系，1990年至今",
+  "site.description": "交互式世界地图，展示各国和区域集团之间的贸易，以及GDP等经济指标，时间跨度从1990年至今。数据来源：IMF、CEPII BACI、世界银行。",
   "loading": "正在加载数据…",
   "loadError": "无法加载数据文件。如果您是直接打开 index.html，请改为通过 HTTP 服务器访问 site 文件夹。",
   "close": "关闭",

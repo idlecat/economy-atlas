@@ -1,7 +1,7 @@
 [project]
 name = "eco-map-pipeline"
 version = "0.1.0"
-description = "Data pipeline for the Trade Atlas website"
+description = "Data pipeline for the Economy Atlas website"
 requires-python = ">=3.11"
 dependencies = ["duckdb>=1.5,<2", "certifi>=2024"]
 

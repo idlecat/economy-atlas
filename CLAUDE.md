@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Trade Atlas: a public, static website showing bilateral goods trade between countries on an interactive world map over time. It has two halves:
+Economy Atlas: a public, static website showing bilateral goods trade and economic indicators for countries and blocs on an interactive world map over time. It has two halves:
 
 - `pipeline/`: a Python data pipeline (uv + DuckDB) that turns source data into JSON in `site/data/`.
 - `site/`: a no-build frontend made of plain ES modules. D3 and topojson-client are imported from jsDelivr at pinned versions.
