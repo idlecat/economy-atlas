@@ -100,7 +100,7 @@ async function goTo(i, { replay = true } = {}) {
   if (my === token) setPlaying(false);
 }
 
-/** A step about a panel section: the layout gives the panel more room (CSS: .layout[data-spot]),
+/** A step about a panel section: on wide screens the panel gets its own column (CSS: .layout[data-spot]),
  *  and the section is highlighted and scrolled into view. */
 function setSpot(id) {
   const layout = $(".layout");

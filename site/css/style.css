@@ -262,16 +262,16 @@ a { color: var(--accent); }
   padding: 16px; overflow-y: auto; flex: 1; min-height: 0;
 }
 
-/* A story step about a panel section (data-spot): the map gets narrower and, on wide screens, the story
-   card sits beside the panel, which then has the full height; the section is highlighted, the rest dimmed. */
-@media (min-width: 981px) {
-  .layout[data-spot] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-}
+/* A story step about a panel section (data-spot): the section is highlighted and the rest dimmed. On wide
+   screens the panel also moves out from under the story card into a full-height column between the map
+   and the card, so the map gets narrower while the card keeps its place and size. */
 @media (min-width: 1280px) {
-  .layout[data-spot] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); }
-  .layout[data-spot] .side { flex-direction: row; align-items: flex-start; }
-  .layout[data-spot] .story { flex: 0 0 340px; max-height: 100%; }
-  .layout[data-spot] .panel { align-self: stretch; }
+  .layout[data-spot] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) 360px; }
+  .layout[data-spot] .side { display: contents; }
+  .layout[data-spot] .map-wrap { grid-column: 1; grid-row: 1; }
+  .layout[data-spot] .panel { grid-column: 2; grid-row: 1; min-height: 420px; max-height: calc(100dvh - 260px); }
+  /* the card has this column to itself, so it isn't capped to leave room for the panel below it */
+  .layout[data-spot] .story { grid-column: 3; grid-row: 1; align-self: start; max-height: calc(100dvh - 260px); }
 }
 .layout[data-spot] .psec { transition: opacity .3s; }
 .layout[data-spot] .psec:not(.spot) { opacity: .5; }
