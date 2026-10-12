@@ -1,0 +1,122 @@
+{
+  "title": "Size, not wealth: China's rise as an exporter",
+  "markers": [
+    {
+      "t": "2001",
+      "label": "WTO approves China's accession (10 November 2001)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "WTO press release 252: WTO Ministerial Conference approves China's accession (10 November 2001)",
+      "url": "https://www.wto.org/english/news_e/pres01_e/pr252_e.htm"
+    },
+    {
+      "name": "IMF International Trade in Goods (exports)",
+      "url": "https://data.imf.org/en/datasets/IMF.STA:IMTS"
+    },
+    {
+      "name": "World Bank World Development Indicators (GDP, GDP per capita, population)",
+      "url": "https://databank.worldbank.org/source/world-development-indicators"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Bigger economies export more",
+      "text": [
+        "Each dot is an economy in 2024, sized by population, with the EU counted as one. Across **184** economies, goods exports and GDP line up almost perfectly on log scales: Pearson **r = 0.93**.",
+        "That is mostly about size. Large economies make more of everything, including things to sell abroad."
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp",
+        "y": "exports",
+        "t": "2024",
+        "focus": "CHN",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "Rich is not the same as big",
+      "text": [
+        "Swap GDP for GDP **per person** and the pattern weakens to **r = 0.34**. Wealth tells you much less than size about how much a country exports.",
+        "China is the clearest case: the world's largest goods exporter in 2024 (**$3.58 trillion**), yet only 67th in GDP per person, at about **$13,300**."
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports",
+        "t": "2024",
+        "focus": "CHN",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "1995: a poor country, already a big exporter",
+      "text": [
+        "In 1995 China's GDP per person was about **$610**, lower than in 121 other economies. It still ranked 7th by exports, at **$149 billion**.",
+        "The EU ($815 billion of exports outside the EU), the US and Japan led."
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports",
+        "t": "1995",
+        "focus": "CHN",
+        "groups": "EU"
+      }
+    },
+    {
+      "title": "Thirty years in one motion",
+      "text": [
+        "The WTO approved China's membership in November 2001. Watch China's dot climb up and to the right.",
+        "China's exports overtook the US in **2007** and the EU's exports to the rest of the world in **2014**. By 2024 they were **24 times** their 1995 value, and GDP per person had risen about **22 times** in current dollars.",
+        "Vietnam follows a similar path a step behind: from 48th to 15th by exports."
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports",
+        "t": "1995",
+        "focus": "CHN",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 700
+      }
+    },
+    {
+      "title": "Exports matter less to China than they did",
+      "text": [
+        "As a share of GDP, China's goods exports peaked at **35%** in 2006. By 2019 they were down to **17%**, and in 2024 they stood at **19%**: the domestic economy grew even faster than exports.",
+        "Some economies depend far more on goods exports: Vietnam at **82%** of GDP and Singapore at **88%**, against **7%** for the US. But small does not simply mean open: across all economies the link is weak and, if anything, positive (r = 0.30 in 2024), because many of the smallest, such as the Pacific island states on the left, export few goods at all."
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp",
+        "y": "exports_gdp",
+        "t": "2006",
+        "focus": "CHN",
+        "groups": "EU"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 600
+      }
+    },
+    {
+      "title": "Explore further",
+      "text": [
+        "Pick other metrics from the axis menus, choose a product such as **Semiconductors & integrated circuits**, or click any dot to open that economy's panel. Correlation across economies does not show cause and effect."
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "exports_gdp",
+        "t": "2024",
+        "groups": "EU"
+      }
+    }
+  ]
+}

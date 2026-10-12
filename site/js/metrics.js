@@ -43,7 +43,7 @@ export function buildMetrics(ind, totals, tPeriods, product) {
     const t = trade(tradeKind)(key, year), g = gdp(key, year);
     return t == null || !g ? null : (t / g) * 100;
   };
-  add({ id: "exports_gdp", name: `Exports of ${goods}, % of GDP`, unit: "pct", group: "Trade ÷ economy", value: ratio("exports"), log: false });
-  add({ id: "trade_gdp", name: `Trade in ${goods}, % of GDP`, unit: "pct", group: "Trade ÷ economy", value: ratio("total"), log: false });
+  add({ id: "exports_gdp", name: `Exports of ${goods}, % of GDP`, unit: "pct", group: "Trade ÷ economy", value: ratio("exports"), log: true });
+  add({ id: "trade_gdp", name: `Trade in ${goods}, % of GDP`, unit: "pct", group: "Trade ÷ economy", value: ratio("total"), log: true });
   return metrics;
 }
