@@ -37,6 +37,10 @@
         "After [Russia](RUS) invaded Ukraine, its pipeline gas exports to Europe fell by about half in 2022, and Europe replaced them mainly with liquefied natural gas (LNG), whose imports rose by more than 60%.",
         "Prices soared, so the [EU](EU) paid **$314 billion** for gas imports in 2022, 2.9 times as much as in 2021. Russia's share fell to 18%; [US](USA) gas brought in $37.6 billion."
       ],
+      "stat": {
+        "value": "2.9×",
+        "label": "the EU's bill for gas imports in 2022, compared with 2021"
+      },
       "view": {
         "t": "2022",
         "product": "GAS",

@@ -945,6 +945,8 @@ async function boot() {
     knows: (code) => !!store.entities[code] || isGroup(code),
     focus: (code) => { stopPlay(); setFocus(code); },
     outline: (code) => map.outline(code),
+    name: (code) => nameOf(code),
+    pins: (list) => map.pins(list),
   });
   // Links pasted into the address bar or back/forward (writeHash uses replaceState, which doesn't fire this).
   addEventListener("hashchange", readHash);

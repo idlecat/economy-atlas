@@ -41,7 +41,13 @@
       "play": {
         "to": "1998",
         "ms": 1600
-      }
+      },
+      "pins": [
+        {
+          "at": [100.5, 13.75],
+          "label": "Bangkok"
+        }
+      ]
     },
     {
       "title": "Imports collapse",

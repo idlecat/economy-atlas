@@ -39,7 +39,17 @@
         "t": "2013",
         "list": "BRI",
         "groups": "EU"
-      }
+      },
+      "pins": [
+        {
+          "at": [71.43, 51.09],
+          "label": "Astana"
+        },
+        {
+          "at": [106.83, -6.21],
+          "label": "Jakarta"
+        }
+      ]
     },
     {
       "title": "A growing share of China's exports",

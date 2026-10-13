@@ -55,6 +55,11 @@
         "Once the embargo took effect, the [EU](EU)'s share of [Russia](RUS)'s crude exports collapsed to **5%** by 2024 (about $7 billion).",
         "[China](CHN) (**50%**, $63 billion) and [India](IND) (**42%**, $53 billion) now take almost all of it. Watch the arcs swing from Europe to Asia."
       ],
+      "ask": {
+        "q": "By 2024, who bought the most Russian crude oil?",
+        "choices": ["IND", "EU", "CHN"],
+        "answer": 2
+      },
       "view": {
         "product": "CRUDE",
         "t": "2021",

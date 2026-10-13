@@ -27,6 +27,10 @@
         "Expecting new tariffs, [US](USA) importers rushed to bring goods in. US imports were **25%** higher in January 2025 than a year earlier and **32%** higher in March.",
         "March 2025's **$343 billion** is the highest monthly figure in this data. The map shows the change in imports from each partner."
       ],
+      "stat": {
+        "value": "$343 billion",
+        "label": "US imports in March 2025, the highest month in this data"
+      },
       "view": {
         "freq": "M",
         "t": "2025-03",
@@ -51,11 +55,17 @@
         "groups": "EU",
         "with": "CHN"
       },
-      "panel": "pair",
       "play": {
         "to": "2025-12",
         "ms": 700
-      }
+      },
+      "panel": "pair",
+      "pins": [
+        {
+          "at": [6.14, 46.2],
+          "label": "Geneva"
+        }
+      ]
     },
     {
       "title": "Who supplied instead",

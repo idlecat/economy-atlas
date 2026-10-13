@@ -90,9 +90,21 @@ for (const lang of LANGS) {
       await page.evaluate(([s, n]) => { location.hash = `story=${s}&step=${n}`; }, [id, i + 1]);
       await page.waitForTimeout(900);
       await expect(text("#story h3").then((s) => s === story.steps[i].title), "step title");
+      const st = story.steps[i];
       const links = await page.$$eval("#story a.ent", (e) => e.length);
-      const expected = story.steps[i].text.join(" ").match(/\]\([A-Z0-9_]+\)/g)?.length ?? 0;
+      const marked = [...st.text, st.ask?.q ?? "", st.stat?.label ?? ""].join(" ");
+      const expected = marked.match(/\]\([A-Z0-9_]+\)/g)?.length ?? 0;
       if (links !== expected) fail(`${where}: ${links} country links, expected ${expected}`);
+      if (st.ask) {
+        // the caption stays hidden until the reader guesses; the right choice is marked
+        await expect(page.isHidden("#story .story-body"), "caption hidden before the guess");
+        await page.click(`#story [data-choice="${st.ask.answer}"]`);
+        await expect(page.isVisible("#story .ask-verdict.right"), "right guess acknowledged");
+        await expect(page.isVisible("#story .story-body"), "caption shown after the guess");
+      }
+      if (st.stat) await expect(page.isVisible("#story .story-stat"), "headline figure shown");
+      if (st.pins && !st.view.view) await expect(page.$$eval("#map .pin", (e) => e.length).then((n) => n === st.pins.length), "map pins");
+      if (i === story.steps.length - 1) await expect(page.isVisible("#story .story-next"), "next story offered");
       if (story.steps[i].panel) {
         await expect(page.$(`#panel .psec.spot[data-sec="${story.steps[i].panel}"]`).then(Boolean), `panel section "${story.steps[i].panel}" highlighted`);
         await expect(page.isVisible("#panel .panel-head"), "panel header pinned on a spotlight step");

@@ -40,12 +40,14 @@ export function createMap(container, { onHover, onMove, onClick }) {
   const listOutline = root.append("path").attr("class", "list-outline");
   const hoverOutline = root.append("path").attr("class", "hover-outline");
   const arcLayer = root.append("g");
+  const pinLayer = root.append("g").attr("class", "pins");
 
   let groupsOn = new Set();
   let highlight = null; // Set of entity ids outlined as a list (e.g. Belt and Road partners), or null
   let pi = 0;
   let hoverKey = null;
   let k = 1;
+  let pinList = []; // [{at: [lon, lat], label}] placed by a story step
 
   const paths = countries.selectAll("path")
     .data(features)
@@ -72,6 +74,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
       k = ev.transform.k;
       root.attr("transform", ev.transform);
       arcLayer.selectAll(".node").attr("r", 3.5 / k);
+      placePins();
     });
   svg.call(zoom).on("dblclick.zoom", null);
 
@@ -88,6 +91,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
     drawList();
     drawHover();
     if (lastView) drawArcs(lastView.arcs);
+    placePins();
   }
 
   function drawOutlines() {
@@ -142,6 +146,26 @@ export function createMap(container, { onHover, onMove, onClick }) {
       .attr("transform", (d) => `translate(${projection(centroidOf(d))})`);
   }
 
+  /** Labelled places (a port, a capital) that a story step points at; they keep their size when zooming. */
+  function drawPins() {
+    pinLayer.selectAll(".pin")
+      .data(pinList, (d) => `${d.at}|${d.label}`)
+      .join((enter) => {
+        const g = enter.append("g").attr("class", "pin");
+        g.append("circle").attr("class", "pin-pulse").attr("r", 5);
+        g.append("circle").attr("class", "pin-dot").attr("r", 4);
+        g.append("text").attr("y", 4);
+        return g;
+      })
+      .classed("left", (d) => d.side === "left")
+      .select("text").attr("x", (d) => (d.side === "left" ? -8 : 8)).text((d) => d.label);
+    placePins();
+  }
+
+  function placePins() {
+    pinLayer.selectAll(".pin").attr("transform", (d) => `translate(${projection(d.at)}) scale(${1 / k})`);
+  }
+
   let lastView = null;
   let lastGroupsKey = "";
 
@@ -183,5 +207,10 @@ export function createMap(container, { onHover, onMove, onClick }) {
     drawHover();
   }
 
-  return { render, zoomBy, reset, outline, hasShape: (key) => !!centroidOf(key) };
+  function pins(list) {
+    pinList = list ?? [];
+    drawPins();
+  }
+
+  return { render, zoomBy, reset, outline, pins, hasShape: (key) => !!centroidOf(key) };
 }

@@ -318,8 +318,24 @@ def test_story_check_reports_drift(tmp_path):
     (tmp_path / "s.json").write_text(js.dumps({"steps": [{**step, "text": ["Exports were **$115 billion** ([China](CHN) 31%)."]}]}))
     (tmp_path / "zh" / "s.json").write_text(js.dumps({"steps": [{**step, "text": ["出口约1150亿美元（中国31%）。"]}]}))
     claims = [sc.C("s", 1, "$115 billion", "usd", lambda s: s["x"]), sc.C("s", 1, "China 31%", "pct", lambda s: s["p"])]
-    assert sc.check({"x": 115_300, "p": 30.6}, tmp_path, claims) == []
-    problems = sc.check({"x": 116_000, "p": 31.0}, tmp_path, claims)  # revised: $116 billion
+    assert sc.check({"x": 115_300, "p": 30.6}, tmp_path, claims, []) == []
+    problems = sc.check({"x": 116_000, "p": 31.0}, tmp_path, claims, [])  # revised: $116 billion
     assert len(problems) == 1 and "$115 billion" in problems[0]
     (tmp_path / "zh" / "s.json").write_text(js.dumps({"steps": [{**step, "text": ["出口约1160亿美元（中国31%）。"]}]}))
-    assert "zh" in sc.check({"x": 115_300, "p": 31.0}, tmp_path, claims)[0]  # translation not updated
+    assert "zh" in sc.check({"x": 115_300, "p": 31.0}, tmp_path, claims, [])[0]  # translation not updated
+
+
+def test_story_check_covers_questions_and_headline_figures(tmp_path):
+    import json as js
+    step = {"title": "t", "view": {}, "text": ["Exports fell."],
+            "ask": {"q": "Who bought most?", "choices": ["CHN", "IND"], "answer": 0},
+            "stat": {"value": "−50%", "label": "exports, April"}}
+    (tmp_path / "s.json").write_text(js.dumps({"steps": [step]}))
+    claims = [sc.C("s", 1, "−50%", "pct", lambda s: s["yoy"])]
+    quizzes = [sc.Q("s", 1, lambda s, ch: sc._argmax(ch, lambda c: s[c]))]
+    site = {"yoy": -50.2, "CHN": 50, "IND": 42}
+    assert sc.check(site, tmp_path, claims, quizzes) == []
+    assert "data now gives 'IND'" in sc.check({**site, "IND": 55}, tmp_path, claims, quizzes)[0]
+    assert "not listed in QUIZZES" in sc.check(site, tmp_path, claims, [])[0]
+    assert "headline figure" in sc.check(site, tmp_path, [], quizzes)[0]
+    assert "−50%" in sc.check({**site, "yoy": -40}, tmp_path, claims, quizzes)[0]  # the stat is checked as text

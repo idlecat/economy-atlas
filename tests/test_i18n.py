@@ -48,8 +48,17 @@ def skeleton(story):
     return {
         "markers": [m["t"] for m in story.get("markers", [])],
         "sources": [s["url"] for s in story.get("sources", [])],
-        "steps": [(s["view"], s.get("play"), s.get("panel")) for s in story["steps"]],
+        "steps": [(s["view"], s.get("play"), s.get("panel"), ask_skeleton(s.get("ask")),
+                   [p["at"] for p in s.get("pins", [])], "stat" in s) for s in story["steps"]],
     }
+
+
+def ask_skeleton(ask):
+    """A question's answer and its entity-code choices (text choices are translated)."""
+    if ask is None:
+        return None
+    code = re.compile(r"[A-Z][A-Z0-9_]{1,9}")
+    return ask["answer"], [c if code.fullmatch(c) else None for c in ask["choices"]]
 
 
 @pytest.mark.parametrize("lang", LANGS)

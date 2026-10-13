@@ -56,6 +56,10 @@
         "On **24 February 2022** [Russia](RUS) launched a full-scale invasion of [Ukraine](UKR). In March and April Ukraine's exports were about half their level a year earlier (−49% and **−50%**).",
         "For 2022 as a whole they fell 32% to $44.5 billion, and real GDP shrank **28.8%**. The map shows the change in exports to each partner from the same month a year earlier."
       ],
+      "stat": {
+        "value": "−50%",
+        "label": "Ukraine's exports in April 2022, compared with April 2021"
+      },
       "view": {
         "freq": "M",
         "t": "2022-02",
@@ -73,19 +77,30 @@
       "title": "Grain finds new routes",
       "text": [
         "From July 2022 to **17 July 2023** the Black Sea Grain Initiative, signed in Istanbul, allowed commercial food and fertilizer exports from three Ukrainian ports: Odesa, Chornomorsk and Yuzhny/Pivdennyi.",
-        "Wheat exports still fell, from $6.3 billion in 2021 to $3.8 billion in 2022, but maize held up ($6.3 billion). Its buyers changed: [China](CHN)'s share fell from 32% to **17%**, while [Romania](ROU) took 14% and [Spain](ESP) 12%. Watch the maize arcs shift to the EU."
+        "Wheat exports still fell, from $6.3 billion in 2021 to $3.8 billion in 2022, but maize held up ($6.3 billion). Its buyers changed: [China](CHN)'s share fell from 32% to **17%**, while [Romania](ROU) took 14% and [Spain](ESP) 12%. EU countries are shown separately here: watch the maize arcs shift towards them."
       ],
+      "ask": {
+        "q": "In 2022, which EU country bought the most Ukrainian maize?",
+        "choices": ["POL", "ESP", "NLD", "ROU"],
+        "answer": 3
+      },
       "view": {
         "product": "MAIZE",
         "t": "2021",
         "focus": "UKR",
         "metric": "exports",
-        "groups": "EU"
+        "groups": "none"
       },
       "play": {
         "to": "2023",
         "ms": 1600
-      }
+      },
+      "pins": [
+        {
+          "at": [30.73, 46.48],
+          "label": "Black Sea grain ports"
+        }
+      ]
     },
     {
       "title": "From steel to farm goods",

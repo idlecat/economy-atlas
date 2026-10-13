@@ -74,6 +74,11 @@
         "China's exports overtook the [US](USA) in **2007** and the [EU](EU)'s exports to the rest of the world in **2014**. By 2024 they were **24 times** their 1995 value, and GDP per person had risen about **22 times** in current dollars.",
         "[Vietnam](VNM) follows a similar path a step behind: from 44th to 15th by exports."
       ],
+      "ask": {
+        "q": "In which year did China's goods exports overtake those of the US?",
+        "choices": ["1999", "2003", "2007", "2011"],
+        "answer": 2
+      },
       "view": {
         "view": "compare",
         "x": "gdp_pc",

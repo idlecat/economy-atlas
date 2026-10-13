@@ -55,12 +55,22 @@
         "On 2 August 1990 [Iraq](IRQ) invaded and occupied [Kuwait](KWT). A few days later the UN Security Council imposed economic sanctions on Iraq.",
         "In 1991 Kuwait's goods exports fell to **$0.8 billion**, from $8.4 billion in 1990, a year already cut short by the invasion. Iraq's fell to **$0.5 billion**, from $10.3 billion. Fuels made up **95%** of Kuwait's exports in 1995, the first year with product data. The map shows the change in each economy's exports from the year before."
       ],
+      "stat": {
+        "value": "−90%",
+        "label": "Kuwait's goods exports in 1991, compared with 1990"
+      },
       "view": {
         "t": "1991",
         "metric": "exports",
         "change": "1",
         "groups": "EU"
-      }
+      },
+      "pins": [
+        {
+          "at": [47.98, 29.37],
+          "label": "Kuwait"
+        }
+      ]
     },
     {
       "title": "Kuwait rebuilds",
@@ -110,6 +120,10 @@
         "[Yemen](YEM)'s civil war began in 2014, when Houthi insurgents took the capital, Sanaa. From March 2015 a coalition of Gulf states led by [Saudi Arabia](SAU) launched a campaign of economic isolation and air strikes.",
         "Yemen's exports, 90% fuels in 2013, fell from $7.2 billion that year to **$0.4 billion** in 2015, and its real GDP shrank 28% that year. Unlike Kuwait's and Libya's, its exports have not come back: they were $59 million in 2024. The highlighted panel section shows Yemen's trade with the world over time."
       ],
+      "stat": {
+        "value": "$59 million",
+        "label": "Yemen's goods exports in 2024"
+      },
       "view": {
         "t": "2015",
         "focus": "YEM",

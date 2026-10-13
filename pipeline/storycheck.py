@@ -9,6 +9,9 @@ checker
   - requires every translation of the step to contain a number that matches the same way.
 Facts from other sources (cited in a story's `sources`) are not listed here.
 
+A step's headline figure (`stat`) is checked as part of its text, and its value must be a claim's snippet.
+Guess-first questions (`ask`) are listed in QUIZZES with how to find the right choice from the data.
+
 Run: python -m pipeline check-stories   (after publish; exits non-zero on any mismatch)
 """
 import json
@@ -187,6 +190,25 @@ def C(story, step, en, kind, value):
     return Claim(story, step, en, kind, value)
 
 
+@dataclass
+class Quiz:
+    story: str
+    step: int        # 1-based
+    pick: Callable   # (Site, choices) -> index of the right choice
+
+
+def Q(story, step, pick):
+    return Quiz(story, step, pick)
+
+
+def _argmax(choices, value):
+    """Index of the choice with the largest value(choice); every choice must have data."""
+    vals = [value(c) for c in choices]
+    if None in vals:
+        raise ValueError(f"no data for {choices[vals.index(None)]}")
+    return vals.index(max(vals))
+
+
 def neg(x):
     return None if x is None else -x
 
@@ -332,6 +354,7 @@ CLAIMS = [
     C("energy-2022", 1, "8%", "pct", lambda s: s.share("EU", "USA", "2021", "m", product="GAS")),
     C("energy-2022", 2, "$314 billion", "usd", lambda s: s.v("EU", "2022", "m", product="GAS")),
     C("energy-2022", 2, "2.9 times", "num", lambda s: s.v("EU", "2022", "m", product="GAS") / s.v("EU", "2021", "m", product="GAS")),
+    C("energy-2022", 2, "2.9×", "num", lambda s: s.v("EU", "2022", "m", product="GAS") / s.v("EU", "2021", "m", product="GAS")),
     C("energy-2022", 2, "18%", "pct", lambda s: s.share("EU", "RUS", "2022", "m", product="GAS")),
     C("energy-2022", 2, "$37.6 billion", "usd", lambda s: s.pv("EU", "USA", "2022", "m", product="GAS")),
     C("energy-2022", 3, "$112 billion", "usd", lambda s: s.v("EU", "2024", "m", product="GAS")),
@@ -464,6 +487,7 @@ CLAIMS = [
     C("war-oil", 1, "$0.5 billion", "usd", lambda s: s.v("IRQ", "1991")),
     C("war-oil", 1, "$10.3 billion", "usd", lambda s: s.v("IRQ", "1990")),
     C("war-oil", 1, "95%", "pct", lambda s: s.mix("KWT", "ENERGY", "1995")),
+    C("war-oil", 1, "−90%", "pct", lambda s: s.change(s.v("KWT", "1991"), s.v("KWT", "1990"))),
     C("war-oil", 2, "41%", "pct", lambda s: neg(s.i("gdp_growth", "KWT", 1991))),
     C("war-oil", 2, "83%", "pct", lambda s: s.i("gdp_growth", "KWT", 1992)),
     C("war-oil", 2, "$9.0 billion", "usd", lambda s: s.v("KWT", "1993")),
@@ -566,6 +590,17 @@ def _first_year_mix_above(s, code, a, b):
     return next((int(years[i]) for i in range(len(years)) if all(ok[i:])), None)
 
 
+QUIZZES = [
+    Q("crisis-2008", 3, lambda s, ch: (lambda v: 2 if v > 100 / 3 else 1 if v > 15 else 0)(
+        -min(s.wyoy(p) for p in s.periods("M") if "2008-10" <= p <= "2009-06"))),
+    Q("covid-2020", 2, lambda s, ch: _argmax(ch, lambda c: s.yoy(c, "2020-04"))),
+    Q("russia-oil", 3, lambda s, ch: _argmax(ch, lambda c: s.share("RUS", c, "2024", product="CRUDE"))),
+    Q("china-rise", 4, lambda s, ch: ch.index(str(_first_year_above(s, "CHN", "USA")))),
+    Q("china-goods-mix", 3, lambda s, ch: _argmax(ch, lambda c: s.share("CHN", c, "2024", product="CARS"))),
+    Q("ukraine-war", 3, lambda s, ch: _argmax(ch, lambda c: s.share("UKR", c, "2022", product="MAIZE"))),
+]
+
+
 # --------------------------------------------------------------------------- matching
 
 EN_NUM = re.compile(r"([−\-+]?)\$?(\d[\d,]*(?:\.\d+)?)\s*(trillion|billion|million)?")
@@ -614,16 +649,22 @@ def plain(texts):
     return re.sub(r"\[([^\]]+)\]\([A-Z0-9_]+\)", r"\1", t).replace("**", "")
 
 
+def step_text(step):
+    """What a step shows the reader: its caption and its headline figure."""
+    stat = step.get("stat")
+    return plain(step["text"]) + (f" {stat['value']} {plain(stat['label'])}" if stat else "")
+
+
 def close(value, target, tol):
     return value is not None and abs(value - target) <= tol + 1e-9 * max(1, abs(target))
 
 
-def check(site=None, stories=STORIES, claims=CLAIMS) -> list[str]:
+def check(site=None, stories=STORIES, claims=CLAIMS, quizzes=QUIZZES) -> list[str]:
     site = site or Site()
-    problems = []
+    problems = check_quizzes(site, stories, quizzes) + check_stats(stories, claims)
     for c in claims:
         en = json.loads((stories / f"{c.story}.json").read_text())
-        en_text = plain(en["steps"][c.step - 1]["text"])
+        en_text = step_text(en["steps"][c.step - 1])
         where = f"{c.story} step {c.step} {c.en!r}"
         if c.en not in en_text:
             problems.append(f"{where}: snippet not found in the English text")
@@ -641,10 +682,49 @@ def check(site=None, stories=STORIES, claims=CLAIMS) -> list[str]:
             path = stories / lang / f"{c.story}.json"
             if not path.exists():
                 continue
-            tr_text = plain(json.loads(path.read_text())["steps"][c.step - 1]["text"])
+            tr_text = step_text(json.loads(path.read_text())["steps"][c.step - 1])
             if not any(close(value, t, tl) for t, tl in zh_candidates(tr_text, c.kind)):
                 problems.append(f"{where}: no matching number in the {lang} text (data gives {value:,.4g})")
     return problems
+
+
+def story_steps(stories):
+    for path in sorted(stories.glob("*.json")):
+        if path.name != "index.json":
+            for i, step in enumerate(json.loads(path.read_text())["steps"], 1):
+                yield path.stem, i, step
+
+
+def check_quizzes(site, stories, quizzes):
+    """Every question's answer is the one the data gives (translations share answers: tests/test_i18n.py)."""
+    problems = []
+    listed = {(q.story, q.step): q for q in quizzes}
+    for story, i, step in story_steps(stories):
+        if "ask" not in step:
+            continue
+        where = f"{story} step {i} question"
+        q = listed.pop((story, i), None)
+        if q is None:
+            problems.append(f"{where}: not listed in QUIZZES")
+            continue
+        ask = step["ask"]
+        try:
+            right = q.pick(site, ask["choices"])
+        except Exception as e:
+            problems.append(f"{where}: cannot compute ({type(e).__name__}: {e})")
+            continue
+        if right != ask["answer"]:
+            problems.append(f"{where}: data now gives {ask['choices'][right]!r}, not {ask['choices'][ask['answer']]!r}")
+    problems += [f"{q.story} step {q.step}: in QUIZZES but the step has no question" for q in listed.values()]
+    return problems
+
+
+def check_stats(stories, claims):
+    """A headline figure must be one of the step's claims, so it is checked like the caption."""
+    snippets = {(c.story, c.step, c.en) for c in claims}
+    return [f"{story} step {i}: headline figure {step['stat']['value']!r} is not a claim"
+            for story, i, step in story_steps(stories)
+            if "stat" in step and (story, i, step["stat"]["value"]) not in snippets]
 
 
 def main():
@@ -652,5 +732,5 @@ def main():
     problems = check()
     for p in problems:
         log(f"  MISMATCH {p}")
-    log(f"check-stories: {len(CLAIMS)} figures, {len(problems)} problem(s)")
+    log(f"check-stories: {len(CLAIMS)} figures, {len(QUIZZES)} questions, {len(problems)} problem(s)")
     return 1 if problems else 0

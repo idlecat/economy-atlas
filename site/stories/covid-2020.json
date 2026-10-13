@@ -33,6 +33,11 @@
         "World exports were **26% lower** in April 2020 than a year earlier, and **27% lower** in May. [India](IND)'s exports fell 61% in April, [Mexico](MEX)'s 57% in May, and [US](USA) exports 36% in May.",
         "[China](CHN)'s exports, after falling early in the year, were 3% higher in April than a year before."
       ],
+      "ask": {
+        "q": "One of these economies exported more in April 2020 than a year earlier. Which?",
+        "choices": ["IND", "USA", "CHN", "DEU"],
+        "answer": 2
+      },
       "view": {
         "freq": "M",
         "t": "2020-03",

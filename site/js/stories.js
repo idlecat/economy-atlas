@@ -13,6 +13,8 @@ let step = 0;
 let token = 0;
 let spot = null;          // panel section the current step points at (step.panel)
 let spotPin = false;      // keep it scrolled into view (through replays) until the reader scrolls the panel
+let answers = new Map();  // step index -> chosen option, for steps that ask the reader to guess first (step.ask)
+let indexData = null;     // the loaded index, for "up next"
 
 async function getJSON(url) {
   const r = await fetch(url);
@@ -27,12 +29,12 @@ function getLocalized(file) {
 }
 
 function loadIndex() {
-  index ??= getLocalized("index.json").catch(() => ({ stories: [] }));
+  index ??= getLocalized("index.json").catch(() => ({ stories: [] })).then((d) => (indexData = d));
   return index;
 }
 
 /** hooks: {applyView(view), playTo(period, ms), stopPlay(), setMarkers(list), onChange(),
- *          knows(code), focus(code), outline(code|null)} */
+ *          knows(code), name(code), focus(code), outline(code|null), pins(list)} */
 /** The Stories dialog: tag chips over the list, sorted by the period each story covers. The chosen tag
  *  is remembered per browser (a convenience only). */
 let tag = (() => { try { return localStorage.getItem("storyTag") ?? "all"; } catch { return "all"; } })();
@@ -86,6 +88,7 @@ export async function startStory(id, at = 0) {
   if (!stories.some((s) => s.id === id)) return false;
   try {
     story = { id, ...(await getLocalized(`${encodeURIComponent(id)}.json`)) };
+    answers = new Map();
   } catch {
     return false;
   }
@@ -100,6 +103,7 @@ export function stopStory() {
   hooks.stopPlay();
   story = null;
   setSpot(null);
+  hooks.pins([]);
   $("#story").hidden = true;
   $("#story").innerHTML = "";
   hooks.setMarkers([]);
@@ -113,8 +117,15 @@ async function goTo(i, { replay = true } = {}) {
   const s = story.steps[step];
   render(s);
   setSpot(s.panel);
+  hooks.pins(s.pins);
   await hooks.applyView(s.view);
-  if (my !== token || !s.play || !replay) return;
+  // a question is asked before the replay that answers it: the replay starts once the reader has guessed
+  if (my !== token || !s.play || !replay || (s.ask && !answers.has(step))) return;
+  await replayStep(my);
+}
+
+async function replayStep(my = ++token) {
+  const s = story.steps[step];
   setPlaying(true);
   await hooks.playTo(s.play.to, s.play.ms);
   if (my === token) setPlaying(false);
@@ -155,6 +166,67 @@ function setPlaying(on) {
   if (el) el.textContent = on ? t("stories.replaying") : `↻ ${t("stories.replay", { from: periodLabel(story.steps[step].view.t), to: periodLabel(story.steps[step].play.to) })}`;
 }
 
+/** A guess-first question: choices are entity codes (shown by name) or short text. */
+function choiceLabel(c) {
+  return /^[A-Z][A-Z0-9_]{1,9}$/.test(c) && hooks.knows(c) ? esc(hooks.name(c)) : esc(c);
+}
+
+function askHTML(ask) {
+  const chosen = answers.get(step);
+  const done = chosen !== undefined;
+  const cls = (i) => (!done ? "" : i === ask.answer ? "right" : i === chosen ? "wrong" : "");
+  const verdict = !done ? ""
+    : chosen === ask.answer ? `<p class="ask-verdict right" role="status">✓ ${t("stories.right")}</p>`
+    : chosen < 0 ? `<p class="ask-verdict" role="status">${t("stories.itWas", { answer: choiceLabel(ask.choices[ask.answer]) })}</p>`
+    : `<p class="ask-verdict wrong" role="status">✗ ${t("stories.wrong", { answer: choiceLabel(ask.choices[ask.answer]) })}</p>`;
+  return `<div class="story-ask">
+      <span class="ask-kicker">${t("stories.guess")}</span>
+      <p class="ask-q">${inline(ask.q)}</p>
+      <div class="ask-choices">${ask.choices.map((c, i) =>
+        `<button type="button" class="btn ${cls(i)}" data-choice="${i}" ${done ? "disabled" : ""}>${choiceLabel(c)}</button>`).join("")}</div>
+      ${done ? verdict : `<button type="button" class="linklike ask-skip" data-choice="-1">${t("stories.skip")}</button>`}
+    </div>`;
+}
+
+/** A headline figure for the step; its number counts up when it is shown. */
+function statHTML(stat) {
+  return `<div class="story-stat"><b>${esc(stat.value)}</b><span>${inline(stat.label)}</span></div>`;
+}
+
+function countUp(el) {
+  const m = el?.textContent.match(/\d[\d,]*(?:\.\d+)?/);
+  if (!m || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const [before, after] = [el.textContent.slice(0, m.index), el.textContent.slice(m.index + m[0].length)];
+  const target = +m[0].replace(/,/g, ""), decimals = m[0].split(".")[1]?.length ?? 0;
+  const fmt = (v) => v.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals, useGrouping: m[0].includes(",") });
+  const start = performance.now(), ms = 900;
+  const tick = (now) => {
+    if (!el.isConnected) return;
+    const f = Math.min(1, (now - start) / ms);
+    el.textContent = before + fmt(target * (1 - (1 - f) ** 3)) + after;
+    if (f < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/** The reader's score so far and the next story (same topic first), shown on the last step. */
+function endHTML() {
+  const asked = story.steps.map((s, i) => [s, i]).filter(([s]) => s.ask);
+  const right = asked.filter(([s, i]) => answers.get(i) === s.ask.answer).length;
+  const score = asked.length && asked.every(([, i]) => answers.has(i))
+    ? `<p class="story-score">${t("stories.score", { n: right, total: asked.length })}</p>` : "";
+  const next = nextStory();
+  return score + (next ? `<button type="button" class="linklike story-next" data-next="${esc(next.id)}">${t("stories.upNext", { title: esc(next.title) })} →</button>` : "");
+}
+
+function nextStory() {
+  const list = [...(indexData?.stories ?? [])].sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
+  const me = list.find((s) => s.id === story.id);
+  if (!me || list.length < 2) return null;
+  const after = [...list.slice(list.indexOf(me) + 1), ...list.slice(0, list.indexOf(me))];
+  return after.find((s) => s.tags?.some((x) => me.tags?.includes(x))) ?? after[0];
+}
+
 /** Captions are plain text with two kinds of markup: **bold**, and [name](CODE) for a country or group
  *  link that focuses it like a click on the map. Unknown codes are shown as plain text. */
 function inline(text) {
@@ -162,6 +234,15 @@ function inline(text) {
     .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
     .replace(/\[([^\]]+)\]\(([A-Z][A-Z0-9_]{1,9})\)/g, (m, label, code) =>
       (hooks.knows(code) ? `<a href="#" class="ent" data-key="${code}">${label}</a>` : label));
+}
+
+/** The reader picked choice i (-1: skipped): reveal the answer and the caption, then run the replay. */
+function answer(i) {
+  const s = story.steps[step];
+  if (answers.has(step)) return;
+  answers.set(step, i);
+  render(s);
+  if (s.play) replayStep();
 }
 
 function render(s) {
@@ -173,8 +254,13 @@ function render(s) {
       <button type="button" class="story-close" aria-label="${t("stories.exit")}">✕</button>
     </div>
     <h3>${esc(s.title)}</h3>
-    ${(Array.isArray(s.text) ? s.text : [s.text]).map((p) => `<p>${inline(p)}</p>`).join("")}
-    ${s.play ? `<button type="button" class="story-replay linklike"></button>` : ""}
+    ${s.ask ? askHTML(s.ask) : ""}
+    <div class="story-body" ${s.ask && !answers.has(step) ? "hidden" : ""}>
+      ${s.stat ? statHTML(s.stat) : ""}
+      ${(Array.isArray(s.text) ? s.text : [s.text]).map((p) => `<p>${inline(p)}</p>`).join("")}
+      ${s.play ? `<button type="button" class="story-replay linklike"></button>` : ""}
+      ${step === n - 1 ? endHTML() : ""}
+    </div>
     <div class="story-nav">
       <button type="button" class="btn" data-go="-1" ${step === 0 ? "disabled" : ""}>← ${t("stories.back")}</button>
       <div class="dots">${story.steps.map((_, i) => `<button type="button" data-step="${i}" aria-label="${t("stories.step", { n: i + 1 })}" class="${i === step ? "on" : ""}"></button>`).join("")}</div>
@@ -190,6 +276,9 @@ function render(s) {
   el.querySelectorAll("[data-step]").forEach((b) => { b.onclick = () => goTo(+b.dataset.step); });
   el.querySelector("[data-end]")?.addEventListener("click", stopStory);
   el.querySelector(".story-replay")?.addEventListener("click", () => goTo(step));
+  el.querySelector("[data-next]")?.addEventListener("click", (e) => startStory(e.currentTarget.dataset.next, 0));
+  el.querySelectorAll("[data-choice]").forEach((b) => { b.onclick = () => answer(+b.dataset.choice); });
+  if (!s.ask || answers.has(step)) countUp(el.querySelector(".story-stat b"));
   for (const a of el.querySelectorAll("a.ent")) {
     a.addEventListener("click", (e) => { e.preventDefault(); hooks.outline(null); hooks.focus(a.dataset.key); });
     a.addEventListener("mouseenter", () => hooks.outline(a.dataset.key));

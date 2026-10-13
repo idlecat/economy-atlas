@@ -68,6 +68,11 @@
         "Within a few months the map turns orange. By February 2009 world exports were **33% lower** than a year earlier, and the drop reached about **36%** in April 2009.",
         "These are values in US dollars, which also fell because prices, especially oil, dropped. Measured by volume, the WTO put the 2009 decline at 12.2%, the largest since the Second World War."
       ],
+      "ask": {
+        "q": "At the worst point, how far below a year earlier did world exports fall?",
+        "choices": ["About a tenth", "About a fifth", "More than a third"],
+        "answer": 2
+      },
       "view": {
         "freq": "M",
         "t": "2008-10",

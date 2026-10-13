@@ -55,6 +55,11 @@
         "[China](CHN)'s passenger car exports were worth only **$8.9 billion** in 2020. Four years later they reached **$87.7 billion**. [Russia](RUS) became the largest buyer, with 17%.",
         "Vehicles, ships and aircraft went from 4% of China's exports in 2020 to 7% in 2024."
       ],
+      "ask": {
+        "q": "Which country became the largest buyer of China's cars by 2024?",
+        "choices": ["MEX", "GBR", "RUS", "ARE"],
+        "answer": 2
+      },
       "view": {
         "product": "CARS",
         "t": "2020",
