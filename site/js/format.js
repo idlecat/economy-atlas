@@ -50,7 +50,8 @@ export function escapeHTML(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 }
 
-/** Format an indicator value by unit: usd (USD millions), usd_pc, people, pct. */
+/** Format an indicator value by unit: usd (USD millions), usd_pc, people, pct, years, per1000, mt (million
+ *  tonnes), t_pc (tonnes per person), index (0–1). `compact` (legend ticks) drops the unit where the title gives it. */
 export function fmtUnit(v, unit, { sign = false, compact = false } = {}) {
   if (v == null || Number.isNaN(v)) return "—";
   switch (unit) {
@@ -65,6 +66,18 @@ export function fmtUnit(v, unit, { sign = false, compact = false } = {}) {
       return a >= 1e9 ? `${trim(a / 1e9, 2)}B` : a >= 1e6 ? `${trim(a / 1e6, a >= 1e8 ? 0 : 1)}M` : a >= 1e3 ? `${trim(a / 1e3, 0)}K` : String(Math.round(a));
     }
     case "pct": return `${sign && v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) >= 10 ? 0 : 1)}%`;
+    case "years": return compact ? v.toFixed(0) : getLang() === "zh" ? `${v.toFixed(1)}岁` : `${v.toFixed(1)} years`;
+    case "per1000": {
+      const n = trim(v, v >= 10 ? 0 : 1);
+      return compact ? n : getLang() === "zh" ? `${n}‰` : `${n} per 1,000`;
+    }
+    case "mt": {
+      const a = Math.abs(v);
+      if (getLang() === "zh") return a >= 1e4 ? `${trim(a / 1e4, 1)}亿吨` : `${trim(a * 100, 0)}万吨`;
+      return a >= 1e3 ? `${trim(a / 1e3, 1)} Gt` : a >= 1 ? `${trim(a, 0)} Mt` : `${trim(a * 1e3, 0)} kt`;
+    }
+    case "t_pc": return getLang() === "zh" ? `${trim(v, 1)}吨` : `${trim(v, 1)} t`;
+    case "index": return v.toFixed(3);
     default: return String(v);
   }
 }

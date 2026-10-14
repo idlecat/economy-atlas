@@ -5,7 +5,7 @@ import { names, t } from "./i18n.js";
 
 /** Units that are positive and span orders of magnitude get log axes. */
 function wantsLog(unit, id) {
-  return ["usd", "usd_pc", "people"].includes(unit) && !["fdi_in", "current_account", "balance"].includes(id);
+  return ["usd", "usd_pc", "people", "mt"].includes(unit) && !["fdi_in", "current_account", "balance"].includes(id);
 }
 
 /**
@@ -42,8 +42,9 @@ export function buildMetrics(ind, totals, tPeriods, product, bil = null) {
   };
   for (const spec of ind.indicators) {
     const tr = names("indicators", spec.id);
-    add({ id: spec.id, name: tr?.name ?? spec.name, unit: spec.unit, group: "economy",
-      description: tr?.description ?? spec.description, value: indVal(spec.id) });
+    add({ id: spec.id, name: tr?.name ?? spec.name, unit: spec.unit, group: "economy", source: spec.source,
+      description: tr?.description ?? spec.description, value: indVal(spec.id),
+      ...(spec.scale === "sequential" && { log: false, sequential: true }) });
   }
   const gdp = indVal("gdp");
   const ratio = (tradeKind) => (key, year) => {

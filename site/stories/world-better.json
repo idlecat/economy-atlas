@@ -1,0 +1,155 @@
+{
+  "title": "Is the world getting better?",
+  "markers": [
+    {
+      "t": "2020",
+      "label": "WHO characterizes COVID-19 as a pandemic (11 March 2020)"
+    }
+  ],
+  "sources": [
+    {
+      "name": "World Bank World Development Indicators (life expectancy, child mortality, poverty, electricity, CO2, GDP)",
+      "url": "https://databank.worldbank.org/source/world-development-indicators"
+    },
+    {
+      "name": "World Bank: Poverty headcount ratio at $3.00 a day (2021 PPP)",
+      "url": "https://data.worldbank.org/indicator/SI.POV.DDAY"
+    },
+    {
+      "name": "UNDP: Human Development Index",
+      "url": "https://hdr.undp.org/data-center/human-development-index"
+    },
+    {
+      "name": "UNDP: Human Development Report 2021/2022",
+      "url": "https://hdr.undp.org/content/human-development-report-2021-22"
+    },
+    {
+      "name": "WHO Director-General's opening remarks at the media briefing on COVID-19, 11 March 2020",
+      "url": "https://www.who.int/news-room/speeches/item/who-director-general-s-opening-remarks-at-the-media-briefing-on-covid-19---11-march-2020"
+    }
+  ],
+  "steps": [
+    {
+      "title": "Longer lives",
+      "text": [
+        "In 1990 a newborn could expect to live **65.1 years**, on world average. By 2024 it was **73.5 years**. The biggest gains came where lives had been shortest: in [Ethiopia](ETH) life expectancy rose from 45.1 to **67.6 years**, and in [Afghanistan](AFG) from 45.1 to 66.3.",
+        "Progress was not steady. After WHO declared COVID-19 a pandemic in March 2020, world life expectancy fell from 72.9 years in 2019 to 71.2 in 2021, and recovered in 2022. The map is colored by life expectancy; watch it change as the timeline plays."
+      ],
+      "ask": {
+        "q": "Compared with 1990, how much longer can a newborn expect to live today, on world average?",
+        "choices": ["About 2 years", "About 8 years", "About 15 years"],
+        "answer": 1
+      },
+      "view": {
+        "t": "1990",
+        "mapby": "life_exp",
+        "groups": "none"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 450
+      }
+    },
+    {
+      "title": "Fewer children die",
+      "text": [
+        "In 1990, **93.5** of every 1,000 children born died before their fifth birthday. In 2024, **37.4** did. [Bangladesh](BGD) cut its rate from 146.5 to 30.5, and [Ethiopia](ETH) from 202 to 44.5.",
+        "Rates are still above 100 per 1,000 in [Nigeria](NGA) (116) and [Niger](NER) (111). The map is colored by child mortality in 2024."
+      ],
+      "stat": {
+        "value": "−60%",
+        "label": "the world's child mortality rate, 2024 compared with 1990"
+      },
+      "view": {
+        "t": "2024",
+        "mapby": "child_mort",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "Out of extreme poverty",
+      "text": [
+        "In 1990, **43.4%** of the world's people, about **2.3 billion**, lived on less than $3.00 a day, the World Bank's line for extreme poverty (in 2021 prices, adjusted for what money buys in each country). By 2024 the share was **10.1%**, about 820 million people.",
+        "Much of the fall came in Asia. In [China](CHN) the share fell from 83.1% in 1990 to 0% by 2019; in [India](IND), from 47.5% in 1993 to **2.6%** in 2023. It remains high in parts of Africa: 41.8% in [Nigeria](NGA) in 2022, and 85.3% in the [Democratic Republic of the Congo](COD) in 2020. Most countries survey households only every few years, so the map shows the countries with a survey in the selected year; the highlighted panel section gives the world figures."
+      ],
+      "ask": {
+        "q": "In 1990, roughly what share of the world's people lived in extreme poverty?",
+        "choices": ["About 1 in 10", "About 1 in 4", "More than 4 in 10"],
+        "answer": 2
+      },
+      "view": {
+        "t": "2022",
+        "mapby": "poverty",
+        "groups": "none"
+      },
+      "panel": "development"
+    },
+    {
+      "title": "The lights come on",
+      "text": [
+        "In 2000, **78.2%** of the world's people had access to electricity. By 2024, **91.9%** did. [Bangladesh](BGD) went from 32% to **99.5%**, and [Rwanda](RWA) from 6.2% to 72%.",
+        "The gaps that remain are mostly in Africa: in 2024 only 5.4% of people in [South Sudan](SSD) and 13.4% in [Chad](TCD) had electricity. Watch the map fill in as the timeline plays."
+      ],
+      "view": {
+        "t": "2000",
+        "mapby": "electricity",
+        "groups": "none"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 450
+      }
+    },
+    {
+      "title": "Richer and healthier",
+      "text": [
+        "Each dot is an economy, sized by population. Richer countries tend to live longer: across **198** economies in 2024, life expectancy and GDP per person (on a log scale) correlate with Pearson **r = 0.86**. Watch the cloud move up and to the right from 1990.",
+        "World GDP per person rose from $4,339 in 1990 to **$13,720** in 2024. These are current dollars, not adjusted for inflation, so part of the rise is higher prices."
+      ],
+      "view": {
+        "view": "compare",
+        "x": "gdp_pc",
+        "y": "life_exp",
+        "t": "1990",
+        "groups": "none"
+      },
+      "play": {
+        "to": "2024",
+        "ms": 450
+      }
+    },
+    {
+      "title": "Human development",
+      "text": [
+        "UNDP's Human Development Index combines life expectancy, years of schooling and income per person into one number between 0 and 1. The world's rose from **0.608** in 1990 to **0.756** in 2023.",
+        "It fell for the first time in **2020**, a reversal UNDP links to the COVID-19 pandemic, and passed its 2019 level again only in 2022: 112 of 192 countries had a lower HDI in 2021 than in 2019. [Syria](SYR) is the only country whose HDI in 2023 (0.564) was below its 1990 level (0.572)."
+      ],
+      "ask": {
+        "q": "Only one of these countries had a lower Human Development Index in 2023 than in 1990. Which?",
+        "choices": ["AFG", "SYR", "YEM", "VEN"],
+        "answer": 1
+      },
+      "view": {
+        "t": "2023",
+        "mapby": "hdi",
+        "groups": "none"
+      }
+    },
+    {
+      "title": "But not the climate",
+      "text": [
+        "Carbon dioxide emissions rose from **22.7 billion tonnes** in 1990 to **39.6 billion tonnes** in 2024. [China](CHN)'s grew from 2.4 billion to **13.1 billion tonnes**, while those of the [US](USA) fell slightly, from 5.0 billion to 4.6 billion tonnes.",
+        "So is the world getting better? On health, poverty and electricity, these numbers say yes, by a wide margin, though not everywhere and not in every year. On the climate, they do not. Use “Color map by” to explore these indicators yourself."
+      ],
+      "stat": {
+        "value": "+75%",
+        "label": "the world's CO2 emissions, 2024 compared with 1990"
+      },
+      "view": {
+        "t": "2024",
+        "mapby": "co2",
+        "groups": "none"
+      }
+    }
+  ]
+}

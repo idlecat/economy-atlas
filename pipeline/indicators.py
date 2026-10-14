@@ -96,7 +96,7 @@ def publish_indicators(con, registry: Registry):
     doc = {
         "periods": [str(y) for y in years],
         "coverage_rule": f"Group sums require members with data to hold at least {COVERAGE:.0%} of the group's population.",
-        "indicators": [{k: spec[k] for k in ("id", "name", "unit", "description", "group") if k in spec}
+        "indicators": [{k: spec[k] for k in ("id", "name", "unit", "description", "group", "scale") if k in spec}
                        | {"source": spec.get("source", "derived")} for spec in shown],
         "values": published,
     }

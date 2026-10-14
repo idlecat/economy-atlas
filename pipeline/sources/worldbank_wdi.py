@@ -1,13 +1,14 @@
 """World Bank World Development Indicators: country-level annual indicators (GDP, population, ...).
 
 One API request per indicator listed in config/indicators.json with source "worldbank_wdi".
-World Bank country codes are ISO3, the same as entity ids; regional aggregates (WLD, EUU, ...)
-are not entities and are dropped. Taiwan is not covered by the World Bank.
+World Bank country codes are ISO3, the same as entity ids. The World aggregate (WLD) is kept, for
+world figures; other aggregates (EUU, AFE, ...) are not entities and are dropped. Taiwan is not covered by the World Bank.
 """
 import json
 
 from ..net import download, json_check, read_manifest, write_manifest
 from ..paths import CONFIG, RAW
+from ..registry import WORLD
 from ..store import write_indicators
 
 ID = "worldbank_wdi"
@@ -51,10 +52,10 @@ def normalize(con, registry):
             code = r["countryiso3code"]
             if r["value"] is None or not code:
                 continue
-            if code not in registry.entities:
+            if code not in registry.entities and code != WORLD:
                 unmapped.add(code)
                 continue
             rows.append((ID, ind["id"], code, "A", r["date"], float(r["value"]), ind["unit"]))
     n = write_indicators(con, ID, rows)
     return {"rows": n, "indicators": [i["id"] for i in inds],
-            "dropped_codes": sorted(unmapped)}  # World Bank aggregates such as WLD, EUU, AFE
+            "dropped_codes": sorted(unmapped)}  # World Bank aggregates such as EUU, AFE

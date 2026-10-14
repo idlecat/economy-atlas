@@ -138,7 +138,7 @@ class Site:
         return 100 * a / (a + b)
 
     # -- Compare view (compare.js): one point per economy, merged groups as one point
-    def compare(self, xid, yid, year, groups=("EU",)):
+    def compare(self, xid, yid, year, groups=("EU",), log=(True, True)):
         def merged(code):
             return any(g in groups and code in self.members(g, year) for g in self.groups)
         keys = set(groups) | {c for c in set(self.totals()) | set(self.ind["values"]["gdp"])
@@ -146,10 +146,11 @@ class Site:
         pts = {}
         for k in keys:
             x, y = self.metric(xid, k, year), self.metric(yid, k, year)
-            if x is not None and y is not None and x > 0 and y > 0:  # all metrics used here are on log axes
+            if x is not None and y is not None and (x > 0 or not log[0]) and (y > 0 or not log[1]):
                 pts[k] = (x, y)
-        xs = [math.log10(x) for x, _ in pts.values()]
-        ys = [math.log10(y) for _, y in pts.values()]
+        # Pearson r on the plotted scale: log10 on log axes (metrics.js wantsLog)
+        xs = [math.log10(x) if log[0] else x for x, _ in pts.values()]
+        ys = [math.log10(y) if log[1] else y for _, y in pts.values()]
         return pts, pearson(xs, ys)
 
     def metric(self, mid, key, year):
@@ -182,7 +183,8 @@ class Claim:
     story: str
     step: int        # 1-based
     en: str          # snippet as written in the English text (markup removed)
-    kind: str        # usd (USD millions; "$1.6 trillion"), usd_pc (plain dollars; "$13,300"), pct, num
+    kind: str        # usd (USD millions; "$1.6 trillion"), usd_pc (plain dollars; "$13,300"), pct, num,
+                     # people (millions; "2.3 billion" / 23亿人), mt (million tonnes; "22.7 billion tonnes" / 227亿吨)
     value: Callable  # Site -> number, in the same sign convention as the text
 
 
@@ -207,6 +209,13 @@ def _argmax(choices, value):
     if None in vals:
         raise ValueError(f"no data for {choices[vals.index(None)]}")
     return vals.index(max(vals))
+
+
+def _only(flags):
+    """Index of the one true flag; an error if there isn't exactly one."""
+    if sum(flags) != 1:
+        raise ValueError(f"{sum(flags)} choices qualify, expected 1")
+    return flags.index(True)
 
 
 def neg(x):
@@ -546,6 +555,61 @@ CLAIMS = [
     C("ukraine-war", 6, "$30.3 billion", "usd", lambda s: neg(s.v("UKR", "2024", "b"))),
     C("ukraine-war", 6, "20%", "pct", lambda s: s.share("UKR", "CHN", "2024", "m")),
     C("ukraine-war", 6, "from 15%", "pct", lambda s: s.share("UKR", "CHN", "2021", "m")),
+    # Is the world getting better? (World Bank and UNDP World aggregates are stored as WLD)
+    C("world-better", 1, "65.1 years", "num", lambda s: s.i("life_exp", "WLD", 1990)),
+    C("world-better", 1, "73.5 years", "num", lambda s: s.i("life_exp", "WLD", 2024)),
+    C("world-better", 1, "rose from 45.1", "num", lambda s: s.i("life_exp", "ETH", 1990)),
+    C("world-better", 1, "67.6 years", "num", lambda s: s.i("life_exp", "ETH", 2024)),
+    C("world-better", 1, "Afghanistan from 45.1", "num", lambda s: s.i("life_exp", "AFG", 1990)),
+    C("world-better", 1, "66.3", "num", lambda s: s.i("life_exp", "AFG", 2024)),
+    C("world-better", 1, "72.9 years", "num", lambda s: s.i("life_exp", "WLD", 2019)),
+    C("world-better", 1, "71.2", "num", lambda s: s.i("life_exp", "WLD", 2021)),
+    C("world-better", 2, "−60%", "pct", lambda s: s.change(s.i("child_mort", "WLD", 2024), s.i("child_mort", "WLD", 1990))),
+    C("world-better", 2, "93.5", "num", lambda s: s.i("child_mort", "WLD", 1990)),
+    C("world-better", 2, "37.4", "num", lambda s: s.i("child_mort", "WLD", 2024)),
+    C("world-better", 2, "146.5", "num", lambda s: s.i("child_mort", "BGD", 1990)),
+    C("world-better", 2, "30.5", "num", lambda s: s.i("child_mort", "BGD", 2024)),
+    C("world-better", 2, "202", "num", lambda s: s.i("child_mort", "ETH", 1990)),
+    C("world-better", 2, "44.5", "num", lambda s: s.i("child_mort", "ETH", 2024)),
+    C("world-better", 2, "(116)", "num", lambda s: s.i("child_mort", "NGA", 2024)),
+    C("world-better", 2, "(111)", "num", lambda s: s.i("child_mort", "NER", 2024)),
+    C("world-better", 3, "43.4%", "pct", lambda s: s.i("poverty", "WLD", 1990)),
+    C("world-better", 3, "2.3 billion", "people", lambda s: s.i("poverty", "WLD", 1990) / 100 * s.i("pop", "WLD", 1990) / 1e6),
+    C("world-better", 3, "10.1%", "pct", lambda s: s.i("poverty", "WLD", 2024)),
+    C("world-better", 3, "820 million", "people", lambda s: s.i("poverty", "WLD", 2024) / 100 * s.i("pop", "WLD", 2024) / 1e6),
+    C("world-better", 3, "83.1%", "pct", lambda s: s.i("poverty", "CHN", 1990)),
+    C("world-better", 3, "0% by 2019", "pct", lambda s: s.i("poverty", "CHN", 2019)),
+    C("world-better", 3, "47.5%", "pct", lambda s: s.i("poverty", "IND", 1993)),
+    C("world-better", 3, "2.6%", "pct", lambda s: s.i("poverty", "IND", 2023)),
+    C("world-better", 3, "41.8%", "pct", lambda s: s.i("poverty", "NGA", 2022)),
+    C("world-better", 3, "85.3%", "pct", lambda s: s.i("poverty", "COD", 2020)),
+    C("world-better", 4, "78.2%", "pct", lambda s: s.i("electricity", "WLD", 2000)),
+    C("world-better", 4, "91.9%", "pct", lambda s: s.i("electricity", "WLD", 2024)),
+    C("world-better", 4, "from 32%", "pct", lambda s: s.i("electricity", "BGD", 2000)),
+    C("world-better", 4, "99.5%", "pct", lambda s: s.i("electricity", "BGD", 2024)),
+    C("world-better", 4, "6.2%", "pct", lambda s: s.i("electricity", "RWA", 2000)),
+    C("world-better", 4, "to 72%", "pct", lambda s: s.i("electricity", "RWA", 2024)),
+    C("world-better", 4, "5.4%", "pct", lambda s: s.i("electricity", "SSD", 2024)),
+    C("world-better", 4, "13.4%", "pct", lambda s: s.i("electricity", "TCD", 2024)),
+    C("world-better", 5, "198", "num", lambda s: len(s.compare("gdp_pc", "life_exp", 2024, (), (True, False))[0])),
+    C("world-better", 5, "r = 0.86", "num", lambda s: s.compare("gdp_pc", "life_exp", 2024, (), (True, False))[1]),
+    C("world-better", 5, "$4,339", "usd_pc", lambda s: s.i("gdp_pc", "WLD", 1990)),
+    C("world-better", 5, "$13,720", "usd_pc", lambda s: s.i("gdp_pc", "WLD", 2024)),
+    C("world-better", 6, "0.608", "num", lambda s: s.i("hdi", "WLD", 1990)),
+    C("world-better", 6, "0.756", "num", lambda s: s.i("hdi", "WLD", 2023)),
+    C("world-better", 6, "2020", "num", lambda s: _first_fall(s, "hdi", "WLD")),
+    C("world-better", 6, "only in 2022", "num", lambda s: next(y for y in range(2021, 2030) if s.i("hdi", "WLD", y) > s.i("hdi", "WLD", 2019))),
+    C("world-better", 6, "112", "num", lambda s: _hdi_lower(s, 2021, 2019)[0]),
+    C("world-better", 6, "192", "num", lambda s: _hdi_lower(s, 2021, 2019)[1]),
+    C("world-better", 6, "(0.564)", "num", lambda s: s.i("hdi", "SYR", 2023)),
+    C("world-better", 6, "(0.572)", "num", lambda s: s.i("hdi", "SYR", 1990)),
+    C("world-better", 7, "+75%", "pct", lambda s: s.change(s.i("co2", "WLD", 2024), s.i("co2", "WLD", 1990))),
+    C("world-better", 7, "22.7 billion tonnes", "mt", lambda s: s.i("co2", "WLD", 1990)),
+    C("world-better", 7, "39.6 billion tonnes", "mt", lambda s: s.i("co2", "WLD", 2024)),
+    C("world-better", 7, "from 2.4 billion", "mt", lambda s: s.i("co2", "CHN", 1990)),
+    C("world-better", 7, "13.1 billion tonnes", "mt", lambda s: s.i("co2", "CHN", 2024)),
+    C("world-better", 7, "from 5.0 billion", "mt", lambda s: s.i("co2", "USA", 1990)),
+    C("world-better", 7, "4.6 billion tonnes", "mt", lambda s: s.i("co2", "USA", 2024)),
 ]
 
 
@@ -583,6 +647,18 @@ def _first_year_above(s, a, b):
     return None
 
 
+def _first_fall(s, ind, code):
+    """First year in which `ind` is lower than the year before."""
+    years = [int(y) for y in s.ind["periods"]]
+    return next(y for y in years[1:] if (a := s.i(ind, code, y)) is not None and (b := s.i(ind, code, y - 1)) is not None and a < b)
+
+
+def _hdi_lower(s, year, base):
+    """(countries with a lower HDI in `year` than in `base`, countries with both values); no aggregates."""
+    both = [k for k in s.ind["values"]["hdi"] if k != "WLD" and s.i("hdi", k, year) is not None and s.i("hdi", k, base) is not None]
+    return sum(s.i("hdi", k, year) < s.i("hdi", k, base) for k in both), len(both)
+
+
 def _first_year_mix_above(s, code, a, b):
     """First year from which product a's share of code's exports exceeds b's in every later year."""
     years = s.periods("A", "SECTORS")
@@ -597,6 +673,10 @@ QUIZZES = [
     Q("russia-oil", 3, lambda s, ch: _argmax(ch, lambda c: s.share("RUS", c, "2024", product="CRUDE"))),
     Q("china-rise", 4, lambda s, ch: ch.index(str(_first_year_above(s, "CHN", "USA")))),
     Q("china-goods-mix", 3, lambda s, ch: _argmax(ch, lambda c: s.share("CHN", c, "2024", product="CARS"))),
+    Q("world-better", 1, lambda s, ch: (lambda d: min(range(3), key=lambda i: abs(d - [2, 8, 15][i])))(
+        s.i("life_exp", "WLD", 2024) - s.i("life_exp", "WLD", 1990))),
+    Q("world-better", 3, lambda s, ch: (lambda v: 2 if v > 40 else 1 if v > 20 else 0)(s.i("poverty", "WLD", 1990))),
+    Q("world-better", 6, lambda s, ch: _only([s.i("hdi", c, 2023) < s.i("hdi", c, 1990) for c in ch])),
     Q("ukraine-war", 3, lambda s, ch: _argmax(ch, lambda c: s.share("UKR", c, "2022", product="MAIZE"))),
 ]
 
@@ -605,6 +685,7 @@ QUIZZES = [
 
 EN_NUM = re.compile(r"([−\-+]?)\$?(\d[\d,]*(?:\.\d+)?)\s*(trillion|billion|million)?")
 ZH_NUM = re.compile(r"([−\-+]?)(\d[\d,]*(?:\.\d+)?)\s*(万亿|亿|万)?(美元)?(%)?")
+SCALED = ("usd", "people", "mt")  # amounts written with million/billion (万/亿) and stored in millions
 EN_SCALE = {"trillion": 1e6, "billion": 1e3, "million": 1.0, None: 1.0}
 ZH_SCALE = {"万亿": 1e6, "亿": 100.0, "万": 0.01, None: 1.0}
 
@@ -625,7 +706,7 @@ def parse_en(snippet, kind):
     m = EN_NUM.search(snippet)
     if not m:
         raise ValueError(f"no number in {snippet!r}")
-    scale = EN_SCALE[m.group(3)] if kind == "usd" else 1.0
+    scale = EN_SCALE[m.group(3)] if kind in SCALED else 1.0
     return written(m.group(1), m.group(2), scale)
 
 
@@ -636,11 +717,13 @@ def zh_candidates(text, kind):
             continue
         if kind == "usd_pc" and not (usd and not mag):
             continue
+        if kind in ("people", "mt") and (usd or pct or not mag):
+            continue
         if kind == "pct" and not pct:
             continue
         if kind == "num" and (usd or pct):
             continue
-        yield written(sign, digits, ZH_SCALE[mag] if kind == "usd" else 1.0)
+        yield written(sign, digits, ZH_SCALE[mag] if kind in SCALED else 1.0)
 
 
 def plain(texts):

@@ -1,5 +1,5 @@
 {
-  "_comment": "Country-level economic indicators. `source_code` is the code in the source (World Bank WDI). `unit`: usd (published in USD millions), usd_pc (USD per person), people, pct. `group`: how a group's value is formed from its members (as of each year): sum = add members' values (only when members with data hold >= 95% of the group's population), none = not computed for groups. Derived indicators are computed at publish time from others. `hidden` indicators are inputs only.",
+  "_comment": "Country-level economic indicators. `source_code` is the code in the source (World Bank WDI). `unit`: usd (published in USD millions), usd_pc (USD per person), people, pct. `scale`: \"sequential\" colors the map on one ramp from the lowest to the highest values (levels that are never negative, e.g. life expectancy) instead of diverging around zero. The World Bank and UNDP World aggregates are kept as WLD. `group`: how a group's value is formed from its members (as of each year): sum = add members' values (only when members with data hold >= 95% of the group's population), none = not computed for groups. Derived indicators are computed at publish time from others. `hidden` indicators are inputs only.",
   "start": 1990,
   "indicators": [
     {"id": "gdp", "name": "GDP", "unit": "usd", "source": "worldbank_wdi", "source_code": "NY.GDP.MKTP.CD", "group": "sum",
@@ -21,6 +21,20 @@
     {"id": "current_account", "name": "Current account balance", "unit": "usd", "source": "worldbank_wdi", "source_code": "BN.CAB.XOKA.CD", "group": "sum",
      "description": "Current account balance, current US dollars"},
     {"id": "trade_gs_gdp", "name": "Trade in goods & services, % of GDP", "unit": "pct", "source": "worldbank_wdi", "source_code": "NE.TRD.GNFS.ZS", "group": "none",
-     "description": "Exports plus imports of goods and services as a share of GDP (national accounts)"}
+     "description": "Exports plus imports of goods and services as a share of GDP (national accounts)"},
+    {"id": "life_exp", "name": "Life expectancy", "unit": "years", "source": "worldbank_wdi", "source_code": "SP.DYN.LE00.IN", "group": "none", "scale": "sequential",
+     "description": "Life expectancy at birth, years"},
+    {"id": "child_mort", "name": "Child mortality", "unit": "per1000", "source": "worldbank_wdi", "source_code": "SH.DYN.MORT", "group": "none", "scale": "sequential",
+     "description": "Deaths before age 5 per 1,000 live births"},
+    {"id": "poverty", "name": "Extreme poverty", "unit": "pct", "source": "worldbank_wdi", "source_code": "SI.POV.DDAY", "group": "none", "scale": "sequential",
+     "description": "Share of people living on less than $3.00 a day (2021 PPP); survey years only for most countries"},
+    {"id": "electricity", "name": "Access to electricity", "unit": "pct", "source": "worldbank_wdi", "source_code": "EG.ELC.ACCS.ZS", "group": "none", "scale": "sequential",
+     "description": "Share of the population with access to electricity"},
+    {"id": "co2", "name": "CO2 emissions", "unit": "mt", "source": "worldbank_wdi", "source_code": "EN.GHG.CO2.MT.CE.AR5", "group": "sum",
+     "description": "Carbon dioxide emissions excluding land use, million tonnes"},
+    {"id": "co2_pc", "name": "CO2 emissions per person", "unit": "t_pc", "source": "worldbank_wdi", "source_code": "EN.GHG.CO2.PC.CE.AR5", "group": "none", "scale": "sequential",
+     "description": "Carbon dioxide emissions excluding land use, tonnes per person"},
+    {"id": "hdi", "name": "Human Development Index", "unit": "index", "source": "undp_hdr", "source_code": "hdi", "group": "none", "scale": "sequential",
+     "description": "UNDP's summary of health, education and income, from 0 to 1"}
   ]
 }

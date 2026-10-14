@@ -4,7 +4,8 @@
     "wars",
     "china",
     "energy",
-    "policy"
+    "policy",
+    "development"
   ],
   "stories": [
     {
@@ -110,7 +111,8 @@
       "summary": "一个使用“对比”视图的故事：什么因素与出口更多相关，以及中国如何从全球第6大出口国跃升至第1。",
       "start": 1995,
       "tags": [
-        "china"
+        "china",
+        "development"
       ]
     },
     {
@@ -139,6 +141,15 @@
       "start": 2022,
       "tags": [
         "wars"
+      ]
+    },
+    {
+      "id": "world-better",
+      "title": "世界在变好吗？",
+      "summary": "三十年来：寿命更长，儿童夭折更少，极端贫困减少，更多人用上电，而二氧化碳排放仍在增加。",
+      "start": 1990,
+      "tags": [
+        "development"
       ]
     }
   ]

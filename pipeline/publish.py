@@ -312,7 +312,7 @@ def publish():
     from .indicators import publish_indicators
     log("Publishing indicators")
     indicators = publish_indicators(con, registry)
-    used_extra = ["worldbank_wdi"] if indicators else []
+    used_extra = list(dict.fromkeys(i["source"] for i in indicators["indicators"] if i["source"] != "derived")) if indicators else []
 
     from .bilateral import publish_bilateral
     log("Publishing bilateral measures")

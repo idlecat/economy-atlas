@@ -4,7 +4,8 @@
     "wars",
     "china",
     "energy",
-    "policy"
+    "policy",
+    "development"
   ],
   "stories": [
     {
@@ -110,7 +111,8 @@
       "summary": "A Compare-view story: what goes with exporting more, and how China climbed from 6th-largest exporter to 1st.",
       "start": 1995,
       "tags": [
-        "china"
+        "china",
+        "development"
       ]
     },
     {
@@ -139,6 +141,15 @@
       "start": 2022,
       "tags": [
         "wars"
+      ]
+    },
+    {
+      "id": "world-better",
+      "title": "Is the world getting better?",
+      "summary": "Thirty years of longer lives, fewer child deaths, less extreme poverty and more electricity, and rising CO2 emissions.",
+      "start": 1990,
+      "tags": [
+        "development"
       ]
     }
   ]

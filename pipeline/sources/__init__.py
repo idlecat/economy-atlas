@@ -15,6 +15,6 @@ To add a source: add a module here, register it in SOURCES, add a code column fo
 its scheme to config/entities.csv if it uses its own country codes, and list it in
 config/datasets.json `precedence`.
 """
-from . import cepii_baci, imf_dip, imf_imts, natural_earth, un_m49, worldbank_ids, worldbank_wdi
+from . import cepii_baci, imf_dip, imf_imts, natural_earth, un_m49, undp_hdr, worldbank_ids, worldbank_wdi
 
-SOURCES = {m.ID: m for m in (un_m49, natural_earth, imf_imts, cepii_baci, worldbank_wdi, worldbank_ids, imf_dip)}
+SOURCES = {m.ID: m for m in (un_m49, natural_earth, imf_imts, cepii_baci, worldbank_wdi, undp_hdr, worldbank_ids, imf_dip)}

@@ -145,6 +145,25 @@ function productShare(ctx, yi) {
 }
 
 const ECON_ROWS = ["gdp", "gdp_pc", "gdp_growth", "pop", "inflation", "unemployment", "fdi_in", "current_account", "trade_gs_gdp", "exports_gdp"];
+const DEV_ROWS = ["hdi", "life_exp", "child_mort", "poverty", "electricity", "co2_pc", "co2"];
+
+/** Indicator rows with a value for `key` in the selected year, or "" if none. */
+function indicatorTable(ctx, ids, key) {
+  const rows = ids.map((id) => ctx.metrics.get(id)).filter(Boolean)
+    .map((m) => ({ m, v: m.value(key, ctx.year) })).filter((r) => r.v != null);
+  return rows.length ? `<table class="econ">${rows.map(({ m, v }) =>
+    `<tr><td title="${esc(m.description ?? "")}">${esc(m.name)}</td><td>${fmtUnit(v, m.unit)}</td></tr>`).join("")}</table>` : "";
+}
+
+/** Health, income and emissions: World Bank WDI and UNDP's Human Development Index. For the world view
+ *  (key WLD) these are the sources' own World aggregates. */
+function developmentSection(ctx, key = ctx.focus) {
+  if (!ctx.ind || !ctx.metrics) return "";
+  const world = key === "WLD";
+  const table = indicatorTable(ctx, world ? ["gdp", "gdp_pc", "gdp_growth", "pop", ...DEV_ROWS] : DEV_ROWS, key);
+  return table ? `<h3>${t(world ? "dev.worldTitle" : "dev.title", { year: ctx.year })}</h3>${table}
+    <p class="note">${t(world ? "dev.worldSource" : "dev.source")}</p>` : "";
+}
 
 /** Year-on-year % changes of exports and of nominal GDP (both current US$), over all years with both. */
 function growthPairs(ctx) {
@@ -360,7 +379,7 @@ export function renderPanel(el, ctx) {
       <div class="chart" id="p-chart"></div>
       ${chartKey()}`) + sec("partners", `
       <h3>${t("panel.largest", { metric: metricLabel(metric), period: year })}</h3>
-      ${rankList(rows, worldTotal, metric)}`);
+      ${rankList(rows, worldTotal, metric)}`) + sec("development", developmentSection(ctx, "WLD"));
     lineChart(el.querySelector("#p-chart"), ctx.world, yi);
     bindList(el, ctx.onFocus);
     return;
@@ -408,7 +427,7 @@ export function renderPanel(el, ctx) {
     <h3>${t("panel.topPartners", { metric: metricLabel(metric), period: year })}</h3>
     ${rows.length ? rankList(rows, focusTotal, metric, ctx.pair) : `<p class="note">${t("panel.noPartners", { period: year })}</p>`}
     <p class="note">${t("panel.clickPartner")}</p>`)
-    + sec("economy", economySection(ctx)) + sec("lending", lendingSection(ctx)) + sec("products", productsSection(ctx, yi));
+    + sec("economy", economySection(ctx)) + sec("development", developmentSection(ctx)) + sec("lending", lendingSection(ctx)) + sec("products", productsSection(ctx, yi));
 
   lineChart(el.querySelector("#p-chart"), fs, yi, { intra: group ? ctx.intra : null });
   if (pair) {

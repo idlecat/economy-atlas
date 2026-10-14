@@ -117,6 +117,16 @@ function indicatorColors(metric, keys, years) {
   for (const k of keys) for (const y of years) { const v = metric.value(k, y); if (v != null) all.push(v); }
   const fmtV = (v, sign = false) => fmtUnit(v, metric.unit, { sign });
   if (metric.log) return buildScale(all.filter((v) => v > 0), "total", 0, fmtV);
+  if (metric.sequential) {
+    // levels that are never negative (life expectancy, HDI): one ramp over the 2nd–98th percentiles
+    const sorted = all.sort(d3.ascending);
+    const lo = d3.quantile(sorted, 0.02) ?? 0, hi = d3.quantile(sorted, 0.98) ?? 1;
+    // the ramp starts a little in, so the lowest values (e.g. 0% poverty) stay distinct from "no data"
+    const ramp = d3.interpolateRgbBasis(palettes().total);
+    const s = d3.scaleSequential([lo, hi], (x) => ramp(0.15 + 0.85 * x)).clamp(true);
+    return { color: (v) => s(v), kind: "linear", pos: (v) => (v - lo) / (hi - lo || 1), ticks: d3.range(5).map((i) => lo + ((hi - lo) * i) / 4),
+      fmt: (v) => fmtUnit(v, metric.unit, { compact: true }) };
+  }
   if (metric.share) {
     // shares (0–100%): one color ramp from 0, capped at the 98th percentile
     const max = d3.quantile(all.filter((v) => v >= 0).sort(d3.ascending), 0.98) || 1;
@@ -309,7 +319,7 @@ function buildArcs(partners) {
 
 function renderTitle(byMetric = null) {
   if (byMetric) {
-    $("#map-title").innerHTML = `${t("title.indicator", { name: esc(byMetric.name), year: year() })}<small>${esc(byMetric.description ?? "")}${byMetric.group === "economy" ? " · World Bank WDI" : ""}</small>`;
+    $("#map-title").innerHTML = `${t("title.indicator", { name: esc(byMetric.name), year: year() })}<small>${esc(byMetric.description ?? "")}${byMetric.group === "economy" ? ` · ${byMetric.source === "undp_hdr" ? "UNDP HDR" : "World Bank WDI"}` : ""}</small>`;
     return;
   }
   const { focus, metric, back, product } = state;
@@ -360,7 +370,7 @@ function renderLegend(sc = current.scale) {
 function sampleScale(sc) {
   const lo = sc.ticks[0], hi = sc.ticks.at(-1);
   if (sc.kind === "ratio") return (t) => sc.color(2 ** (t * 4 - 2));
-  if (sc.kind === "linear") return (t) => sc.color(t * hi);
+  if (sc.kind === "linear") return (t) => sc.color(lo + t * (hi - lo));
   if (sc.kind === "diverging") {
     return (t) => {
       let a = lo, b = hi;
@@ -732,7 +742,7 @@ function renderSources() {
   const { imf_imts: imf, un_m49: m49, natural_earth: ne } = src;
   const baci = store.meta.products ? src.cepii_baci : null;
   const wb = src.worldbank_wdi;
-  const ids = src.worldbank_ids, dip = src.imf_dip;
+  const ids = src.worldbank_ids, dip = src.imf_dip, undp = src.undp_hdr;
   const link = (url, text) => `<a href="${url}" target="_blank" rel="noopener">${esc(text)}</a>`;
   const span = (f) => `${periodLabel(store.meta.periods[f][0])}–${periodLabel(store.meta.periods[f].at(-1))}`;
   const coverage = availableFreqs().map((f) => `${freqLabel(f).toLowerCase()} ${span(f)}`).join(t("listSep"));
@@ -741,7 +751,8 @@ function renderSources() {
     imf: link(imf.url, "IMF, International Trade in Goods by partner country (IMTS)"), accessed: imf.accessed,
     baci: baci ? t("footer.baci", { link: link(baci.url, "CEPII BACI"), terms: esc(baci.terms) }) : "",
     wb: (wb ? t("footer.wb", { link: link(wb.url, "World Bank WDI"), terms: esc(wb.terms) }) : "")
-      + (ids && dip ? t("footer.lend", { ids: link(ids.url, "World Bank IDS"), dip: link(dip.url, "IMF DIP") }) : ""),
+      + (ids && dip ? t("footer.lend", { ids: link(ids.url, "World Bank IDS"), dip: link(dip.url, "IMF DIP") }) : "")
+      + (undp ? t("footer.undp", { link: link(undp.url, "UNDP Human Development Report"), terms: esc(undp.terms) }) : ""),
     m49: link(m49.url, "UN M49"), ne: link(ne.url, "Natural Earth"),
   });
   const memberLabel = (m) => {
@@ -771,7 +782,7 @@ function renderSources() {
         return `${freqLabel(f).toLowerCase()} ${periodLabel(p)}${p === last ? "" : `–${periodLabel(last)}`}`;
       }).join(t("listSep"))) })}</p>` : ""}
     ${baci ? productsAbout(baci, link) : ""}
-    ${wb ? indicatorsAbout(wb, link) : ""}
+    ${wb ? indicatorsAbout(wb, link, undp) : ""}
     ${ids && dip ? `<h3>${t("about.lend.title")}</h3>
       <p>${t("about.lend.debt", { ids: link(ids.url, ids.name) })}</p>
       <p>${t("about.lend.fdi", { dip: link(dip.url, dip.name) })}</p>
@@ -800,11 +811,12 @@ function renderSources() {
     <p class="note">${t("about.generated", { date: store.meta.generated })}</p>`;
 }
 
-function indicatorsAbout(wb, link) {
+function indicatorsAbout(wb, link, undp) {
   return `
     <h3>${t("about.ind.title")}</h3>
     <p>${t("about.ind.source", { wb: link(wb.url, wb.name) })}</p>
     <p>${t("about.ind.groups")}</p>
+    ${undp ? `<p>${t("about.ind.dev", { undp: link(undp.url, undp.name) })}</p>` : ""}
     <p>${t("about.ind.compare")}</p>`;
 }
 
