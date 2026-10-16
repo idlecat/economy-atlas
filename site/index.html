@@ -108,6 +108,17 @@
     <form method="dialog"><button class="close" aria-label="Close" data-i18n-attr="aria-label:close">×</button></form>
     <h2 id="stories-title" data-i18n="stories.button">Stories</h2>
     <p class="note" data-i18n="stories.intro">Guided replays of moments that reshaped world trade.</p>
+    <form id="vs-form" class="vs-form">
+      <h3 data-i18n="vs.heading">Head to head</h3>
+      <p class="note" data-i18n="vs.intro">Pick two economies for a guided comparison of their economy, trade and living standards over time.</p>
+      <div class="vs-row">
+        <input id="vs-a" type="search" list="entity-list" autocomplete="off" placeholder="First economy…" aria-label="First economy" data-i18n-attr="placeholder:vs.first;aria-label:vs.first">
+        <span class="vs-sep" data-i18n="vs.versus">vs</span>
+        <input id="vs-b" type="search" list="entity-list" autocomplete="off" placeholder="Second economy…" aria-label="Second economy" data-i18n-attr="placeholder:vs.second;aria-label:vs.second">
+        <button type="submit" class="btn primary" data-i18n="vs.start">Compare</button>
+      </div>
+      <p id="vs-msg" class="vs-msg" role="status"></p>
+    </form>
     <div id="story-tags" class="chips story-tags" role="group" aria-label="Filter stories by topic" data-i18n-attr="aria-label:stories.filter"></div>
     <ul id="stories-list" class="stories-list"></ul>
   </dialog>

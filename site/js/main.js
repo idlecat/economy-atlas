@@ -11,7 +11,7 @@ import { renderTrends, defaultSet, SCALES } from "./trends.js";
 import { compareData, statsHTML, REGION_COLORS } from "./compare.js";
 import { createMap } from "./map.js";
 import { renderPanel, lineChart, METRICS, metricLabel } from "./panel.js";
-import { initStories, activeStory, startStory, stopStory } from "./stories.js";
+import { initStories, activeStory, startStory, stopStory, syncStoryYear } from "./stories.js";
 import { FREQS, freqLabel, periodLabel, nearestIndex } from "./time.js";
 import { initI18n, t, getLang, setLang, LANGS } from "./i18n.js";
 import { money, ratioPct, share, fmtUnit, escapeHTML as esc } from "./format.js";
@@ -40,6 +40,9 @@ const state = {
 
 let map, scatter, current = null, playTimer = null, updateToken = 0, markers = [];
 let metricsCache = { key: null, metrics: null };
+let storyMarks = null; // entity ids a story outlines like a list (a Head to head story's two economies), or null
+/** Entities outlined on the map and in Compare: the highlighted list, else a story's. */
+const highlighted = () => (state.list ? listMembers(state.list) : storyMarks);
 const year = () => +period().slice(0, 4);
 
 const period = (i = state.pi) => store.periods[i];
@@ -177,8 +180,8 @@ async function update() {
   }
   if (current.worldKey !== `${product}/${freq}`) Object.assign(current, { worldKey: `${product}/${freq}`, world: worldSeries() });
   Object.assign(current, { seriesMap, focusSeries, intra, flows: focus ? await loadFlows(focus, freq, product) : null });
-  const highlight = state.list ? listMembers(state.list) : null;
-  current.listSplit = highlight && focus ? splitByList(current.flows, highlight) : null;
+  const highlight = highlighted();
+  current.listSplit = state.list && focus ? splitByList(current.flows, highlight) : null;
   const { metrics, ind, bil, years } = await getMetrics();
   if (token !== updateToken) return;
   current.metrics = metrics;
@@ -207,6 +210,7 @@ async function update() {
     renderTitle(byMetric);
   }
   renderSpark();
+  syncStoryYear(year());
   renderPanel($("#panel"), {
     ind, bil, metrics, year: year(),
     focus, pi, metric, compare: compareN(), label: label(), groupsOn, product,
@@ -224,7 +228,7 @@ async function update() {
 
 function renderCompare(metrics, ind) {
   const d = compareData({ metrics, xId: state.sx, yId: state.sy, year: year(), groupsOn: state.groupsOn, pi: state.pi, focus: state.focus, ind,
-    highlight: state.list ? listMembers(state.list) : null });
+    highlight: highlighted() });
   current.compare = d;
   scatter.render({ points: d.points, x: d.x, y: d.y, fit: d.stats.fit, animate: true });
   $("#map-title").innerHTML = t("compare.title", { y: esc(d.y.name), x: esc(d.x.name), year: year() }) + statsHTML(d.stats, d.x, d.y, state.groupsOn);
@@ -959,6 +963,9 @@ async function boot() {
     outline: (code) => map.outline(code),
     name: (code) => nameOf(code),
     pins: (list) => map.pins(list),
+    find: findEntity,
+    mark: (set) => { storyMarks = set; },
+    year,
   });
   // Links pasted into the address bar or back/forward (writeHash uses replaceState, which doesn't fire this).
   addEventListener("hashchange", readHash);

@@ -118,6 +118,26 @@ for (const lang of LANGS) {
   await page.click('#story a.ent[data-key="LAO"]');
   await page.waitForTimeout(1000);
   await expect(text(".panel h2").then((s) => s === (lang === "en" ? "Laos" : "老挝")), "link focuses Laos");
+
+  // Head to head: a story generated for two economies picked in the Stories dialog
+  where = `${lang} head to head`;
+  await page.click("#stories-btn");
+  await page.fill("#vs-a", "CHN");
+  await page.fill("#vs-b", "USA");
+  await page.click('#vs-form button[type="submit"]');
+  await page.waitForTimeout(1500);
+  await expect(page.evaluate(() => location.hash.startsWith("#story=vs-CHN-USA")), "story started from the dialog");
+  for (let i = 0; i < 12; i++) {
+    where = `${lang} head to head step ${i + 1}`;
+    await expect(text("#story h3").then((s) => s.length > 0), "step title");
+    if (await page.$("#story [data-choice]:not([disabled])")) await page.click('#story [data-choice="0"]');
+    await expect(text("#story .story-body").then((s) => s.length > 40 && !s.includes("{")), "caption filled in");
+    if (await page.$("#story .story-fig")) await expect(page.$("#story .story-fig svg, #story .story-fig table").then(Boolean), "figure drawn");
+    if (!(await page.$('#story [data-go="1"]'))) break;
+    await page.click('#story [data-go="1"]');
+    await page.waitForTimeout(900);
+  }
+  await expect(page.isVisible("#story [data-vs-again]"), "another pair offered at the end");
 }
 
 await browser.close();

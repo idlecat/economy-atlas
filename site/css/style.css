@@ -451,3 +451,29 @@ dialog code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px
 .pin.left text { text-anchor: end; }
 @keyframes pin-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(3.2); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .pin-pulse { animation: none; opacity: 0; } }
+
+/* ---------- Head to head (a story generated for two economies, versus.js) */
+.vs-form { margin: 14px 0 4px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+.vs-form h3 { margin: 0 0 2px; font-size: 15px; }
+.vs-form .note { margin: 0 0 8px; }
+.vs-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vs-row input { flex: 1 1 140px; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: inherit; font: inherit; }
+.vs-sep { color: var(--muted); font-size: 13px; }
+.vs-msg { margin: 6px 0 0; font-size: 12.5px; color: var(--imports); }
+.vs-msg:empty { display: none; }
+.story-fig { margin: 8px 0 4px; }
+.vs-key { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.vs-key b { color: var(--text); font-weight: 600; }
+.vs-key i, .vs-table i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 4px; }
+.vs-chart { width: 100%; height: auto; display: block; font-size: 10px; }
+.vs-chart .grid line { stroke: var(--border); }
+.vs-chart .axis text { fill: var(--muted); }
+.vs-chart .axis line, .vs-chart .axis path { stroke: var(--border); }
+.vs-chart .tl { fill: none; stroke-width: 2; }
+.vs-chart .zero { stroke: var(--muted); stroke-width: 1; }
+.vs-chart .yr { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 2; }
+.vs-table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.vs-table th { text-align: right; font-weight: 600; padding: 4px 0 4px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.vs-table td { padding: 3px 0 3px 8px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.vs-table td:first-child { text-align: left; padding-left: 0; white-space: normal; }
+.vs-table small { color: var(--muted); }

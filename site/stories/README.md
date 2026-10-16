@@ -70,3 +70,10 @@ Rules for content on a public site:
 Tags: give each story the topics a reader would look for it under (a story can have several); add a new tag only when at least two stories share it, with a `storyTag.<id>` name in every `site/i18n/<lang>.json`.
 
 Translations: every story also needs `<lang>/<id>.json` (and an entry in `<lang>/index.json`), e.g. `zh/`. Only `title`, `text`, `summary`, marker and pin `label`s, `ask` questions and text choices, and `stat` values and labels are translated (a `stat` value in the language's own units); views, replays, panels, marker times, pin positions, question answers and sources must be identical to the English file (`tests/test_i18n.py` checks this). Write amounts in the language's own units (Chinese: 1150亿美元, 1.6万亿美元), from the same site data.
+
+## Head to head (generated stories)
+
+The Stories dialog also lets the reader pick any two economies (countries or groups) for a generated comparison, `site/js/versus.js` `buildVersus`. Its id is `vs-<A>-<B>` (e.g. `#story=vs-CHN-USA&step=1`, shareable like any story); there is no JSON file. Steps are built when the story starts, from `indicators.json`, the annual all-goods totals and the first economy's flows (the second's if the first doesn't report, or only has mirror data): size (GDP, with a guess-first question), income per person, real growth, trade in goods (Trends view), trade with each other (`panel: "pair"`) and health (life expectancy, child mortality, HDI), then a side-by-side table. A step is left out when either economy lacks its data (e.g. development indicators for groups, anything from the World Bank for Taiwan). Every figure is computed from site data at run time, so these stories have no `CLAIMS`; their wording is in the `vs.*` strings of `site/i18n/<lang>.json`.
+
+Generated steps can carry two things static stories don't: `figure` (`{draw(el), setYear(year)}`, a chart or table drawn in the card under the caption; `syncStoryYear` in `stories.js` moves its year marker on every update) and the story's `marks` (entity ids outlined on the map and in Compare like a highlighted list).
+

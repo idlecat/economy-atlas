@@ -4,6 +4,7 @@
 import { escapeHTML as esc } from "./format.js";
 import { periodLabel } from "./time.js";
 import { getLang, t } from "./i18n.js";
+import { buildVersus, parseVersusId, versusId } from "./versus.js";
 
 const $ = (s) => document.querySelector(s);
 let hooks = null;
@@ -34,7 +35,8 @@ function loadIndex() {
 }
 
 /** hooks: {applyView(view), playTo(period, ms), stopPlay(), setMarkers(list), onChange(),
- *          knows(code), name(code), focus(code), outline(code|null), pins(list)} */
+ *          knows(code), name(code), focus(code), outline(code|null), pins(list),
+ *          find(text) -> code|null, mark(Set|null), year() -> the year on screen} */
 /** The Stories dialog: tag chips over the list, sorted by the period each story covers. The chosen tag
  *  is remembered per browser (a convenience only). */
 let tag = (() => { try { return localStorage.getItem("storyTag") ?? "all"; } catch { return "all"; } })();
@@ -65,6 +67,16 @@ export function initStories(h) {
     renderList(await loadIndex());
     dialog.showModal();
   });
+  // Head to head: a story generated for two economies the reader picks (versus.js)
+  $("#vs-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const [a, b] = ["#vs-a", "#vs-b"].map((s) => hooks.find($(s).value));
+    const msg = $("#vs-msg");
+    msg.textContent = !a || !b ? t("vs.pick") : a === b ? t("vs.same") : "";
+    if (msg.textContent) return;
+    if (await startStory(versusId(a, b), 0)) dialog.close();
+    else msg.textContent = t("vs.noData");
+  });
   $("#story-tags").addEventListener("click", async (e) => {
     const id = e.target.closest("[data-tag]")?.dataset.tag;
     if (!id) return;
@@ -78,20 +90,33 @@ export function initStories(h) {
   });
 }
 
+/** Called on every update: a step's figure (a generated story's chart) marks the year on screen. */
+export function syncStoryYear(year) {
+  story?.steps[step].figure?.setYear(year);
+}
+
 export function activeStory() {
   return story ? { id: story.id, step } : null;
 }
 
 /** Start a story at step `at`. Resolves false if the story can't be loaded. */
 export async function startStory(id, at = 0) {
-  const { stories } = await loadIndex();
-  if (!stories.some((s) => s.id === id)) return false;
-  try {
-    story = { id, ...(await getLocalized(`${encodeURIComponent(id)}.json`)) };
-    answers = new Map();
-  } catch {
-    return false;
+  const vs = parseVersusId(id);
+  if (vs) {
+    const s = await buildVersus(...vs);
+    if (!s) return false;
+    story = s;
+  } else {
+    const { stories } = await loadIndex();
+    if (!stories.some((s) => s.id === id)) return false;
+    try {
+      story = { id, ...(await getLocalized(`${encodeURIComponent(id)}.json`)) };
+    } catch {
+      return false;
+    }
   }
+  answers = new Map();
+  hooks.mark(story.marks ?? null);
   hooks.setMarkers(story.markers ?? []);
   $("#story").hidden = false;
   await goTo(at);
@@ -104,6 +129,7 @@ export function stopStory() {
   story = null;
   setSpot(null);
   hooks.pins([]);
+  hooks.mark(null);
   $("#story").hidden = true;
   $("#story").innerHTML = "";
   hooks.setMarkers([]);
@@ -116,6 +142,7 @@ async function goTo(i, { replay = true } = {}) {
   step = Math.max(0, Math.min(story.steps.length - 1, i));
   const s = story.steps[step];
   render(s);
+  $("#story").scrollTop = 0;
   setSpot(s.panel);
   hooks.pins(s.pins);
   await hooks.applyView(s.view);
@@ -215,6 +242,7 @@ function endHTML() {
   const right = asked.filter(([s, i]) => answers.get(i) === s.ask.answer).length;
   const score = asked.length && asked.every(([, i]) => answers.has(i))
     ? `<p class="story-score">${t("stories.score", { n: right, total: asked.length })}</p>` : "";
+  if (story.generated) return `${score}<button type="button" class="linklike story-next" data-vs-again>${t("vs.again")} →</button>`;
   const next = nextStory();
   return score + (next ? `<button type="button" class="linklike story-next" data-next="${esc(next.id)}">${t("stories.upNext", { title: esc(next.title) })} →</button>` : "");
 }
@@ -257,6 +285,7 @@ function render(s) {
     ${s.ask ? askHTML(s.ask) : ""}
     <div class="story-body" ${s.ask && !answers.has(step) ? "hidden" : ""}>
       ${s.stat ? statHTML(s.stat) : ""}
+      ${s.figure ? `<div class="story-fig"></div>` : ""}
       ${(Array.isArray(s.text) ? s.text : [s.text]).map((p) => `<p>${inline(p)}</p>`).join("")}
       ${s.play ? `<button type="button" class="story-replay linklike"></button>` : ""}
       ${step === n - 1 ? endHTML() : ""}
@@ -277,6 +306,11 @@ function render(s) {
   el.querySelector("[data-end]")?.addEventListener("click", stopStory);
   el.querySelector(".story-replay")?.addEventListener("click", () => goTo(step));
   el.querySelector("[data-next]")?.addEventListener("click", (e) => startStory(e.currentTarget.dataset.next, 0));
+  el.querySelector("[data-vs-again]")?.addEventListener("click", () => { stopStory(); $("#stories-btn").click(); });
+  if (s.figure) {
+    s.figure.draw(el.querySelector(".story-fig"));
+    s.figure.setYear(hooks.year());
+  }
   el.querySelectorAll("[data-choice]").forEach((b) => { b.onclick = () => answer(+b.dataset.choice); });
   if (!s.ask || answers.has(step)) countUp(el.querySelector(".story-stat b"));
   for (const a of el.querySelectorAll("a.ent")) {
