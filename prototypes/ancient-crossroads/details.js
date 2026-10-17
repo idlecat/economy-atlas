@@ -132,3 +132,20 @@ const POP = {
   inca: [[1500, 'about 10 million', 'estimates range from about 6 to 14 million']],
   aztec: [[1500, '5–25 million in central Mexico', 'estimates vary very widely']],
 };
+
+// Successions: states that followed one another over the same heartland. The card's earlier/later buttons
+// step across a whole succession (moving the selection to whichever member a step belongs to), and the card
+// names the member before and after. Each civilisation is in at most one succession; order is by founding.
+const SUCCESSIONS = {
+  'Chinese dynasties': ['erlitou', 'shang', 'zhou', 'ezhou', 'qin', 'han', 'jinsouth', 'sui', 'tang', 'song', 'yuan', 'ming'],
+  'Pharaonic Egypt': ['egypt-ok', 'egypt-mk', 'egypt-nk', 'egypt-lp', 'ptolemaic'],
+  'Mesopotamia': ['sumer', 'akkad', 'ur3', 'babylon1', 'kassite', 'assyria2', 'assyria3', 'babylon2'],
+  'Iranian empires': ['media', 'achaemenid', 'seleucid', 'parthia', 'sasanian'],
+  'Caliphates': ['rashidun', 'umayyad', 'abbasid'],
+  'Aegean': ['minoan', 'mycenae', 'greek', 'macedon'],
+  'Rome': ['rome', 'byzantium'],
+  'Nubia': ['kerma', 'kush', 'makuria'],
+  'Magadha and its empires': ['magadha', 'maurya', 'gupta'],
+  'Turkic khaganates': ['gokturk', 'uyghur'],
+  'Rus': ['rus', 'moscow'],
+};

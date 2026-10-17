@@ -289,24 +289,38 @@ function selectedHTML() {
 const plural = (n, w) => `${n.toLocaleString('en')} ${w}${n === 1 ? '' : 's'}`;
 const yearsBetween = (a, b) => b - a - (a < 0 && b > 0 ? 1 : 0); // there is no year 0
 
-// Significant years of a civilisation, for the card's previous/next buttons: its key moments, founding,
+// Significant years of a civilisation, for the card's earlier/later buttons: its key moments, founding,
 // greatest drawn extent and final year (or, with no key moments, every year its borders were redrawn).
 function civStops(c) {
   const last = Math.min(c.to >= MAX ? MAX : c.to - 1, MAX), at = (y) => Math.max(c.from, Math.min(last, y));
-  const stops = (MOMENTS[c.id] || []).map((m) => ({ y: at(m[0]), label: m[1] }));
-  const add = (y, label) => { if (!stops.some((s) => s.y === y)) stops.push({ y, label }); };
+  const stops = (MOMENTS[c.id] || []).map((m) => ({ y: at(m[0]), label: m[1], c }));
+  const add = (y, label) => { if (!stops.some((s) => s.y === y)) stops.push({ y, label, c }); };
   add(c.from, c.kind === 'culture' ? 'Emerges' : 'Founded');
   if (!MOMENTS[c.id]) for (const f of c.frames) if (f.y > c.from && f.y < last) add(f.y, f === c.peak ? 'Greatest extent' : 'Borders redrawn');
   add(peakYear(c), 'Greatest extent');
   if (c.to < MAX) add(last, `Final years: it ends in ${fmtYear(c.to)}`);
-  return stops.sort((a, b) => a.y - b.y).filter((s, i, a) => !i || s.y !== a[i - 1].y);
+  return stops;
 }
-const stepBtn = (s, dir) => s
-  ? `<button type="button" data-jump="${s.y}" title="${dir === 'prev' ? 'Previous' : 'Next'} key moment ([ or ])"><span class="yrs">${dir === 'prev' ? '‹ ' : ''}${fmtYear(s.y)}${dir === 'next' ? ' ›' : ''}</span><span>${esc(s.label)}</span></button>`
+// The succession a civilisation belongs to (SUCCESSIONS in details.js), as civilisations; just itself if none.
+const succession = (c) => {
+  const ids = Object.values(SUCCESSIONS).find((ids) => ids.includes(c.id));
+  return ids ? ids.map((id) => CIVS.find((d) => d.id === id)) : [c];
+};
+// Steps across the whole succession; when two members share a year, the later-founded one wins.
+const successionStops = (c) => succession(c).flatMap(civStops).sort((a, b) => a.y - b.y || b.c.from - a.c.from)
+  .filter((s, i, a) => !i || s.y !== a[i - 1].y);
+const stepBtn = (s, dir, c) => s
+  ? `<button type="button" data-jump="${s.y}" data-step-civ="${s.c.id}" title="${dir === 'prev' ? 'Previous' : 'Next'} key moment ([ or ])"><span class="yrs">${dir === 'prev' ? '‹ ' : ''}${fmtYear(s.y)}${dir === 'next' ? ' ›' : ''}</span>${s.c === c ? '' : `<span class="who" style="color:var(--c-${s.c.s})">${esc(s.c.name)}</span>`}<span>${esc(s.label)}</span></button>`
   : `<button type="button" disabled><span class="yrs">${dir === 'prev' ? '‹ Earlier' : 'Later ›'}</span><span>Nothing ${dir === 'prev' ? 'before' : 'after'} this</span></button>`;
 function civStep(c, dir) {
-  const yr = Math.round(state.year), stops = civStops(c);
+  const yr = Math.round(state.year), stops = successionStops(c);
   return dir === 'prev' ? stops.filter((s) => s.y < yr).pop() : stops.find((s) => s.y > yr);
+}
+// Moves the year to a step and, if the step belongs to another member of the succession, selects that member.
+function goStep(s) {
+  stop();
+  if (state.sel?.type !== 'civ' || state.sel.id !== s.c.id) state.sel = { type: 'civ', id: s.c.id };
+  setYear(s.y);
 }
 
 function civHTML(c, y) {
@@ -321,7 +335,7 @@ function civHTML(c, y) {
   else if (!on) status = `Gone by now: it ended in ${fmtYear(end)}, ${plural(yearsBetween(end, yr), 'year')} earlier.`;
   else status = `${plural(yearsBetween(c.from, yr), 'year')} since ${c.kind === 'culture' ? 'it emerged' : 'it was founded'}${c.to < MAX ? `; ${plural(yearsBetween(yr, c.to), 'year')} left` : ''}.`;
 
-  let now = `<div class="stepper">${stepBtn(civStep(c, 'prev'), 'prev')}${stepBtn(civStep(c, 'next'), 'next')}</div><p class="status">${status}</p>`;
+  let now = `<div class="stepper">${stepBtn(civStep(c, 'prev'), 'prev', c)}${stepBtn(civStep(c, 'next'), 'next', c)}</div><p class="status">${status}</p>`;
   if (on && latest) now += `<p class="latest"><span class="yrs">${momentYear(latest)}</span> ${esc(latest[1])}</p>`;
   const pop = (POP[c.id] || []).filter((p) => p[0] <= yr + 25).pop() || (on && POP[c.id] ? POP[c.id][0] : null);
   if (pop) now += `<dl class="facts"><dt>Population</dt><dd>${esc(pop[1])}<span class="src">${fmtYear(pop[0])} · ${esc(pop[2])}</span></dd></dl>`;
@@ -341,9 +355,12 @@ function civHTML(c, y) {
   const wiki = info ? `<div class="group"><h3>From Wikipedia</h3>${info.text ? `<p class="wiki">${esc(info.text)}</p>` : ''}<p class="wikilink"><a href="${esc(info.url)}" target="_blank" rel="noopener">Read “${esc(info.title)}” on Wikipedia ↗</a></p><p class="yrs">Text: Wikipedia, CC BY-SA 4.0</p></div>`
     : (WIKI[c.id] ? `<div class="group"><p class="wikilink"><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(WIKI[c.id].replace(/ /g, '_'))}" target="_blank" rel="noopener">Read more on Wikipedia ↗</a></p></div>` : '');
 
+  const line = succession(c), k = line.indexOf(c), name = Object.keys(SUCCESSIONS).find((n) => SUCCESSIONS[n].includes(c.id));
+  const link = (d, dir) => `<button class="chip" type="button" data-civ="${d.id}" title="${dir === 'prev' ? 'Came before' : 'Came after'}"><i style="background:var(--c-${d.s})"></i><span style="color:var(--fg)">${dir === 'prev' ? '← ' : ''}${esc(d.name)}${dir === 'next' ? ' →' : ''}</span></button>`;
+  const seq = name ? `<div class="succession"><span class="yrs">${esc(name)}:</span>${k > 0 ? link(line[k - 1], 'prev') : ''}${k < line.length - 1 ? link(line[k + 1], 'next') : ''}</div>` : '';
   return `<section class="card civcard"><div class="eyebrow"><span style="color:var(--c-${c.s})">● ${esc(sphereName[c.s])}${c.kind === 'culture' ? ' · culture' : ''}</span><button class="x" type="button" data-close aria-label="Close">×</button></div>
     <h2>${esc(c.name)}</h2><div class="yrs">${fmtSpan(c.from, end)} · ${c.kind === 'culture' ? 'centre' : 'capital'}: ${esc(c.cap[1])}</div>
-    ${img}<div class="group"><h3>In ${fmtYear(y)}</h3>${now}</div><p class="note">${esc(c.note)}</p>${timeline}${wiki}</section>`;
+    ${seq}${img}<div class="group"><h3>In ${fmtYear(y)}</h3>${now}</div><p class="note">${esc(c.note)}</p>${timeline}${wiki}</section>`;
 }
 const civChip = (c) => `<button class="chip${c.kind === 'culture' ? ' culture' : ''}" type="button" data-civ="${c.id}" style="color:var(--c-${c.s})"><i style="background:var(--c-${c.s})"></i><span style="color:var(--fg)">${esc(c.name)}</span></button>`;
 const routeItem = (r) => `<li><button type="button" data-route="${r.id}">${glyphFor(r.kind)}<span>${esc(r.name)}</span><span class="yrs">${r.kind === 'land' ? 'land' : 'sea'}</span></button></li>`;
@@ -393,7 +410,8 @@ panel.on('click', (ev) => {
     const e = EVENTS.find((d) => d.id === ds.event);
     if (!evVisible(e, state.year)) setYear(e.kind === 'conflict' ? e.year + 1 : e.end);
     select({ type: 'event', id: ds.event });
-  } else if (ds.jump) { stop(); setYear(+ds.jump); }
+  } else if (ds.stepCiv) goStep({ y: +ds.jump, c: CIVS.find((d) => d.id === ds.stepCiv) });
+  else if (ds.jump) { stop(); setYear(+ds.jump); }
 });
 panel.on('mouseover', (ev) => {
   const b = ev.target.closest('button[data-civ]');
@@ -541,7 +559,7 @@ document.addEventListener('keydown', (ev) => {
   if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { stop(); setYear(Math.round(state.year) + (ev.key === 'ArrowRight' ? 1 : -1) * (ev.shiftKey ? 100 : 10)); ev.preventDefault(); }
   else if ((ev.key === '[' || ev.key === ']') && state.sel?.type === 'civ') {
     const s = civStep(CIVS.find((d) => d.id === state.sel.id), ev.key === '[' ? 'prev' : 'next');
-    if (s) { stop(); setYear(s.y); }
+    if (s) goStep(s);
     ev.preventDefault();
   } else if (ev.key === ' ' && !ev.target.closest('button')) { state.playing ? stop() : play(); ev.preventDefault(); }
 });
