@@ -965,6 +965,7 @@ async function boot() {
     pins: (list) => map.pins(list),
     find: findEntity,
     mark: (set) => { storyMarks = set; },
+    flash: (codes) => map.flash(codes),
     year,
   });
   // Links pasted into the address bar or back/forward (writeHash uses replaceState, which doesn't fire this).

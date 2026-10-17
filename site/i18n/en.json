@@ -193,6 +193,7 @@
   "stories.sources": "Sources",
   "stories.guess": "Guess first",
   "stories.skip": "Just show me",
+  "stories.showNow": "Show the caption now",
   "stories.right": "Right!",
   "stories.wrong": "Not quite: it's {answer}.",
   "stories.itWas": "The answer: {answer}.",

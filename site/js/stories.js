@@ -15,6 +15,7 @@ let token = 0;
 let spot = null;          // panel section the current step points at (step.panel)
 let spotPin = false;      // keep it scrolled into view (through replays) until the reader scrolls the panel
 let answers = new Map();  // step index -> chosen option, for steps that ask the reader to guess first (step.ask)
+let revealed = new Set(); // steps whose caption was held back during the replay (step.watch) and has been shown
 let indexData = null;     // the loaded index, for "up next"
 
 async function getJSON(url) {
@@ -36,7 +37,7 @@ function loadIndex() {
 
 /** hooks: {applyView(view), playTo(period, ms), stopPlay(), setMarkers(list), onChange(),
  *          knows(code), name(code), focus(code), outline(code|null), pins(list),
- *          find(text) -> code|null, mark(Set|null), year() -> the year on screen} */
+ *          find(text) -> code|null, mark(Set|null), year() -> the year on screen, flash(codes)} */
 /** The Stories dialog: tag chips over the list, sorted by the period each story covers. The chosen tag
  *  is remembered per browser (a convenience only). */
 let tag = (() => { try { return localStorage.getItem("storyTag") ?? "all"; } catch { return "all"; } })();
@@ -116,6 +117,7 @@ export async function startStory(id, at = 0) {
     }
   }
   answers = new Map();
+  revealed = new Set();
   hooks.mark(story.marks ?? null);
   hooks.setMarkers(story.markers ?? []);
   $("#story").hidden = false;
@@ -146,8 +148,10 @@ async function goTo(i, { replay = true } = {}) {
   setSpot(s.panel);
   hooks.pins(s.pins);
   await hooks.applyView(s.view);
+  if (my !== token || asking(s)) return;
+  flash(s);
   // a question is asked before the replay that answers it: the replay starts once the reader has guessed
-  if (my !== token || !s.play || !replay || (s.ask && !answers.has(step))) return;
+  if (!s.play || !replay) return;
   await replayStep(my);
 }
 
@@ -155,8 +159,40 @@ async function replayStep(my = ++token) {
   const s = story.steps[step];
   setPlaying(true);
   await hooks.playTo(s.play.to, s.play.ms);
-  if (my === token) setPlaying(false);
+  if (my !== token) return;
+  setPlaying(false);
+  reveal();
 }
+
+const asking = (s) => !!s.ask && !answers.has(step);
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** A step with `watch` holds its caption back while its replay runs, showing only the cue; the replay makes
+ *  the point and the caption names it afterwards. Steps already seen, and reduced motion, skip the wait. */
+const waiting = (s) => !!(s.watch && s.play && !revealed.has(step) && !reducedMotion());
+
+/** Show a held-back caption (the replay ended, or the reader asked for it). */
+function reveal() {
+  const s = story.steps[step];
+  if (!waiting(s)) return;
+  revealed.add(step);
+  const el = $("#story");
+  el.querySelector(".story-watch")?.remove();
+  const body = el.querySelector(".story-body");
+  body.hidden = false;
+  body.classList.add("revealed");
+  countUp(body.querySelector(".story-stat b"));
+}
+
+/** Briefly outline on the map the countries the step is about: `look`, or the first two the caption links
+ *  (other than the focus, which the map already marks). Map view only. */
+function flash(s) {
+  if (s.view.view) return;
+  const linked = [...plain(s.text).matchAll(/\]\(([A-Z][A-Z0-9_]{1,9})\)/g)].map((m) => m[1]);
+  const codes = s.look ?? [...new Set(linked)].filter((c) => c !== s.view.focus && hooks.knows(c)).slice(0, 2);
+  if (codes.length) hooks.flash(codes);
+}
+
+const plain = (text) => (Array.isArray(text) ? text : [text]).join(" ");
 
 /** A step about a panel section: on wide screens the panel gets its own column (CSS: .layout[data-spot]),
  *  and the section is highlighted and scrolled into view. */
@@ -270,6 +306,7 @@ function answer(i) {
   if (answers.has(step)) return;
   answers.set(step, i);
   render(s);
+  flash(s);
   if (s.play) replayStep();
 }
 
@@ -283,7 +320,9 @@ function render(s) {
     </div>
     <h3>${esc(s.title)}</h3>
     ${s.ask ? askHTML(s.ask) : ""}
-    <div class="story-body" ${s.ask && !answers.has(step) ? "hidden" : ""}>
+    ${!asking(s) && waiting(s) ? `<div class="story-watch"><p>${inline(s.watch)}</p>
+      <button type="button" class="linklike story-reveal">${t("stories.showNow")}</button></div>` : ""}
+    <div class="story-body" ${asking(s) || waiting(s) ? "hidden" : ""}>
       ${s.stat ? statHTML(s.stat) : ""}
       ${s.figure ? `<div class="story-fig"></div>` : ""}
       ${(Array.isArray(s.text) ? s.text : [s.text]).map((p) => `<p>${inline(p)}</p>`).join("")}
@@ -312,7 +351,8 @@ function render(s) {
     s.figure.setYear(hooks.year());
   }
   el.querySelectorAll("[data-choice]").forEach((b) => { b.onclick = () => answer(+b.dataset.choice); });
-  if (!s.ask || answers.has(step)) countUp(el.querySelector(".story-stat b"));
+  el.querySelector(".story-reveal")?.addEventListener("click", reveal);
+  if (!asking(s) && !waiting(s)) countUp(el.querySelector(".story-stat b"));
   for (const a of el.querySelectorAll("a.ent")) {
     a.addEventListener("click", (e) => { e.preventDefault(); hooks.outline(null); hooks.focus(a.dataset.key); });
     a.addEventListener("mouseenter", () => hooks.outline(a.dataset.key));

@@ -39,6 +39,7 @@ export function createMap(container, { onHover, onMove, onClick }) {
   const outlines = root.append("path").attr("class", "group-outline");
   const listOutline = root.append("path").attr("class", "list-outline");
   const hoverOutline = root.append("path").attr("class", "hover-outline");
+  const flashOutline = root.append("path").attr("class", "flash-outline");
   const arcLayer = root.append("g");
   const pinLayer = root.append("g").attr("class", "pins");
 
@@ -108,11 +109,14 @@ export function createMap(container, { onHover, onMove, onClick }) {
     listOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => (a === b ? inList(a) : inList(a) !== inList(b)))));
   }
 
+  /** Outline of the shapes drawn as any of `keys`: the countries themselves, or merged groups. */
+  function outlineOf(keys) {
+    const inKey = (g) => !!g.id && (keys.has(g.id) || keys.has(displayOf(g.id, groupsOn, pi)));
+    return path(topojson.mesh(topo, obj, (a, b) => (a === b ? inKey(a) : inKey(a) !== inKey(b))));
+  }
+
   function drawHover() {
-    if (!hoverKey) return hoverOutline.attr("d", null);
-    // a shape belongs to the key if it is that country, or is drawn as it (a merged group)
-    const inKey = (g) => !!g.id && (g.id === hoverKey || displayOf(g.id, groupsOn, pi) === hoverKey);
-    hoverOutline.attr("d", path(topojson.mesh(topo, obj, (a, b) => (a === b ? inKey(a) : inKey(a) !== inKey(b)))));
+    hoverOutline.attr("d", hoverKey ? outlineOf(new Set([hoverKey])) : null);
   }
 
   function centroidOf(key) {
@@ -207,10 +211,20 @@ export function createMap(container, { onHover, onMove, onClick }) {
     drawHover();
   }
 
+  /** Pulse an outline around some countries for a moment (a story step pointing at them). */
+  let flashTimer = null;
+  function flash(keys) {
+    clearTimeout(flashTimer);
+    flashOutline.classed("on", false).attr("d", outlineOf(new Set(keys)));
+    flashOutline.node().getBoundingClientRect(); // restart the CSS animation
+    flashOutline.classed("on", true);
+    flashTimer = setTimeout(() => flashOutline.classed("on", false).attr("d", null), 2600);
+  }
+
   function pins(list) {
     pinList = list ?? [];
     drawPins();
   }
 
-  return { render, zoomBy, reset, outline, pins, hasShape: (key) => !!centroidOf(key) };
+  return { render, zoomBy, reset, outline, pins, flash, hasShape: (key) => !!centroidOf(key) };
 }

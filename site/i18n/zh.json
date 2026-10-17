@@ -193,6 +193,7 @@
   "stories.sources": "资料来源",
   "stories.guess": "先猜一猜",
   "stories.skip": "直接看答案",
+  "stories.showNow": "直接显示说明",
   "stories.right": "答对了！",
   "stories.wrong": "不对，答案是{answer}。",
   "stories.itWas": "答案：{answer}。",

@@ -100,8 +100,17 @@ for (const lang of LANGS) {
         await expect(page.isHidden("#story .story-body"), "caption hidden before the guess");
         await page.click(`#story [data-choice="${st.ask.answer}"]`);
         await expect(page.isVisible("#story .ask-verdict.right"), "right guess acknowledged");
-        await expect(page.isVisible("#story .story-body"), "caption shown after the guess");
+        if (!st.watch) await expect(page.isVisible("#story .story-body"), "caption shown after the guess");
       }
+      if (st.watch) {
+        // the caption waits for the replay; the reader can ask for it at once
+        await expect(page.isVisible("#story .story-watch"), "watch cue shown during the replay");
+        await expect(page.isHidden("#story .story-body"), "caption held back during the replay");
+        await page.click("#story .story-reveal");
+        await expect(page.isVisible("#story .story-body"), "caption shown on request");
+      }
+      const others = [...new Set([...st.text.join(" ").matchAll(/\]\(([A-Z0-9_]+)\)/g)].map((m) => m[1]))].filter((c) => c !== st.view.focus);
+      if (!st.view.view && !st.ask && (st.look ?? others).length) await expect(page.$("#map .flash-outline.on").then(Boolean), "countries in the caption outlined");
       if (st.stat) await expect(page.isVisible("#story .story-stat"), "headline figure shown");
       if (st.pins && !st.view.view) await expect(page.$$eval("#map .pin", (e) => e.length).then((n) => n === st.pins.length), "map pins");
       if (i === story.steps.length - 1) await expect(page.isVisible("#story .story-next"), "next story offered");

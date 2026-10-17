@@ -24,6 +24,7 @@ from typing import Callable
 from .paths import ROOT, SITE_DATA
 
 STORIES = ROOT / "site" / "stories"
+MAX_FIGURES = 4  # more per step is reported as a note: the point gets lost
 LANGS = ["zh"]
 
 
@@ -521,40 +522,19 @@ CLAIMS = [
     C("war-oil", 5, "$59 million", "usd", lambda s: s.v("YEM", "2024")),
     # War in Ukraine
     C("ukraine-war", 1, "$65.8 billion", "usd", lambda s: s.v("UKR", "2021")),
-    C("ukraine-war", 1, "(12%)", "pct", lambda s: s.share("UKR", "CHN", "2021")),
-    C("ukraine-war", 1, "(8%)", "pct", lambda s: s.share("UKR", "POL", "2021")),
-    C("ukraine-war", 1, "(6%)", "pct", lambda s: s.share("UKR", "TUR", "2021")),
     C("ukraine-war", 1, "40%", "pct", lambda s: s.mix("UKR", "AGRI", "2021")),
-    C("ukraine-war", 1, "24%", "pct", lambda s: s.mix("UKR", "METALS", "2021")),
-    C("ukraine-war", 2, "−49%", "pct", lambda s: s.yoy("UKR", "2022-03")),
     C("ukraine-war", 2, "−50%", "pct", lambda s: s.yoy("UKR", "2022-04")),
     C("ukraine-war", 2, "32%", "pct", lambda s: neg(s.change(s.v("UKR", "2022"), s.v("UKR", "2021")))),
-    C("ukraine-war", 2, "$44.5 billion", "usd", lambda s: s.v("UKR", "2022")),
     C("ukraine-war", 2, "28.8%", "pct", lambda s: neg(s.i("gdp_growth", "UKR", 2022))),
-    C("ukraine-war", 3, "from $6.3 billion", "usd", lambda s: s.v("UKR", "2021", product="WHEAT")),
-    C("ukraine-war", 3, "$3.8 billion", "usd", lambda s: s.v("UKR", "2022", product="WHEAT")),
-    C("ukraine-war", 3, "held up ($6.3 billion)", "usd", lambda s: s.v("UKR", "2022", product="MAIZE")),
     C("ukraine-war", 3, "from 32%", "pct", lambda s: s.share("UKR", "CHN", "2021", product="MAIZE")),
-    C("ukraine-war", 3, "17%", "pct", lambda s: s.share("UKR", "CHN", "2022", product="MAIZE")),
-    C("ukraine-war", 3, "took 14%", "pct", lambda s: s.share("UKR", "ROU", "2022", product="MAIZE")),
-    C("ukraine-war", 3, "Spain 12%", "pct", lambda s: s.share("UKR", "ESP", "2022", product="MAIZE")),
-    C("ukraine-war", 4, "from 24%", "pct", lambda s: s.mix("UKR", "METALS", "2021")),
-    C("ukraine-war", 4, "10%", "pct", lambda s: s.mix("UKR", "METALS", "2024")),
-    C("ukraine-war", 4, "$17.1 billion", "usd", lambda s: s.v("UKR", "2021", product="METALS")),
-    C("ukraine-war", 4, "$4.8 billion", "usd", lambda s: s.v("UKR", "2024", product="METALS")),
+    C("ukraine-war", 3, "to 17%", "pct", lambda s: s.share("UKR", "CHN", "2022", product="MAIZE")),
     C("ukraine-war", 4, "from 40%", "pct", lambda s: s.mix("UKR", "AGRI", "2021")),
     C("ukraine-war", 4, "59%", "pct", lambda s: s.mix("UKR", "AGRI", "2024")),
+    C("ukraine-war", 4, "to 10%", "pct", lambda s: s.mix("UKR", "METALS", "2024")),
     C("ukraine-war", 5, "from 39%", "pct", lambda s: s.share("UKR", "EU", "2021")),
     C("ukraine-war", 5, "63%", "pct", lambda s: s.share("UKR", "EU", "2022")),
-    C("ukraine-war", 5, "was 58%", "pct", lambda s: s.share("UKR", "EU", "2024")),
-    C("ukraine-war", 5, "bought 15%", "pct", lambda s: s.share("UKR", "POL", "2022")),
-    C("ukraine-war", 6, "$70.5 billion", "usd", lambda s: s.v("UKR", "2024", "m")),
-    C("ukraine-war", 6, "($70.0 billion)", "usd", lambda s: s.v("UKR", "2021", "m")),
-    C("ukraine-war", 6, "$40.2 billion", "usd", lambda s: s.v("UKR", "2024")),
     C("ukraine-war", 6, "$4.1 billion", "usd", lambda s: neg(s.v("UKR", "2021", "b"))),
     C("ukraine-war", 6, "$30.3 billion", "usd", lambda s: neg(s.v("UKR", "2024", "b"))),
-    C("ukraine-war", 6, "20%", "pct", lambda s: s.share("UKR", "CHN", "2024", "m")),
-    C("ukraine-war", 6, "from 15%", "pct", lambda s: s.share("UKR", "CHN", "2021", "m")),
     # Is the world getting better? (World Bank and UNDP World aggregates are stored as WLD)
     C("world-better", 1, "65.1 years", "num", lambda s: s.i("life_exp", "WLD", 1990)),
     C("world-better", 1, "73.5 years", "num", lambda s: s.i("life_exp", "WLD", 2024)),
@@ -815,5 +795,12 @@ def main():
     problems = check()
     for p in problems:
         log(f"  MISMATCH {p}")
+    # a guideline, not an error (site/stories/README.md): one point per step, about three figures
+    per_step = {}
+    for c in CLAIMS:
+        per_step[(c.story, c.step)] = per_step.get((c.story, c.step), 0) + 1
+    busy = sorted(f"{s} {i} ({n})" for (s, i), n in per_step.items() if n > MAX_FIGURES)
+    if busy:
+        log(f"  note: {len(busy)} step(s) quote more than {MAX_FIGURES} figures: {', '.join(busy)}")
     log(f"check-stories: {len(CLAIMS)} figures, {len(QUIZZES)} questions, {len(problems)} problem(s)")
     return 1 if problems else 0

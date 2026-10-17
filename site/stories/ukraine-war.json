@@ -38,10 +38,10 @@
   ],
   "steps": [
     {
-      "title": "2021: before the full-scale war",
+      "title": "2021: grain and steel for the world",
       "text": [
-        "In 2021 [Ukraine](UKR) exported **$65.8 billion** of goods. Its largest customers were [China](CHN) (12%), [Poland](POL) (8%) and [Türkiye](TUR) (6%).",
-        "Agriculture and food made up 40% of its exports and base metals 24% (CEPII BACI). The map shows where Ukraine's exports went."
+        "**Before the full-scale war, [Ukraine](UKR) sold the world mostly food and metals.** It exported $65.8 billion of goods in 2021, and agriculture and food alone made up 40%.",
+        "[China](CHN) was its largest customer. The map shows where the exports went."
       ],
       "view": {
         "t": "2021",
@@ -51,10 +51,10 @@
       }
     },
     {
-      "title": "February 2022: invasion",
+      "title": "Exports halved within weeks",
       "text": [
-        "On **24 February 2022** [Russia](RUS) launched a full-scale invasion of [Ukraine](UKR). In March and April Ukraine's exports were about half their level a year earlier (−49% and **−50%**).",
-        "For 2022 as a whole they fell 32% to $44.5 billion, and real GDP shrank **28.8%**. The map shows the change in exports to each partner from the same month a year earlier."
+        "**Two months into the invasion, [Ukraine](UKR)'s exports had halved.** [Russia](RUS) launched its full-scale invasion on 24 February 2022.",
+        "Over the whole year exports fell 32%, and the economy shrank by 28.8%."
       ],
       "stat": {
         "value": "−50%",
@@ -71,13 +71,14 @@
       "play": {
         "to": "2022-12",
         "ms": 700
-      }
+      },
+      "watch": "Watch Ukraine's exports to each partner, month by month, compared with a year earlier."
     },
     {
-      "title": "Grain finds new routes",
+      "title": "Maize found new buyers",
       "text": [
-        "From July 2022 to **17 July 2023** the Black Sea Grain Initiative, signed in Istanbul, allowed commercial food and fertilizer exports from three Ukrainian ports: Odesa, Chornomorsk and Yuzhny/Pivdennyi.",
-        "Wheat exports still fell, from $6.3 billion in 2021 to $3.8 billion in 2022, but maize held up ($6.3 billion). Its buyers changed: [China](CHN)'s share fell from 32% to **17%**, while [Romania](ROU) took 14% and [Spain](ESP) 12%. EU countries are shown separately here: watch the maize arcs shift towards them."
+        "**Maize exports held up, but they went to new buyers: [China](CHN)'s share fell from 32% to 17%, and [Romania](ROU) became the largest buyer in the EU.**",
+        "From July 2022 to 17 July 2023 the Black Sea Grain Initiative kept three ports near Odesa open for food and fertilizer exports. EU countries are shown separately here."
       ],
       "ask": {
         "q": "In 2022, which EU country bought the most Ukrainian maize?",
@@ -100,13 +101,13 @@
           "at": [30.73, 46.48],
           "label": "Black Sea grain ports"
         }
-      ]
+      ],
+      "watch": "Watch the maize arcs swing from China towards the EU."
     },
     {
-      "title": "From steel to farm goods",
+      "title": "Farm goods became most of what Ukraine sells",
       "text": [
-        "Base metals fell from 24% of [Ukraine](UKR)'s exports in 2021 to **10%** in 2024, from $17.1 billion to $4.8 billion. Agriculture and food rose from 40% to **59%**.",
-        "The highlighted list in the panel re-sorts as the timeline plays (CEPII BACI)."
+        "**Agriculture and food rose from 40% of [Ukraine](UKR)'s exports in 2021 to 59% in 2024**, while base metals shrank to 10% (CEPII BACI)."
       ],
       "view": {
         "t": "2021",
@@ -118,26 +119,30 @@
       "play": {
         "to": "2024",
         "ms": 1400
-      }
+      },
+      "watch": "Watch the product list in the panel re-sort."
     },
     {
-      "title": "Closer to the EU",
+      "title": "The EU became the main customer",
       "text": [
-        "From **4 June 2022** the [EU](EU) suspended import duties, quotas and trade defence measures on Ukrainian goods; the measures were renewed until 5 June 2025.",
-        "The EU's share of [Ukraine](UKR)'s exports rose from 39% in 2021 to **63%** in 2022, and was 58% in 2024. In 2022 [Poland](POL) alone bought 15%."
+        "**The [EU](EU)'s share of [Ukraine](UKR)'s exports jumped from 39% in 2021 to 63% in 2022**, after it suspended import duties and quotas on Ukrainian goods from 4 June 2022."
       ],
       "view": {
         "t": "2022",
         "focus": "UKR",
         "metric": "exports",
         "groups": "EU"
+      },
+      "stat": {
+        "value": "63%",
+        "label": "The EU's share of Ukraine's exports in 2022"
       }
     },
     {
       "title": "Imports came back, exports did not",
       "text": [
-        "[Ukraine](UKR)'s imports were $70.5 billion in 2024, about the same as in 2021 ($70.0 billion), while its exports were $40.2 billion. Its trade deficit grew from $4.1 billion in 2021 to **$30.3 billion** in 2024.",
-        "[China](CHN) supplied 20% of Ukraine's imports in 2024, up from 15%. The highlighted panel section shows the gap opening between exports and imports."
+        "**By 2024 [Ukraine](UKR) imported as much as before the war but exported far less, so its trade deficit grew from $4.1 billion in 2021 to $30.3 billion.**",
+        "The highlighted panel section shows the gap opening between exports and imports."
       ],
       "view": {
         "t": "2024",

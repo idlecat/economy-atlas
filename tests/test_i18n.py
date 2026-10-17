@@ -49,7 +49,8 @@ def skeleton(story):
         "markers": [m["t"] for m in story.get("markers", [])],
         "sources": [s["url"] for s in story.get("sources", [])],
         "steps": [(s["view"], s.get("play"), s.get("panel"), ask_skeleton(s.get("ask")),
-                   [p["at"] for p in s.get("pins", [])], "stat" in s) for s in story["steps"]],
+                   [p["at"] for p in s.get("pins", [])], "stat" in s, "watch" in s, s.get("look"))
+                  for s in story["steps"]],
     }
 
 
@@ -93,3 +94,13 @@ def test_story_links_point_to_known_entities():
             for text in step["text"] if isinstance(step["text"], list) else [step["text"]]:
                 for code in re.findall(r"\[[^\]]+\]\(([A-Z0-9_]+)\)", text):
                     assert code in known, f"{path.name}: unknown link target {code}"
+
+
+def test_watch_cues_quote_no_figures():
+    """A replay's cue (step.watch) shows before the caption and isn't checked by check-stories, so it names
+    what to look at without quoting numbers."""
+    for path in [p for p in (SITE / "stories").rglob("*.json") if p.name != "index.json"]:
+        for i, step in enumerate(load(path)["steps"], 1):
+            assert not re.search(r"\d", step.get("watch", "")), f"{path.name} step {i}: figure in the watch cue"
+            assert "watch" not in step or "play" in step, f"{path.name} step {i}: a watch cue needs a replay"
+
