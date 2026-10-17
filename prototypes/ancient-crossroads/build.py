@@ -3,7 +3,8 @@
 Downloads coastlines, rivers and lakes from Natural Earth (public domain) into .cache/,
 simplifies them, and inlines them with data.js, details.js and app.js into page.html. For each
 civilisation it also fetches the lead text, image and image credit of its Wikipedia article
-(WIKI in details.js) into .cache/wiki/; the page itself never contacts Wikipedia.
+(WIKI in details.js), and the lead text of the same article in each translation's language (i18n/<lang>.js),
+into .cache/wiki/; the page itself never contacts Wikipedia.
 
     uv run --with pillow python prototypes/ancient-crossroads/build.py          # ancient-crossroads.html (Claude artifact)
     uv run --with pillow python prototypes/ancient-crossroads/build.py --site   # site/ancient/index.html (GitHub Pages)
@@ -91,6 +92,8 @@ CDN_SCRIPTS = """<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3
 <script>const GEO = /*GEO*/;</script>
 <script>/*DATA*/
 /*DETAILS*/
+const I18N = {};
+/*I18N*/
 const WIKI_INFO = /*WIKI_INFO*/;</script>
 <script>/*APP*/</script>"""
 # The artifact host wraps the page in a document with a small reset; the site page brings its own.
@@ -109,6 +112,8 @@ import * as topojson from "../vendor/topojson-client.js";
 const GEO = /*GEO*/;
 /*DATA*/
 /*DETAILS*/
+const I18N = {};
+/*I18N*/
 const WIKI_INFO = /*WIKI_INFO*/;
 /*APP*/
 </script>"""
@@ -124,9 +129,56 @@ def get(url):
         return r.read()
 
 
-def api(**params):
+def api(base=WIKI_API, **params):
     params.update(action="query", format="json", formatversion="2")
-    return json.loads(get(WIKI_API + "?" + urllib.parse.urlencode(params)))["query"]
+    return json.loads(get(base + "?" + urllib.parse.urlencode(params)))["query"]
+
+
+def langs():
+    """Translations: i18n/<lang>.js files."""
+    return sorted(p.stem for p in (HERE / "i18n").glob("*.js"))
+
+
+# Script variant to ask Wikipedia for, where the language has several (zh: Simplified Chinese).
+WIKI_VARIANT = {"zh": "zh-cn"}
+
+
+def fetch_wiki_lang(meta, lang):
+    """The same article in another language (via interlanguage links) and its lead text, stored in meta[cid][lang]."""
+    todo = [m for m in meta.values() if m.get(f"ll_{lang}_for") != m["title"]]
+    for i in range(0, len(todo), 50):
+        batch = {m["title"]: m for m in todo[i:i + 50]}
+        try:
+            q = api(titles="|".join(batch), prop="langlinks", lllang=lang, lllimit=500)
+        except Exception as e:  # noqa: BLE001
+            print(f"warning: Wikipedia language links ({lang}) failed ({e})")
+            continue
+        for p in q["pages"]:
+            if p["title"] in batch:
+                m = batch[p["title"]]
+                m[f"ll_{lang}"] = (p.get("langlinks") or [{}])[0].get("title", "")
+                m[f"ll_{lang}_for"] = m["title"]
+    base = f"https://{lang}.wikipedia.org/w/api.php"
+    todo = [m for m in meta.values() if m.get(f"ll_{lang}") and m.get(lang, {}).get("asked") != m[f"ll_{lang}"]]
+    for i in range(0, len(todo), 20):
+        batch = {m[f"ll_{lang}"]: m for m in todo[i:i + 20]}
+        extra = {"variant": WIKI_VARIANT[lang]} if lang in WIKI_VARIANT else {}
+        try:
+            q = api(base, titles="|".join(batch), redirects=1, prop="extracts|info", inprop="url",
+                    exintro=1, explaintext=1, exsentences=3, exlimit=20, **extra)
+        except Exception as e:  # noqa: BLE001
+            print(f"warning: {lang} Wikipedia request failed ({e})")
+            continue
+        alias = {n["from"]: n["to"] for kind in ("normalized", "redirects") for n in q.get(kind, [])}
+        pages = {p["title"]: p for p in q["pages"]}
+        for t, m in batch.items():
+            name = t
+            while name in alias:
+                name = alias[name]
+            p = pages.get(name)
+            if p and not p.get("missing"):
+                url = p["fullurl"].replace("/wiki/", f"/{WIKI_VARIANT[lang]}/") if lang in WIKI_VARIANT else p["fullurl"]
+                m[lang] = {"asked": t, "title": p["title"], "url": url, "text": p.get("extract", "").strip()}
 
 
 def wiki_titles():
@@ -202,6 +254,8 @@ def fetch_wiki():
                 m["img_file"] = path.name
             except Exception as e:  # noqa: BLE001
                 print(f"warning: image for {cid} not downloaded ({e})")
+    for lang in langs():
+        fetch_wiki_lang(meta, lang)
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1, sort_keys=True))
     return {cid: m for cid, m in meta.items() if cid in titles and m.get("title_asked") == titles[cid]}
 
@@ -220,6 +274,12 @@ def tidy(text):
     for _ in range(3):  # nested parentheses
         text = re.sub(r"\s*\(([^()]*)\)", keep, text)
     return re.sub(r"\s+([,.;])", r"\1", re.sub(r"\s+", " ", text)).strip()
+
+
+def tidy_cjk(text):
+    """Drop names in other scripts, e.g. "（英语：Sumer；阿卡德语：...）", and join paragraphs."""
+    text = re.sub(r"[（(][^（）()]*?(?:语|語|文)[：:][^（）()]*[）)]", "", text)
+    return re.sub(r" {2,}", " ", re.sub(r"\s*\n\s*", "", text)).strip()
 
 
 def small_jpeg(src):
@@ -248,6 +308,10 @@ def wiki_info(site, out_dir):
     result = {}
     for cid, m in sorted(meta.items()):
         entry = {"title": m["title"], "url": m["url"], "text": tidy(m["text"])}
+        for lang in langs():
+            if m.get(lang):
+                tr = m[lang]
+                entry[lang] = {"title": tr["title"], "url": tr["url"], "text": tidy_cjk(tr["text"]) if lang in ("zh", "ja") else tidy(tr["text"])}
         credit = m.get("credit")
         # only images whose licence is known
         if m.get("img_file") and credit and credit.get("license") and cid not in SKIP_IMAGES:
@@ -283,6 +347,7 @@ def main():
     page = (page.replace("/*GEO*/", json.dumps(geography(), separators=(",", ":")))
             .replace("/*DATA*/", (HERE / "data.js").read_text())
             .replace("/*DETAILS*/", (HERE / "details.js").read_text())
+            .replace("/*I18N*/", "\n".join((HERE / "i18n" / f"{lang}.js").read_text() for lang in langs()))
             .replace("/*WIKI_INFO*/", info)
             .replace("/*APP*/", (HERE / "app.js").read_text()))
     out.write_text(page)

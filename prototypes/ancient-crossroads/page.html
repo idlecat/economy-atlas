@@ -42,7 +42,7 @@ button, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-header { grid-area: head; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+header { grid-area: head; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .brand { display: flex; align-items: baseline; gap: 12px; }
 .brand h1 { margin: 0; font: 400 25px/1 var(--f-display); letter-spacing: .04em; text-wrap: balance; }
 .brand span { font: 400 12px/1 var(--f-data); color: var(--muted); letter-spacing: .04em; }
@@ -54,6 +54,7 @@ header { grid-area: head; display: flex; flex-wrap: wrap; align-items: center; g
 .layer[aria-pressed="false"] { opacity: .45; }
 .layer svg { width: 22px; height: 10px; overflow: visible; }
 .spacer { flex: 1; }
+.meta { display: flex; align-items: center; gap: 6px; }
 .linkbtn { border: 0; background: none; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 14px; padding: 4px; }
 
 #mapwrap { grid-area: map; position: relative; min-height: 0; border-radius: 10px; overflow: hidden; background: var(--sea); box-shadow: var(--shadow); }
@@ -175,7 +176,7 @@ aside { grid-area: panel; min-height: 0; overflow-y: auto; display: flex; flex-d
 .tctl { display: grid; gap: 6px; justify-items: center; padding-top: 14px; }
 #play { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--fg); color: var(--bg); display: grid; place-items: center; }
 #play svg { width: 16px; height: 16px; fill: currentColor; }
-#speed { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; font: 12px var(--f-data); padding: 2px 6px; }
+#speed, #lang { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; font: 12px var(--f-data); padding: 2px 6px; }
 #timeline { width: 100%; display: block; cursor: ew-resize; touch-action: none; user-select: none; }
 .tl-axis text { font: 11px var(--f-data); fill: var(--muted); }
 .tl-axis line { stroke: var(--line); }
@@ -188,6 +189,17 @@ aside { grid-area: panel; min-height: 0; overflow-y: auto; display: flex; flex-d
 .curbox { fill: var(--fg); }
 .chap { fill: var(--surface); stroke: var(--fg); stroke-width: 1.2; cursor: pointer; }
 .chap.on { fill: var(--fg); }
+
+/* Chinese: CJK fallbacks (the Latin fonts have no Chinese), a serif for display text, no letter-spacing tricks. */
+:root:lang(zh) {
+  --f-display: "Songti SC", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC", "STSong", "SimSun", serif;
+  --f-body: "Alegreya Sans", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --f-data: "IBM Plex Mono", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", monospace;
+}
+:root:lang(zh) .lab, :root:lang(zh) .eyebrow, :root:lang(zh) .group h3 { letter-spacing: .02em; }
+:root:lang(zh) .lab { font-weight: 600; }
+:root:lang(zh) .tour li button { grid-template-columns: 96px 1fr; }
+:root:lang(zh) .moments button { grid-template-columns: 104px 1fr; }
 
 dialog { max-width: min(640px, calc(100vw - 32px)); border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--fg); padding: 22px 24px; box-shadow: var(--shadow); }
 dialog::backdrop { background: rgba(5, 10, 20, .45); }
@@ -208,32 +220,33 @@ dialog a { color: var(--accent); }
 </style>
 
 <header>
-  <div class="brand"><h1>Ancient Crossroads</h1><span>3000 BC – AD 1500</span></div>
-  <div class="seg" id="views" role="group" aria-label="Map view"></div>
-  <div class="layers" id="layers" role="group" aria-label="Layers"></div>
+  <div class="brand"><h1 data-i18n="title">Ancient Crossroads</h1><span data-i18n="range">3000 BC – AD 1500</span></div>
+  <div class="seg" id="views" role="group" aria-label="Map view" data-i18n-aria="aria.views"></div>
+  <div class="layers" id="layers" role="group" aria-label="Layers" data-i18n-aria="aria.layers"></div>
   <div class="spacer"></div>
-  <button class="linkbtn" id="aboutbtn" type="button">How this map was made</button>
+  <div class="meta"><button class="linkbtn" id="aboutbtn" type="button" data-i18n="about">How this map was made</button><select id="lang"></select></div>
 </header>
 
 <div id="mapwrap">
-  <svg id="map" aria-label="Map of civilisations, routes and events"></svg>
+  <svg id="map" aria-label="Map of civilisations, routes and events" data-i18n-aria="aria.map"></svg>
   <div class="stamp"><b id="stampyear">AD 100</b><small id="stampsub"></small></div>
-  <div class="zoomctl"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">−</button></div>
-  <div class="credit">Borders approximate · Coastlines: Natural Earth</div>
+  <div class="zoomctl"><button type="button" id="zin" aria-label="Zoom in" data-i18n-aria="aria.zin">+</button><button type="button" id="zout" aria-label="Zoom out" data-i18n-aria="aria.zout">−</button></div>
+  <div class="credit" data-i18n="credit">Borders approximate · Coastlines: Natural Earth</div>
   <div id="tip" hidden></div>
 </div>
 
 <div id="timewrap">
   <div class="tctl">
-    <button id="play" type="button" aria-label="Play"><svg viewBox="0 0 16 16"><path d="M3 1.5v13l11-6.5z"/></svg></button>
-    <select id="speed" aria-label="Playback speed"><option value="25">25 yr/s</option><option value="60" selected>60 yr/s</option><option value="150">150 yr/s</option></select>
+    <button id="play" type="button" aria-label="Play" data-i18n-aria="aria.play"><svg viewBox="0 0 16 16"><path d="M3 1.5v13l11-6.5z"/></svg></button>
+    <select id="speed" aria-label="Playback speed" data-i18n-aria="aria.speed"><option value="25">25 yr/s</option><option value="60" selected>60 yr/s</option><option value="150">150 yr/s</option></select>
   </div>
-  <svg id="timeline" aria-label="Timeline: drag to change the year"></svg>
+  <svg id="timeline" aria-label="Timeline: drag to change the year" data-i18n-aria="aria.timeline"></svg>
 </div>
 
 <aside id="panel"></aside>
 
 <dialog id="about">
+  <div id="aboutbody">
   <h2>How this map was made</h2>
   <p>Every border, route and date here was drawn by hand as a simplified sketch, using standard historical atlases and reference works. It shows the general shape of things, not precise frontiers.</p>
   <h3>Reading the map</h3>
@@ -249,7 +262,8 @@ dialog a { color: var(--accent); }
     <li>Ancient texts quoted: Herodotus, <i>Histories</i>; the <i>Periplus of the Erythraean Sea</i>; Ashoka's Rock Edict XIII; Sima Qian, <i>Records of the Grand Historian</i>; Pegolotti, <i>La pratica della mercatura</i>; the <i>Hou Hanshu</i>.</li>
     <li>Further reading: <a href="https://en.unesco.org/silkroad/" target="_blank" rel="noopener">UNESCO Silk Roads Programme</a>; Valerie Hansen, <i>The Silk Road: A New History</i>; Peter Frankopan, <i>The Silk Roads</i>; Eric H. Cline, <i>1177 B.C.</i>; Barry Cunliffe, <i>By Steppe, Desert, and Ocean</i>.</li>
   </ul>
-  <p style="margin-top:16px"><button class="btn primary" type="button" id="aboutclose">Close</button></p>
+  </div>
+  <p style="margin-top:16px"><button class="btn primary" type="button" id="aboutclose" data-i18n="close">Close</button></p>
 </dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
@@ -257,5 +271,7 @@ dialog a { color: var(--accent); }
 <script>const GEO = /*GEO*/;</script>
 <script>/*DATA*/
 /*DETAILS*/
+const I18N = {};
+/*I18N*/
 const WIKI_INFO = /*WIKI_INFO*/;</script>
 <script>/*APP*/</script>

@@ -249,7 +249,7 @@
   "footer.wb": "经济指标：{link}（{terms}）。",
   "footer.undp": "人类发展指数：{link}（{terms}）。",
   "about.button": "关于数据与方法",
-  "footer.ancient": "古代十字路口：公元前3000年至公元1500年的文明（英文）",
+  "footer.ancient": "古代十字路口：公元前3000年至公元1500年的文明",
   "about.title": "关于数据",
   "about.trade.title": "贸易数值",
   "about.trade.intro": "双边商品（货物）贸易数据来自{imf}（原名 {formerly}）。覆盖范围：{coverage}，以现价美元计（未经通胀或季节调整）。不包括服务贸易。",

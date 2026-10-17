@@ -154,18 +154,20 @@ for (const lang of LANGS) {
 }
 
 // Ancient Crossroads (/ancient/, built by prototypes/ancient-crossroads/build.py --site; skipped if not built)
-if (fs.existsSync(new URL("ancient/index.html", SITE))) {
-  console.log("== ancient crossroads");
-  where = "ancient";
-  await page.goto(`${BASE}/ancient/`, { waitUntil: "load" });
+if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS) {
+  console.log(`== ancient crossroads: ${lang}`);
+  where = `ancient ${lang}`;
+  await page.goto(`${BASE}/ancient/?lang=${lang}`, { waitUntil: "load" });
   await page.waitForTimeout(800);
+  await expect(page.evaluate(() => window.__i18nMissing.length === 0), "every name and text translated");
+  await expect(page.evaluate((l) => document.documentElement.lang.startsWith(l), lang), "page language");
   await expect(page.$$eval("#map path.civ", (e) => e.length).then((n) => n > 10), "civilisations drawn");
   await expect(page.$$eval("#map g.route", (e) => e.length).then((n) => n > 2), "routes drawn");
   for (let i = 0; i < 12; i++) {
-    where = `ancient tour stop ${i + 1}`;
+    where = `ancient ${lang} tour stop ${i + 1}`;
     await page.click(`#panel button[data-chapter="${i}"]`);
     await page.waitForTimeout(400);
-    await expect(text("#panel .tour h2").then((s) => s.length > 5), "tour stop title");
+    await expect(text("#panel .tour h2").then((s) => s.length > 1), "tour stop title");
   }
   await page.dispatchEvent("#map path.civ", "click"); // routes drawn on top would intercept a real click
   await expect(page.$("#panel [data-close]").then(Boolean), "civilisation details open");
@@ -173,7 +175,8 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) {
   await page.click("#panel .stepper button:not(:disabled)");
   await page.waitForTimeout(300);
   await expect(text("#stampyear").then((s) => s !== before), "previous/next moment moves the year");
-} else console.log("== ancient crossroads: not built, skipped");
+}
+if (!fs.existsSync(new URL("ancient/index.html", SITE))) console.log("== ancient crossroads: not built, skipped");
 
 await browser.close();
 console.log(failures.length ? `\n${failures.length} failure(s)` : "\nall checks passed");
