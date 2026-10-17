@@ -289,6 +289,26 @@ function selectedHTML() {
 const plural = (n, w) => `${n.toLocaleString('en')} ${w}${n === 1 ? '' : 's'}`;
 const yearsBetween = (a, b) => b - a - (a < 0 && b > 0 ? 1 : 0); // there is no year 0
 
+// Significant years of a civilisation, for the card's previous/next buttons: its key moments, founding,
+// greatest drawn extent and final year (or, with no key moments, every year its borders were redrawn).
+function civStops(c) {
+  const last = Math.min(c.to >= MAX ? MAX : c.to - 1, MAX), at = (y) => Math.max(c.from, Math.min(last, y));
+  const stops = (MOMENTS[c.id] || []).map((m) => ({ y: at(m[0]), label: m[1] }));
+  const add = (y, label) => { if (!stops.some((s) => s.y === y)) stops.push({ y, label }); };
+  add(c.from, c.kind === 'culture' ? 'Emerges' : 'Founded');
+  if (!MOMENTS[c.id]) for (const f of c.frames) if (f.y > c.from && f.y < last) add(f.y, f === c.peak ? 'Greatest extent' : 'Borders redrawn');
+  add(peakYear(c), 'Greatest extent');
+  if (c.to < MAX) add(last, `Final years: it ends in ${fmtYear(c.to)}`);
+  return stops.sort((a, b) => a.y - b.y).filter((s, i, a) => !i || s.y !== a[i - 1].y);
+}
+const stepBtn = (s, dir) => s
+  ? `<button type="button" data-jump="${s.y}" title="${dir === 'prev' ? 'Previous' : 'Next'} key moment ([ or ])"><span class="yrs">${dir === 'prev' ? '‹ ' : ''}${fmtYear(s.y)}${dir === 'next' ? ' ›' : ''}</span><span>${esc(s.label)}</span></button>`
+  : `<button type="button" disabled><span class="yrs">${dir === 'prev' ? '‹ Earlier' : 'Later ›'}</span><span>Nothing ${dir === 'prev' ? 'before' : 'after'} this</span></button>`;
+function civStep(c, dir) {
+  const yr = Math.round(state.year), stops = civStops(c);
+  return dir === 'prev' ? stops.filter((s) => s.y < yr).pop() : stops.find((s) => s.y > yr);
+}
+
 function civHTML(c, y) {
   const on = isActive(c, y); const end = Math.min(c.to, MAX); const yr = Math.round(y);
   const info = (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[c.id]) || null;
@@ -301,7 +321,7 @@ function civHTML(c, y) {
   else if (!on) status = `Gone by now: it ended in ${fmtYear(end)}, ${plural(yearsBetween(end, yr), 'year')} earlier.`;
   else status = `${plural(yearsBetween(c.from, yr), 'year')} since ${c.kind === 'culture' ? 'it emerged' : 'it was founded'}${c.to < MAX ? `; ${plural(yearsBetween(yr, c.to), 'year')} left` : ''}.`;
 
-  let now = `<p class="status">${status}</p>`;
+  let now = `<div class="stepper">${stepBtn(civStep(c, 'prev'), 'prev')}${stepBtn(civStep(c, 'next'), 'next')}</div><p class="status">${status}</p>`;
   if (on && latest) now += `<p class="latest"><span class="yrs">${momentYear(latest)}</span> ${esc(latest[1])}</p>`;
   const pop = (POP[c.id] || []).filter((p) => p[0] <= yr + 25).pop() || (on && POP[c.id] ? POP[c.id][0] : null);
   if (pop) now += `<dl class="facts"><dt>Population</dt><dd>${esc(pop[1])}<span class="src">${fmtYear(pop[0])} · ${esc(pop[2])}</span></dd></dl>`;
@@ -519,7 +539,11 @@ function playChapter(i) {
 document.addEventListener('keydown', (ev) => {
   if (about.open || ev.target.closest('select, input')) return;
   if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') { stop(); setYear(Math.round(state.year) + (ev.key === 'ArrowRight' ? 1 : -1) * (ev.shiftKey ? 100 : 10)); ev.preventDefault(); }
-  else if (ev.key === ' ' && !ev.target.closest('button')) { state.playing ? stop() : play(); ev.preventDefault(); }
+  else if ((ev.key === '[' || ev.key === ']') && state.sel?.type === 'civ') {
+    const s = civStep(CIVS.find((d) => d.id === state.sel.id), ev.key === '[' ? 'prev' : 'next');
+    if (s) { stop(); setYear(s.y); }
+    ev.preventDefault();
+  } else if (ev.key === ' ' && !ev.target.closest('button')) { state.playing ? stop() : play(); ev.preventDefault(); }
 });
 
 // ---------- boot ----------

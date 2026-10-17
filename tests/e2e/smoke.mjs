@@ -169,6 +169,10 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) {
   }
   await page.dispatchEvent("#map path.civ", "click"); // routes drawn on top would intercept a real click
   await expect(page.$("#panel [data-close]").then(Boolean), "civilisation details open");
+  const before = await text("#stampyear");
+  await page.click("#panel .stepper button:not(:disabled)");
+  await page.waitForTimeout(300);
+  await expect(text("#stampyear").then((s) => s !== before), "previous/next moment moves the year");
 } else console.log("== ancient crossroads: not built, skipped");
 
 await browser.close();
