@@ -1,16 +1,25 @@
 """Build the Ancient Crossroads page from page.html, data.js, app.js and Natural Earth geography.
 
 Downloads coastlines, rivers and lakes from Natural Earth (public domain) into .cache/,
-simplifies them, and inlines them with data.js and app.js into page.html.
+simplifies them, and inlines them with data.js, details.js and app.js into page.html. For each
+civilisation it also fetches the lead text, image and image credit of its Wikipedia article
+(WIKI in details.js) into .cache/wiki/; the page itself never contacts Wikipedia.
 
-    uv run python prototypes/ancient-crossroads/build.py          # ancient-crossroads.html (Claude artifact)
-    uv run python prototypes/ancient-crossroads/build.py --site   # site/ancient/index.html (GitHub Pages)
+    uv run --with pillow python prototypes/ancient-crossroads/build.py          # ancient-crossroads.html (Claude artifact)
+    uv run --with pillow python prototypes/ancient-crossroads/build.py --site   # site/ancient/index.html (GitHub Pages)
+
+Pillow (only needed here, hence --with) shrinks the Wikipedia images to small JPEGs.
 
 The artifact loads D3 and fonts from CDNs. The site page uses site/vendor/ instead (scripts/vendor.sh),
 like the rest of the site, so it also works where CDNs are blocked.
 """
+import base64
+import html
 import json
+import re
+import shutil
 import sys
+import urllib.parse
 import ssl
 import urllib.request
 from pathlib import Path
@@ -80,7 +89,9 @@ CDN_FONTS = """<link rel="preconnect" href="https://fonts.googleapis.com">
 CDN_SCRIPTS = """<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <script>const GEO = /*GEO*/;</script>
-<script>/*DATA*/</script>
+<script>/*DATA*/
+/*DETAILS*/
+const WIKI_INFO = /*WIKI_INFO*/;</script>
 <script>/*APP*/</script>"""
 # The artifact host wraps the page in a document with a small reset; the site page brings its own.
 SITE_HEAD = """<!doctype html>
@@ -97,8 +108,165 @@ import * as d3 from "../vendor/d3.js";
 import * as topojson from "../vendor/topojson-client.js";
 const GEO = /*GEO*/;
 /*DATA*/
+/*DETAILS*/
+const WIKI_INFO = /*WIKI_INFO*/;
 /*APP*/
 </script>"""
+
+
+WIKI_API = "https://en.wikipedia.org/w/api.php"
+USER_AGENT = "AncientCrossroads/1.0 (https://github.com/idlecat/economy-atlas)"
+
+
+def get(url):
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, context=SSL_CONTEXT, timeout=60) as r:
+        return r.read()
+
+
+def api(**params):
+    params.update(action="query", format="json", formatversion="2")
+    return json.loads(get(WIKI_API + "?" + urllib.parse.urlencode(params)))["query"]
+
+
+def wiki_titles():
+    """WIKI in details.js: civilisation id -> English Wikipedia article title."""
+    src = (HERE / "details.js").read_text()
+    block = src[src.index("const WIKI = {"):src.index("};", src.index("const WIKI = {"))]
+    return dict(re.findall(r"""['"]?([\w-]+)['"]?: ['"]((?:[^'"\\]|\\.)+)['"]""", block))
+
+
+def plain(s):
+    return html.unescape(re.sub(r"<[^>]+>", "", s or "")).strip()
+
+
+def fetch_wiki():
+    """Lead text, image and image credit for each article, cached in .cache/wiki/ (delete it to refresh)."""
+    cache = CACHE / "wiki"
+    (cache / "img").mkdir(parents=True, exist_ok=True)
+    meta_path = cache / "meta.json"
+    meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
+    titles = wiki_titles()
+    todo = {cid: t for cid, t in titles.items() if meta.get(cid, {}).get("title_asked") != t}
+    items = list(todo.items())
+    for i in range(0, len(items), 20):  # extracts allow at most 20 pages per request
+        batch = dict(items[i:i + 20])
+        try:
+            q = api(titles="|".join(batch.values()), redirects=1, prop="extracts|pageimages|info", inprop="url",
+                    exintro=1, explaintext=1, exsentences=3, exlimit=20, piprop="thumbnail|name", pithumbsize=400)
+        except Exception as e:  # noqa: BLE001 - the page works without Wikipedia details
+            print(f"warning: Wikipedia request failed ({e}); details for {len(batch)} entries skipped")
+            continue
+        alias = {}
+        for kind in ("normalized", "redirects"):
+            for n in q.get(kind, []):
+                alias[n["from"]] = n["to"]
+        pages = {p["title"]: p for p in q["pages"]}
+        for cid, t in batch.items():
+            name = t
+            while name in alias:
+                name = alias[name]
+            p = pages.get(name)
+            if not p or p.get("missing"):
+                print(f"warning: no Wikipedia article '{t}' for {cid}")
+                continue
+            meta[cid] = {"title_asked": t, "title": p["title"], "url": p["fullurl"], "text": p.get("extract", "").strip(),
+                         "thumb": p.get("thumbnail", {}).get("source"), "file": p.get("pageimage")}
+    files = sorted({m["file"] for m in meta.values() if m.get("file") and "credit" not in m})
+    for i in range(0, len(files), 50):
+        try:
+            q = api(titles="|".join("File:" + f for f in files[i:i + 50]), prop="imageinfo", iiprop="extmetadata|url",
+                    iiextmetadatafilter="Artist|LicenseShortName|ObjectName")
+        except Exception as e:  # noqa: BLE001
+            print(f"warning: image credit request failed ({e})")
+            continue
+        alias = {n["from"]: n["to"] for n in q.get("normalized", [])}
+        info = {}
+        for p in q["pages"]:
+            ii = (p.get("imageinfo") or [{}])[0]
+            md = ii.get("extmetadata", {})
+            info[p["title"]] = {"artist": plain(md.get("Artist", {}).get("value"))[:120],
+                                "license": plain(md.get("LicenseShortName", {}).get("value")),
+                                "page": ii.get("descriptionurl", ""), "alt": plain(md.get("ObjectName", {}).get("value"))}
+        for m in meta.values():
+            key = "File:" + (m.get("file") or "")
+            key = alias.get(key, key)
+            if key in info:
+                m["credit"] = info[key]
+    for cid, m in meta.items():
+        if m.get("thumb") and not m.get("img_file"):
+            ext = m["thumb"].rsplit(".", 1)[-1].lower()
+            path = cache / "img" / f"{cid}.{ext if ext in ('jpg', 'jpeg', 'png', 'gif', 'webp') else 'jpg'}"
+            try:
+                path.write_bytes(get(m["thumb"]))
+                m["img_file"] = path.name
+            except Exception as e:  # noqa: BLE001
+                print(f"warning: image for {cid} not downloaded ({e})")
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1, sort_keys=True))
+    return {cid: m for cid, m in meta.items() if cid in titles and m.get("title_asked") == titles[cid]}
+
+
+# Article images that would mislead: flags from centuries after the period shown, or modern reconstructions.
+SKIP_IMAGES = {"ottoman", "ethiopia", "inca"}
+
+
+def tidy(text):
+    """Drop pronunciations and native-script names, e.g. "( KAR-thij; Punic: ...)" or "()", and join paragraphs."""
+    def keep(m):
+        inner = m.group(1)
+        noise = (not re.search(r"\w", inner) or ";" in inner or "lit." in inner or re.match(r"\s*[A-Z]{2,}", inner)
+                 or re.search(r"[^\x00-\u024f\u2010-\u2027]", inner))
+        return "" if noise else m.group(0)
+    for _ in range(3):  # nested parentheses
+        text = re.sub(r"\s*\(([^()]*)\)", keep, text)
+    return re.sub(r"\s+([,.;])", r"\1", re.sub(r"\s+", " ", text)).strip()
+
+
+def small_jpeg(src):
+    """Thumbnail as a JPEG at most 400 px wide, flattened on white (first frame of an animation)."""
+    import io
+
+    from PIL import Image, PngImagePlugin
+
+    PngImagePlugin.MAX_TEXT_CHUNK = 64 * 1024 * 1024  # some Wikimedia PNGs carry large metadata
+    im = Image.open(src)
+    im = im.convert("RGBA")
+    im.thumbnail((400, 400))
+    flat = Image.new("RGB", im.size, "white")
+    flat.paste(im, mask=im.getchannel("A"))
+    buf = io.BytesIO()
+    flat.save(buf, "JPEG", quality=78, optimize=True, progressive=True)
+    return buf.getvalue()
+
+
+def wiki_info(site, out_dir):
+    """The WIKI_INFO object for the page. Images go next to the site page, or inline as data URIs."""
+    meta = fetch_wiki()
+    if site:
+        shutil.rmtree(out_dir / "img", ignore_errors=True)
+        (out_dir / "img").mkdir(parents=True)
+    result = {}
+    for cid, m in sorted(meta.items()):
+        entry = {"title": m["title"], "url": m["url"], "text": tidy(m["text"])}
+        credit = m.get("credit")
+        # only images whose licence is known
+        if m.get("img_file") and credit and credit.get("license") and cid not in SKIP_IMAGES:
+            try:
+                jpeg = small_jpeg(CACHE / "wiki" / "img" / m["img_file"])
+            except Exception as e:  # noqa: BLE001
+                print(f"warning: image for {cid} unreadable ({e})")
+                result[cid] = entry
+                continue
+            if site:
+                (out_dir / "img" / f"{cid}.jpg").write_bytes(jpeg)
+                entry["img"] = f"img/{cid}.jpg"
+            else:
+                entry["img"] = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()
+            entry["credit"] = {k: credit[k] for k in ("artist", "license", "page")}
+            entry["alt"] = credit.get("alt") or ""
+        result[cid] = entry
+    print(f"Wikipedia details for {len(result)} civilisations, {sum('img' in e for e in result.values())} with images")
+    return result
 
 
 def main():
@@ -109,11 +277,14 @@ def main():
         page = page.replace(CDN_FONTS + "\n", "").replace(CDN_SCRIPTS, SITE_SCRIPTS)
         page = page.replace("<header>", "</head>\n<body>\n<header>", 1)
         page = SITE_HEAD + page + "</body>\n</html>\n"
-    page = (page.replace("/*GEO*/", json.dumps(geography(), separators=(",", ":")))
-            .replace("/*DATA*/", (HERE / "data.js").read_text())
-            .replace("/*APP*/", (HERE / "app.js").read_text()))
     out = HERE.parent.parent / "site" / "ancient" / "index.html" if site else HERE / "ancient-crossroads.html"
     out.parent.mkdir(exist_ok=True)
+    info = json.dumps(wiki_info(site, out.parent), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    page = (page.replace("/*GEO*/", json.dumps(geography(), separators=(",", ":")))
+            .replace("/*DATA*/", (HERE / "data.js").read_text())
+            .replace("/*DETAILS*/", (HERE / "details.js").read_text())
+            .replace("/*WIKI_INFO*/", info)
+            .replace("/*APP*/", (HERE / "app.js").read_text()))
     out.write_text(page)
     print(f"wrote {out} ({len(page) // 1024} KB)")
 

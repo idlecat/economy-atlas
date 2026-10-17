@@ -274,19 +274,7 @@ const inShape = (c, y, p) => frameAt(c, y).pts.some((r) => d3.polygonContains(r,
 function selectedHTML() {
   const s = state.sel; const y = state.year;
   if (!s) return '';
-  if (s.type === 'civ') {
-    const c = CIVS.find((d) => d.id === s.id);
-    const on = isActive(c, y);
-    let body = `<p>${esc(c.note)}</p><p class="yrs">${c.kind === 'culture' ? 'Centre' : 'Capital'}: ${esc(c.cap[1])}</p>`;
-    if (on) {
-      const rts = ROUTES.filter((r) => routeActive(r, y) && r.pts.flat().some((p) => inShape(c, y, p)));
-      const evs = EVENTS.filter((e) => evVisible(e, y) && (e.kind === 'conflict' ? inShape(c, y, e.pt) : e.br.flat().some((st) => st.y <= y && inShape(c, y, st.p))));
-      body += `<div class="group"><h3>Connected in ${fmtYear(y)}</h3>${rts.length || evs.length ? `<ul class="list">${rts.map(routeItem).join('')}${evs.map(eventItem).join('')}</ul>` : '<p class="empty">No routes or events on the map touch it this year.</p>'}</div>`;
-    } else {
-      body += `<p><button class="btn" type="button" data-jump="${peakYear(c)}">Go to ${fmtYear(peakYear(c))}</button></p>`;
-    }
-    return `<section class="card"><div class="eyebrow"><span style="color:var(--c-${c.s})">● ${esc(sphereName[c.s])}${c.kind === 'culture' ? ' · culture' : ''}</span><button class="x" type="button" data-close aria-label="Close">×</button></div><h2>${esc(c.name)}</h2><div class="yrs">${fmtSpan(c.from, Math.min(c.to, MAX))}</div>${body}</section>`;
-  }
+  if (s.type === 'civ') return civHTML(CIVS.find((d) => d.id === s.id), y);
   if (s.type === 'route') {
     const r = ROUTES.find((d) => d.id === s.id);
     const on = routeActive(r, y);
@@ -297,6 +285,45 @@ function selectedHTML() {
   const kindName = { conflict: 'Battle or conquest', journey: 'Journey', spread: 'Spread' }[e.kind];
   const stops = e.kind === 'conflict' ? '' : `<p class="stops">${[...new Map(e.br.flat().map((st) => [st.label + st.y, st])).values()].sort((a, b) => a.y - b.y).map((st) => `${esc(st.label)} <span class="yrs">${fmtYear(st.y)}</span>`).join(' · ')}</p>`;
   return `<section class="card"><div class="eyebrow"><span>${kindName}</span><button class="x" type="button" data-close aria-label="Close">×</button></div><h2>${esc(e.title)}</h2><div class="yrs">${evYears(e)}</div><p style="margin-top:8px">${esc(e.note)}</p>${stops}${evVisible(e, y) ? '' : `<p><button class="btn" type="button" data-jump="${Math.round(e.end)}">Go to ${fmtYear(e.end)}</button></p>`}</section>`;
+}
+const plural = (n, w) => `${n.toLocaleString('en')} ${w}${n === 1 ? '' : 's'}`;
+const yearsBetween = (a, b) => b - a - (a < 0 && b > 0 ? 1 : 0); // there is no year 0
+
+function civHTML(c, y) {
+  const on = isActive(c, y); const end = Math.min(c.to, MAX); const yr = Math.round(y);
+  const info = (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[c.id]) || null;
+  const moments = (MOMENTS[c.id] || []).slice().sort((a, b) => a[0] - b[0]);
+  const latest = moments.filter((m) => m[0] <= yr).pop();
+  const momentYear = (m) => `${m[2] ? 'c. ' : ''}${fmtYear(m[0])}`;
+
+  let status;
+  if (yr < c.from) status = `Not yet founded: it begins in ${fmtYear(c.from)}, ${plural(yearsBetween(yr, c.from), 'year')} from now.`;
+  else if (!on) status = `Gone by now: it ended in ${fmtYear(end)}, ${plural(yearsBetween(end, yr), 'year')} earlier.`;
+  else status = `${plural(yearsBetween(c.from, yr), 'year')} since ${c.kind === 'culture' ? 'it emerged' : 'it was founded'}${c.to < MAX ? `; ${plural(yearsBetween(yr, c.to), 'year')} left` : ''}.`;
+
+  let now = `<p class="status">${status}</p>`;
+  if (on && latest) now += `<p class="latest"><span class="yrs">${momentYear(latest)}</span> ${esc(latest[1])}</p>`;
+  const pop = (POP[c.id] || []).filter((p) => p[0] <= yr + 25).pop() || (on && POP[c.id] ? POP[c.id][0] : null);
+  if (pop) now += `<dl class="facts"><dt>Population</dt><dd>${esc(pop[1])}<span class="src">${fmtYear(pop[0])} · ${esc(pop[2])}</span></dd></dl>`;
+  if (on) {
+    const rts = ROUTES.filter((r) => routeActive(r, y) && r.pts.flat().some((p) => inShape(c, y, p)));
+    const evs = EVENTS.filter((e) => evVisible(e, y) && (e.kind === 'conflict' ? inShape(c, y, e.pt) : e.br.flat().some((st) => st.y <= y && inShape(c, y, st.p))));
+    if (rts.length || evs.length) now += `<div class="group"><h3>Connections</h3><ul class="list">${rts.map(routeItem).join('')}${evs.map(eventItem).join('')}</ul></div>`;
+    const others = SPHERES.filter((sp) => sp.id !== c.s).map((sp) => CIVS.filter((d) => d.s === sp.id && d.kind !== 'culture' && isActive(d, y))
+      .sort((a, b) => frameAt(b, y).area - frameAt(a, y).area)[0]).filter(Boolean);
+    if (others.length) now += `<div class="group"><h3>Meanwhile elsewhere</h3><div class="chips">${others.map(civChip).join('')}</div></div>`;
+  } else {
+    now += `<p><button class="btn" type="button" data-jump="${peakYear(c)}">Go to ${fmtYear(peakYear(c))}</button></p>`;
+  }
+
+  const img = info && info.img ? `<figure class="pic"><img src="${esc(info.img)}" alt="${esc(info.alt || c.name)}" loading="lazy"><figcaption>${info.credit ? `Image: ${esc(info.credit.artist || 'unknown')}${info.credit.license ? `, <a href="${esc(info.credit.page)}" target="_blank" rel="noopener">${esc(info.credit.license)}</a>` : ''}` : ''}</figcaption></figure>` : '';
+  const timeline = moments.length ? `<div class="group"><h3>Key moments</h3><ol class="moments">${moments.map((m) => `<li class="${m[0] > yr ? 'later' : ''}${m === latest && on ? ' now' : ''}"><button type="button" data-jump="${m[0]}"><span class="yrs">${momentYear(m)}</span><span>${esc(m[1])}</span></button></li>`).join('')}</ol></div>` : '';
+  const wiki = info ? `<div class="group"><h3>From Wikipedia</h3>${info.text ? `<p class="wiki">${esc(info.text)}</p>` : ''}<p class="wikilink"><a href="${esc(info.url)}" target="_blank" rel="noopener">Read “${esc(info.title)}” on Wikipedia ↗</a></p><p class="yrs">Text: Wikipedia, CC BY-SA 4.0</p></div>`
+    : (WIKI[c.id] ? `<div class="group"><p class="wikilink"><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(WIKI[c.id].replace(/ /g, '_'))}" target="_blank" rel="noopener">Read more on Wikipedia ↗</a></p></div>` : '');
+
+  return `<section class="card civcard"><div class="eyebrow"><span style="color:var(--c-${c.s})">● ${esc(sphereName[c.s])}${c.kind === 'culture' ? ' · culture' : ''}</span><button class="x" type="button" data-close aria-label="Close">×</button></div>
+    <h2>${esc(c.name)}</h2><div class="yrs">${fmtSpan(c.from, end)} · ${c.kind === 'culture' ? 'centre' : 'capital'}: ${esc(c.cap[1])}</div>
+    ${img}<div class="group"><h3>In ${fmtYear(y)}</h3>${now}</div><p class="note">${esc(c.note)}</p>${timeline}${wiki}</section>`;
 }
 const civChip = (c) => `<button class="chip${c.kind === 'culture' ? ' culture' : ''}" type="button" data-civ="${c.id}" style="color:var(--c-${c.s})"><i style="background:var(--c-${c.s})"></i><span style="color:var(--fg)">${esc(c.name)}</span></button>`;
 const routeItem = (r) => `<li><button type="button" data-route="${r.id}">${glyphFor(r.kind)}<span>${esc(r.name)}</span><span class="yrs">${r.kind === 'land' ? 'land' : 'sea'}</span></button></li>`;
@@ -330,7 +357,7 @@ function renderPanel(force) {
   if (!force && key === panelKey) return;
   panelKey = key;
   const st = panel.node().scrollTop;
-  panel.html(tourHTML() + selectedHTML() + nowHTML());
+  panel.html(selectedHTML() + tourHTML() + nowHTML());
   panel.node().scrollTop = st;
 }
 panel.on('click', (ev) => {
@@ -357,6 +384,7 @@ panel.on('mouseout', () => drawCivs());
 function select(s) {
   state.sel = s && state.sel && state.sel.type === s.type && state.sel.id === s.id ? null : s;
   drawMap(); renderPanel(true); drawTimelineMarks();
+  if (state.sel) { panel.node().scrollTop = 0; if (matchMedia('(max-width: 860px)').matches) panel.node().scrollIntoView({ block: 'start' }); }
 }
 svg.on('click', () => { if (state.sel) select(null); });
 

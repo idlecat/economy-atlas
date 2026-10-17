@@ -16,7 +16,11 @@ const browser = await chromium.launch(process.env.CHANNEL ? { channel: process.e
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 let where = "";
 page.on("pageerror", (e) => fail(`${where}: page error: ${e.message}`));
-page.on("requestfailed", (r) => { if (!r.url().includes("favicon")) fail(`${where}: request failed: ${r.url()} (${r.failure()?.errorText})`); });
+// net::ERR_ABORTED: cancelled by the next navigation (open() reloads while data is still loading), not broken.
+// A missing file still fails below through its HTTP status.
+page.on("requestfailed", (r) => {
+  if (!r.url().includes("favicon") && r.failure()?.errorText !== "net::ERR_ABORTED") fail(`${where}: request failed: ${r.url()} (${r.failure()?.errorText})`);
+});
 page.on("response", (r) => {
   // translated story files may legitimately be missing (the English one is used); everything else must load
   if (r.status() >= 400 && !/\/stories\/[a-z]{2}\//.test(r.url())) fail(`${where}: HTTP ${r.status()} ${r.url()}`);
