@@ -5,3 +5,4 @@ data_store/
 .venv/
 .pytest_cache/
 site/data/
+site/ancient/

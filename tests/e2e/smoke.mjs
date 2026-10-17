@@ -149,6 +149,24 @@ for (const lang of LANGS) {
   await expect(page.isVisible("#story [data-vs-again]"), "another pair offered at the end");
 }
 
+// Ancient Crossroads (/ancient/, built by prototypes/ancient-crossroads/build.py --site; skipped if not built)
+if (fs.existsSync(new URL("ancient/index.html", SITE))) {
+  console.log("== ancient crossroads");
+  where = "ancient";
+  await page.goto(`${BASE}/ancient/`, { waitUntil: "load" });
+  await page.waitForTimeout(800);
+  await expect(page.$$eval("#map path.civ", (e) => e.length).then((n) => n > 10), "civilisations drawn");
+  await expect(page.$$eval("#map g.route", (e) => e.length).then((n) => n > 2), "routes drawn");
+  for (let i = 0; i < 12; i++) {
+    where = `ancient tour stop ${i + 1}`;
+    await page.click(`#panel button[data-chapter="${i}"]`);
+    await page.waitForTimeout(400);
+    await expect(text("#panel .tour h2").then((s) => s.length > 5), "tour stop title");
+  }
+  await page.dispatchEvent("#map path.civ", "click"); // routes drawn on top would intercept a real click
+  await expect(page.$("#panel [data-close]").then(Boolean), "civilisation details open");
+} else console.log("== ancient crossroads: not built, skipped");
+
 await browser.close();
 console.log(failures.length ? `\n${failures.length} failure(s)` : "\nall checks passed");
 process.exit(failures.length ? 1 : 0);

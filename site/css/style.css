@@ -391,6 +391,7 @@ a { color: var(--accent); }
   padding: 8px 20px 16px; color: var(--muted); font-size: 12px;
 }
 .linklike { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 12px; text-decoration: underline; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 6px 16px; }
 
 dialog {
   max-width: 720px; width: calc(100% - 32px); border: 1px solid var(--border); border-radius: 12px;

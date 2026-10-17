@@ -9,6 +9,8 @@ Economy Atlas: a public, static website showing bilateral goods trade and econom
 - `pipeline/`: a Python data pipeline (uv + DuckDB) that turns source data into JSON in `site/data/`.
 - `site/`: a no-build frontend made of plain ES modules. D3, topojson-client and the Inter font are served from `site/vendor/` (no CDN, so the site also works where jsDelivr/Google Fonts are blocked, e.g. mainland China); `scripts/vendor.sh` regenerates them at pinned versions.
 
+A separate prototype, Ancient Crossroads (a map of civilisations 3000 BC–AD 1500), lives in `prototypes/ancient-crossroads/` and is published at `site/ancient/` by `build.py --site` during the deploy; see its README.
+
 Data: all-goods trade from the IMF (annual + monthly), debt by creditor (World Bank IDS) and direct investment by investor (IMF DIP), trade by product from CEPII BACI (annual, sectors and commodities from `config/products.json`), country-level economic and development indicators from the World Bank WDI and the UNDP Human Development Index (`config/indicators.json`), and stories (guided replays) in `site/stories/`.
 
 ## Commands

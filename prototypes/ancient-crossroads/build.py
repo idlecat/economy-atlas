@@ -1,11 +1,16 @@
-"""Build ancient-crossroads.html: a single self-contained page.
+"""Build the Ancient Crossroads page from page.html, data.js, app.js and Natural Earth geography.
 
 Downloads coastlines, rivers and lakes from Natural Earth (public domain) into .cache/,
 simplifies them, and inlines them with data.js and app.js into page.html.
 
-    uv run python prototypes/ancient-crossroads/build.py
+    uv run python prototypes/ancient-crossroads/build.py          # ancient-crossroads.html (Claude artifact)
+    uv run python prototypes/ancient-crossroads/build.py --site   # site/ancient/index.html (GitHub Pages)
+
+The artifact loads D3 and fonts from CDNs. The site page uses site/vendor/ instead (scripts/vendor.sh),
+like the rest of the site, so it also works where CDNs are blocked.
 """
 import json
+import sys
 import ssl
 import urllib.request
 from pathlib import Path
@@ -69,12 +74,46 @@ def geography():
     return {"land": fetch("land-50m.json"), "rivers": rivers, "lakes": lakes}
 
 
+CDN_FONTS = """<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">"""
+CDN_SCRIPTS = """<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>const GEO = /*GEO*/;</script>
+<script>/*DATA*/</script>
+<script>/*APP*/</script>"""
+# The artifact host wraps the page in a document with a small reset; the site page brings its own.
+SITE_HEAD = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="An interactive map of civilisations from 3000 BC to AD 1500 and how they met: empires, Silk Road trade routes, journeys, battles and the spread of ideas.">
+<link rel="stylesheet" href="../vendor/fonts/ancient-crossroads.css">
+<style>body { margin: 0; } [hidden] { display: none !important; }</style>
+"""
+SITE_SCRIPTS = """<script type="module">
+import * as d3 from "../vendor/d3.js";
+import * as topojson from "../vendor/topojson-client.js";
+const GEO = /*GEO*/;
+/*DATA*/
+/*APP*/
+</script>"""
+
+
 def main():
+    site = "--site" in sys.argv[1:]
     page = (HERE / "page.html").read_text()
+    assert CDN_FONTS in page and CDN_SCRIPTS in page, "page.html head or scripts changed; update build.py"
+    if site:
+        page = page.replace(CDN_FONTS + "\n", "").replace(CDN_SCRIPTS, SITE_SCRIPTS)
+        page = page.replace("<header>", "</head>\n<body>\n<header>", 1)
+        page = SITE_HEAD + page + "</body>\n</html>\n"
     page = (page.replace("/*GEO*/", json.dumps(geography(), separators=(",", ":")))
             .replace("/*DATA*/", (HERE / "data.js").read_text())
             .replace("/*APP*/", (HERE / "app.js").read_text()))
-    out = HERE / "ancient-crossroads.html"
+    out = HERE.parent.parent / "site" / "ancient" / "index.html" if site else HERE / "ancient-crossroads.html"
+    out.parent.mkdir(exist_ok=True)
     out.write_text(page)
     print(f"wrote {out} ({len(page) // 1024} KB)")
 

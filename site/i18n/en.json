@@ -249,6 +249,7 @@
   "footer.wb": " Economic indicators: {link} ({terms}).",
   "footer.undp": " Human Development Index: {link} ({terms}).",
   "about.button": "About the data &amp; methodology",
+  "footer.ancient": "Ancient Crossroads: civilisations 3000 BC–AD 1500",
   "about.title": "About the data",
   "about.trade.title": "Trade values",
   "about.trade.intro": "Bilateral merchandise (goods) trade from the {imf}, formerly the {formerly}. Coverage: {coverage}, in current US dollars (not adjusted for inflation or seasonality). Services trade is not included.",

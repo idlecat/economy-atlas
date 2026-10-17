@@ -59,6 +59,9 @@ jobs:
           else
             uv run python -m pipeline build
           fi
+      # A separate page at /ancient/ (prototypes/ancient-crossroads), built from its own sources.
+      - name: Build Ancient Crossroads page
+        run: uv run python prototypes/ancient-crossroads/build.py --site
       # Story texts quote figures from the data; a refresh that changes one stops the deploy here
       # (the live site keeps the previous build) and lists the sentences to update.
       - name: Check story figures
