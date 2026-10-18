@@ -5,7 +5,7 @@ const proj = d3.geoNaturalEarth1().rotate([-20, 0]).fitExtent([[0, 0], [BW, BH]]
 const gpath = d3.geoPath(proj);
 const pr = (p) => proj(p);
 
-const state = { year: 100, playing: false, layers: { civs: true, routes: true, journeys: true, ideas: true, wars: true }, sel: null, chapter: -1, view: 'silk' };
+const state = { year: 100, playing: false, layers: { civs: true, cities: true, routes: true, journeys: true, ideas: true, wars: true }, sel: null, chapter: -1, view: 'silk' };
 let T = d3.zoomIdentity;
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -36,6 +36,9 @@ const UI_EN = {
   'tour.eyebrow': 'Guided tour · {n} stops', 'tour.title': 'Five thousand years of contact',
   'tour.intro': 'Each stop moves the map to a moment when distant peoples met, traded or fought. Or drag the timeline and explore.',
   'tour.stop': 'Stop {i} of {n} · {year}', 'tour.prev': 'Previous', 'tour.next': 'Next stop', 'tour.replay': 'Replay', 'tour.tip': 'Tour stop · {year}',
+  'layer.cities': 'Cities', 'city.kind': 'City', 'city.ruler': 'Ruled by', 'city.estimate': 'rough estimate',
+  'city.peak': 'Peak: {n} ({year})', 'city.chart': 'Population over time', 'city.notYet': 'Not yet a city in this year.', 'city.gone': 'Abandoned or destroyed by this year.',
+  'now.cities': 'Largest cities', 'now.noCities': 'No cities drawn for this year.',
   'now.title': 'On the map in {year}', 'now.powers': '{n} powers', 'now.nothing': 'Nothing drawn for this year.', 'now.routes': 'Trade routes in use',
   'now.noRoutes': 'No long-distance routes drawn for this year.', 'now.events': 'Events in view', 'now.noEvents': 'No journeys, spreads or battles in view.',
 };
@@ -53,6 +56,8 @@ const msg = (k, vars = {}) => (UI[k] ?? k).replace(/\{(\w+)\}/g, (m, v) => (v in
 const fmtYear = TR?.year ?? ((y) => { const r = Math.round(y); return r < 0 ? `${-r} BC` : `AD ${Math.max(r, 1)}`; });
 const fmtSpan = TR?.span ?? ((a, b) => (a < 0 && b < 0) ? `${-a}–${-b} BC` : (a < 0 ? `${-a} BC – AD ${Math.max(b, 1)}` : `AD ${Math.max(a, 1)}–${b}`));
 const fmtTick = TR?.tick ?? fmtYear; // timeline axis labels
+// Population given in thousands, rounded to two significant figures.
+const fmtPeople = TR?.people ?? ((k) => (k >= 1000 ? `about ${+(k / 1000).toFixed(1)} million` : `about ${(+k.toPrecision(2) * 1000).toLocaleString('en')}`));
 const plural = TR?.years ?? ((n) => `${n.toLocaleString('en')} year${n === 1 ? '' : 's'}`);
 
 // Translate the data in place. Anything without a translation stays in English and is listed in
@@ -65,6 +70,7 @@ if (TR) {
   each(CIVS, TR.civs, 'civ', (c, [name, cap, note]) => { c.name = name; c.cap = [c.cap[0], cap]; c.note = note; });
   each(ROUTES, TR.routes, 'route', (r, [name, goods, note]) => { r.name = name; r.goods = goods; r.note = note; });
   each(EVENTS, TR.events, 'event', (e, [title, note]) => { e.title = title; e.note = note; });
+  each(CITIES, TR.cities, 'city', (c, [name, note]) => { c.name = name; c.note = note; });
   for (const e of EVENTS) for (const b of e.branches || []) for (const st of b) {
     if (TR.places[st[3]]) st[3] = TR.places[st[3]]; else missing.push(`place ${st[3]}`);
   }
@@ -139,6 +145,18 @@ for (const e of EVENTS) {
   e.start = Math.min(...ys); e.end = Math.max(...ys);
   e.win = [e.start - 1, e.end + (e.linger || 60)];
 }
+for (const c of CITIES) { c.p = pr(c.at); c.from = c.pop[0][0]; c.peak = c.pop.reduce((a, b) => (b[1] > a[1] ? b : a)); }
+// Population (thousands) at a year: interpolated between keyframes, 0 before the first, the last value after the last.
+function cityPop(c, y) {
+  const k = c.pop;
+  if (y < k[0][0]) return 0;
+  for (let i = 1; i < k.length; i++) if (y < k[i][0]) return k[i - 1][1] + (k[i][1] - k[i - 1][1]) * (y - k[i - 1][0]) / (k[i][0] - k[i - 1][0]);
+  return k[k.length - 1][1];
+}
+const cityR = (k) => 2.2 + 0.2 * Math.sqrt(k);
+// The state whose shape holds a city in a year (states before cultures, then the smallest shape).
+const rulerOf = (city, y) => CIVS.filter((c) => isActive(c, y) && frameAt(c, y).pts.some((r) => d3.polygonContains(r, city.p)))
+  .sort((a, b) => (a.kind === 'culture') - (b.kind === 'culture') || frameAt(a, y).area - frameAt(b, y).area)[0];
 const evVisible = (e, y) => y >= e.win[0] && y <= e.win[1];
 const evLayer = (e) => (e.kind === 'conflict' ? 'wars' : e.kind === 'journey' ? 'journeys' : 'ideas');
 const evYears = (e) => (e.kind === 'conflict' ? fmtYear(e.year) : (Math.round(e.start) === Math.round(e.end) ? fmtYear(e.start) : fmtSpan(Math.round(e.start), Math.round(e.end)))) + (e.c ? msg('circaSuffix') : '');
@@ -155,7 +173,7 @@ const civG = zg.append('g').attr('clip-path', 'url(#landclip)');
 zg.append('path').attr('class', 'lakes').attr('d', gpath({ type: 'MultiPolygon', coordinates: GEO.lakes }));
 zg.append('path').attr('class', 'rivers').attr('d', gpath({ type: 'MultiLineString', coordinates: GEO.rivers }));
 const ov = svg.append('g');
-const routeG = ov.append('g'), evG = ov.append('g'), labG = ov.append('g'), warG = ov.append('g');
+const routeG = ov.append('g'), evG = ov.append('g'), cityG = ov.append('g'), labG = ov.append('g'), warG = ov.append('g');
 
 const zoom = d3.zoom().scaleExtent([0.8, 16]).on('zoom', (ev) => { T = ev.transform; zg.attr('transform', T); drawOverlay(); });
 svg.call(zoom).on('dblclick.zoom', null);
@@ -193,6 +211,7 @@ function showTip(ev, html) {
 const hideTip = () => tip.attr('hidden', '');
 const civTip = (c) => `<b>${esc(c.name)}</b><span class="yrs">${fmtSpan(c.from, Math.min(c.to, MAX))}${c.kind === 'culture' ? ` · ${msg('culture')}` : ''}</span><br>${esc(sphereName[c.s])}`;
 const routeTip = (r) => `<b>${esc(r.name)}</b><span class="yrs">${fmtSpan(r.from, r.to)}</span><br>${esc(r.goods)}`;
+const cityTip = (c) => { const r = rulerOf(c, state.year); return `<b>${esc(c.name)}</b><span class="yrs">${fmtPeople(cityPop(c, state.year))}</span>${r ? `<br>${esc(r.name)}` : ''}`; };
 const evTip = (e) => `<b>${esc(e.title)}</b><span class="yrs">${evYears(e)}</span>`;
 
 // ---------- drawing ----------
@@ -307,6 +326,16 @@ function drawEvents() {
   w.select('text').attr('x', 8).attr('y', -6).text((d) => (y - d.year < 15 || d.id === sel ? `${d.title} ${fmtYear(d.year)}` : ''));
 }
 
+let activeCities = [];
+function drawCities() {
+  const y = state.year;
+  activeCities = state.layers.cities ? CITIES.map((c) => ({ c, k: cityPop(c, y) })).filter((d) => d.k >= 1).sort((a, b) => a.k - b.k) : [];
+  const sel = state.sel && state.sel.type === 'city' ? state.sel.id : null;
+  cityG.selectAll('circle.city').data(activeCities, (d) => d.c.id).join((en) => en.append('circle')
+    .on('mousemove', (ev, d) => showTip(ev, cityTip(d.c))).on('mouseleave', hideTip).on('click', (ev, d) => { ev.stopPropagation(); select({ type: 'city', id: d.c.id }); }))
+    .attr('class', (d) => `city${d.c.id === sel ? ' sel' : ''}`).attr('r', (d) => cityR(d.k)).attr('cx', (d) => sx(d.c.p)).attr('cy', (d) => sy(d.c.p)).order();
+}
+
 function drawLabels() {
   const [w, h] = size();
   const sel = state.sel && state.sel.type === 'civ' ? state.sel.id : null;
@@ -323,13 +352,26 @@ function drawLabels() {
     if (d.c.id !== sel && boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
     boxes.push(bx); out.push(d);
   }
+  // City names fill the gaps, largest first; small towns only when zoomed in.
+  const csel = state.sel && state.sel.type === 'city' ? state.sel.id : null;
+  const cout = [];
+  for (const d of [...activeCities].sort((a, b) => (b.c.id === csel) - (a.c.id === csel) || b.k - a.k)) {
+    const x = sx(d.c.p), y = sy(d.c.p);
+    if (x < -20 || x > w + 20 || y < -10 || y > h + 10 || (d.c.id !== csel && d.k * T.k * T.k < 30)) continue;
+    const lx = x + cityR(d.k) + 3, tw = textWidth(d.c.name, 11, 0.55);
+    const bx = [lx, y - 8, lx + tw, y + 5];
+    if (d.c.id !== csel && boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
+    boxes.push(bx); cout.push({ c: d.c, x: lx, y });
+  }
+  labG.selectAll('text.ctag').data(cout, (d) => d.c.id).join('text').attr('class', (d) => `ctag${d.c.id === csel ? ' sel' : ''}`)
+    .attr('x', (d) => d.x).attr('y', (d) => d.y + 4).text((d) => d.c.name);
   labG.selectAll('circle.capdot').data(out, (d) => d.c.id).join('circle').attr('class', 'capdot').attr('r', 2.6)
     .attr('cx', (d) => d.x).attr('cy', (d) => d.y).style('fill', (d) => `var(--c-${d.c.s})`);
   labG.selectAll('text.lab').data(out, (d) => d.c.id).join('text').attr('class', (d) => `lab${d.c.kind === 'culture' ? ' culture' : ''}`)
     .attr('x', (d) => d.x).attr('y', (d) => d.y - 6).style('font-size', (d) => d.size + 'px').text((d) => d.c.name);
 }
 
-function drawOverlay() { drawRoutes(); drawEvents(); drawLabels(); }
+function drawOverlay() { drawRoutes(); drawEvents(); drawCities(); drawLabels(); }
 function drawMap() { drawCivs(); drawOverlay(); }
 
 // ---------- header controls ----------
@@ -337,6 +379,7 @@ const VIEW_BUTTONS = ['silk', 'med', 'ocean', 'east', 'world'];
 d3.select('#views').selectAll('button').data(VIEW_BUTTONS).join('button').attr('type', 'button').text((d) => VIEWS[d].name).on('click', (ev, d) => setView(d));
 const LAYERS = [
   { id: 'civs', glyph: '<rect x="1" y="1" width="20" height="8" rx="2" fill="var(--c-ne)" fill-opacity=".45" stroke="var(--c-ne)"/>' },
+  { id: 'cities', glyph: '<circle cx="6" cy="5" r="4" class="city"/><circle cx="16" cy="6" r="2.6" class="city"/>' },
   { id: 'routes', glyph: '<path d="M0,3H22" stroke="var(--gold)" stroke-width="2" stroke-dasharray="5 3"/><path d="M0,8H22" stroke="var(--searoute)" stroke-width="2" stroke-dasharray="1.5 3.5" stroke-linecap="round"/>' },
   { id: 'journeys', glyph: '<path d="M1,8Q11,-2 21,6" fill="none" stroke="var(--journey)" stroke-width="1.6" stroke-dasharray="4 2.5"/><circle cx="21" cy="6" r="2.4" fill="var(--journey)"/>' },
   { id: 'ideas', glyph: '<path d="M1,8Q11,-2 21,6" fill="none" stroke="var(--idea)" stroke-width="1.8"/><circle cx="1" cy="8" r="2.4" fill="var(--idea)"/><circle cx="21" cy="6" r="2.4" fill="var(--idea)"/>' },
@@ -367,6 +410,7 @@ function selectedHTML() {
   const s = state.sel; const y = state.year;
   if (!s) return '';
   if (s.type === 'civ') return civHTML(CIVS.find((d) => d.id === s.id), y);
+  if (s.type === 'city') return cityHTML(CITIES.find((d) => d.id === s.id), y);
   if (s.type === 'route') {
     const r = ROUTES.find((d) => d.id === s.id);
     const on = routeActive(r, y);
@@ -471,14 +515,42 @@ function tourHTML() {
   return `<section class="card tour"><div class="eyebrow"><span>${msg('tour.stop', { i: i + 1, n: CHAPTERS.length, year: fmtYear(c.year) })}</span><button class="x" type="button" data-endtour aria-label="${msg('leaveTour')}">×</button></div><h2>${esc(c.title)}</h2><p>${esc(c.text)}</p><div class="tournav"><button class="btn" type="button" data-chapter="${i - 1}" ${i === 0 ? 'disabled' : ''}>${msg('tour.prev')}</button><button class="btn primary" type="button" data-chapter="${i + 1}" ${i === CHAPTERS.length - 1 ? 'disabled' : ''}>${msg('tour.next')}</button><button class="btn" type="button" data-replay="${i}">${msg('tour.replay')}</button></div></section>`;
 }
 
+// A small chart of a city's population over time, with the selected year marked.
+function popChart(c, y) {
+  const W = 320, H = 74, P = { l: 4, r: 4, t: 14, b: 16 };
+  const last = c.pop[c.pop.length - 1][0], x0 = c.from, x1 = Math.max(last, Math.min(MAX, c.from + 200));
+  const xs = d3.scaleLinear([x0, x1], [P.l, W - P.r]), ys = d3.scaleLinear([0, c.peak[1]], [H - P.b, P.t]);
+  const pts = [...c.pop.map(([py, k]) => [py, k]), ...(last < x1 ? [[x1, c.pop[c.pop.length - 1][1]]] : [])];
+  const area = d3.area().x((d) => xs(d[0])).y0(H - P.b).y1((d) => ys(d[1]))(pts);
+  const cur = y >= x0 && y <= x1 ? `<line class="pc-cur" x1="${xs(y)}" x2="${xs(y)}" y1="${P.t - 4}" y2="${H - P.b}"/><circle class="pc-dot" r="3" cx="${xs(y)}" cy="${ys(cityPop(c, y))}"/>` : '';
+  return `<svg class="popchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${msg('city.chart')}"><path class="pc-area" d="${area}"/>${cur}
+    <text x="${P.l}" y="10">${msg('city.peak', { n: fmtPeople(c.peak[1]), year: fmtYear(c.peak[0]) })}</text>
+    <text x="${P.l}" y="${H - 3}">${fmtYear(x0)}</text><text x="${W - P.r}" y="${H - 3}" text-anchor="end">${fmtYear(x1)}</text></svg>`;
+}
+function cityHTML(c, y) {
+  const k = cityPop(c, y), r = k >= 1 ? rulerOf(c, y) : null;
+  const info = (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[`city-${c.id}`]) || null;
+  const art = info && (info[LANG] || info);
+  const img = info && info.img ? `<figure class="pic"><img src="${esc(info.img)}" alt="${esc(info.alt || c.name)}" loading="lazy"><figcaption>${info.credit ? `${msg('image', { artist: esc(info.credit.artist || msg('unknown')) })}${info.credit.license ? `, <a href="${esc(info.credit.page)}" target="_blank" rel="noopener">${esc(info.credit.license)}</a>` : ''}` : ''}</figcaption></figure>` : '';
+  const wiki = art ? `<div class="group"><h3>${msg(art === info && TR ? 'fromWikiEn' : 'fromWiki')}</h3>${art.text ? `<p class="wiki">${esc(art.text)}</p>` : ''}<p class="wikilink"><a href="${esc(art.url)}" target="_blank" rel="noopener">${msg('readWiki', { title: esc(art.title) })}</a></p><p class="yrs">${msg('wikiLicence')}</p></div>` : '';
+  const now = k >= 1
+    ? `<dl class="facts"><dt>${msg('population')}</dt><dd>${fmtPeople(k)}<span class="src">${msg('city.estimate')}</span></dd>${r ? `<dt>${msg('city.ruler')}</dt><dd>${civChip(r)}</dd>` : ''}</dl>`
+    : `<p class="status">${msg(y < c.from ? 'city.notYet' : 'city.gone')}</p>${goBtn(c.peak[0])}`;
+  return `<section class="card civcard"><div class="eyebrow"><span>${msg('city.kind')}</span>${closeBtn()}</div><h2>${esc(c.name)}</h2>
+    ${img}<div class="group"><h3>${msg('inYear', { year: fmtYear(y) })}</h3>${now}</div>${popChart(c, y)}<p class="note">${esc(c.note)}</p>${wiki}</section>`;
+}
+const cityItem = (d) => `<li><button type="button" data-city="${d.c.id}"><svg class="glyph" viewBox="0 0 14 10"><circle cx="7" cy="5" r="${Math.min(4.5, cityR(d.k) / 2)}" class="city"/></svg><span>${esc(d.c.name)}</span><span class="yrs">${fmtPeople(d.k)}</span></button></li>`;
+
 function nowHTML() {
   const y = state.year;
   const civs = CIVS.filter((c) => isActive(c, y));
   const groups = SPHERES.map((s) => [s, civs.filter((c) => c.s === s.id).sort((a, b) => frameAt(b, y).area - frameAt(a, y).area)]).filter(([, l]) => l.length);
   const rts = ROUTES.filter((r) => routeActive(r, y));
   const evs = EVENTS.filter((e) => evVisible(e, y) && state.layers[evLayer(e)]).sort((a, b) => b.start - a.start);
+  const bigCities = CITIES.map((c) => ({ c, k: cityPop(c, y) })).filter((d) => d.k >= 1).sort((a, b) => b.k - a.k).slice(0, 8);
   return `<section class="card"><div class="eyebrow"><span>${msg('now.title', { year: fmtYear(y) })}</span><span>${msg('now.powers', { n: civs.length })}</span></div>
     ${groups.map(([s, l]) => `<div class="group"><h3>${esc(s.name)}</h3><div class="chips">${l.map(civChip).join('')}</div></div>`).join('') || `<p class="empty">${msg('now.nothing')}</p>`}
+    ${state.layers.cities ? `<div class="group"><h3>${msg('now.cities')}</h3>${bigCities.length ? `<ul class="list">${bigCities.map(cityItem).join('')}</ul>` : `<p class="empty">${msg('now.noCities')}</p>`}</div>` : ''}
     <div class="group"><h3>${msg('now.routes')}</h3>${rts.length ? `<ul class="list">${rts.map(routeItem).join('')}</ul>` : `<p class="empty">${msg('now.noRoutes')}</p>`}</div>
     <div class="group"><h3>${msg('now.events')}</h3>${evs.length ? `<ul class="list">${evs.map(eventItem).join('')}</ul>` : `<p class="empty">${msg('now.noEvents')}</p>`}</div></section>`;
 }
@@ -502,6 +574,7 @@ panel.on('click', (ev) => {
   else if (ds.close !== undefined) select(null);
   else if (ds.civ) select({ type: 'civ', id: ds.civ });
   else if (ds.route) select({ type: 'route', id: ds.route });
+  else if (ds.city) select({ type: 'city', id: ds.city });
   else if (ds.event) {
     const e = EVENTS.find((d) => d.id === ds.event);
     if (!evVisible(e, state.year)) setYear(e.kind === 'conflict' ? e.year + 1 : e.end);

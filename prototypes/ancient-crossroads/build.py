@@ -1,7 +1,7 @@
 """Build the Ancient Crossroads page from page.html, data.js, app.js and Natural Earth geography.
 
 Downloads coastlines, rivers and lakes from Natural Earth (public domain) into .cache/,
-simplifies them, and inlines them with data.js, details.js and app.js into page.html. For each
+simplifies them, and inlines them with data.js, cities.js, details.js and app.js into page.html. For each
 civilisation it also fetches the lead text, image and image credit of its Wikipedia article
 (WIKI in details.js), and the lead text of the same article in each translation's language (i18n/<lang>.js),
 into .cache/wiki/; the page itself never contacts Wikipedia.
@@ -182,10 +182,13 @@ def fetch_wiki_lang(meta, lang):
 
 
 def wiki_titles():
-    """WIKI in details.js: civilisation id -> English Wikipedia article title."""
+    """English Wikipedia article titles: WIKI in details.js by civilisation id, and each city's wiki in cities.js as city-<id>."""
     src = (HERE / "details.js").read_text()
     block = src[src.index("const WIKI = {"):src.index("};", src.index("const WIKI = {"))]
-    return dict(re.findall(r"""['"]?([\w-]+)['"]?: ['"]((?:[^'"\\]|\\.)+)['"]""", block))
+    titles = dict(re.findall(r"""['"]?([\w-]+)['"]?: ['"]((?:[^'"\\]|\\.)+)['"]""", block))
+    for cid, _, title in re.findall(r"""\{ id: '([\w-]+)'.*?wiki: (['"])(.*?)\2""", (HERE / "cities.js").read_text()):
+        titles[f"city-{cid}"] = title
+    return titles
 
 
 def plain(s):
@@ -260,8 +263,11 @@ def fetch_wiki():
     return {cid: m for cid, m in meta.items() if cid in titles and m.get("title_asked") == titles[cid]}
 
 
-# Article images that would mislead: flags from centuries after the period shown, or modern reconstructions.
-SKIP_IMAGES = {"ottoman", "ethiopia", "inca"}
+# Article images that would mislead: flags from centuries after the period shown, modern reconstructions, and
+# photos of today's city (skylines, modern buildings) for cities.
+SKIP_IMAGES = {"ottoman", "ethiopia", "inca"} | {f"city-{c}" for c in (
+    "alexandria", "anyang", "cairo", "calicut", "damascus", "guangzhou", "hangzhou", "kiev", "malacca", "palembang",
+    "paris", "quanzhou", "tyre")}
 
 
 def tidy(text):
@@ -278,7 +284,7 @@ def tidy(text):
 
 def tidy_cjk(text):
     """Drop names in other scripts, e.g. "（英语：Sumer；阿卡德语：...）", and join paragraphs."""
-    text = re.sub(r"[（(][^（）()]*?(?:语|語|文)[：:][^（）()]*[）)]", "", text)
+    text = re.sub(r"[（(][^（）()]*?(?:语|語|文|音)[：:][^（）()]*[）)]", "", text)
     return re.sub(r" {2,}", " ", re.sub(r"\s*\n\s*", "", text)).strip()
 
 
@@ -329,7 +335,7 @@ def wiki_info(site, out_dir):
             entry["credit"] = {k: credit[k] for k in ("artist", "license", "page")}
             entry["alt"] = credit.get("alt") or ""
         result[cid] = entry
-    print(f"Wikipedia details for {len(result)} civilisations, {sum('img' in e for e in result.values())} with images")
+    print(f"Wikipedia details for {len(result)} civilisations and cities, {sum('img' in e for e in result.values())} with images")
     return result
 
 
@@ -345,7 +351,7 @@ def main():
     out.parent.mkdir(exist_ok=True)
     info = json.dumps(wiki_info(site, out.parent), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     page = (page.replace("/*GEO*/", json.dumps(geography(), separators=(",", ":")))
-            .replace("/*DATA*/", (HERE / "data.js").read_text())
+            .replace("/*DATA*/", (HERE / "data.js").read_text() + (HERE / "cities.js").read_text())
             .replace("/*DETAILS*/", (HERE / "details.js").read_text())
             .replace("/*I18N*/", "\n".join((HERE / "i18n" / f"{lang}.js").read_text() for lang in langs()))
             .replace("/*WIKI_INFO*/", info)

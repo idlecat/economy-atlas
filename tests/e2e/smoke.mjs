@@ -163,6 +163,10 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await expect(page.evaluate((l) => document.documentElement.lang.startsWith(l), lang), "page language");
   await expect(page.$$eval("#map path.civ", (e) => e.length).then((n) => n > 10), "civilisations drawn");
   await expect(page.$$eval("#map g.route", (e) => e.length).then((n) => n > 2), "routes drawn");
+  await expect(page.$$eval("#map circle.city", (e) => e.length).then((n) => n > 10), "cities drawn");
+  await page.dispatchEvent("#map circle.city:last-of-type", "click");
+  await expect(page.$("#panel .popchart").then(Boolean), "city details open");
+  await page.click("#panel [data-close]");
   for (let i = 0; i < 12; i++) {
     where = `ancient ${lang} tour stop ${i + 1}`;
     await page.click(`#panel button[data-chapter="${i}"]`);
