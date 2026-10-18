@@ -1,5 +1,5 @@
 (() => {
-const MIN = -3000, MAX = 1500;
+const MIN = -3000, MAX = 1900;
 const BW = 1000, BH = 520;
 const proj = d3.geoNaturalEarth1().rotate([-20, 0]).fitExtent([[0, 0], [BW, BH]], { type: 'Sphere' });
 const gpath = d3.geoPath(proj);
@@ -17,7 +17,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // interface strings, year formats and translations of the data by id). The language is chosen like on the main
 // site: ?lang=, then the saved choice (localStorage "lang", shared with the site), then the browser's languages.
 const UI_EN = {
-  title: 'Ancient Crossroads', range: '3000 BC – AD 1500', about: 'How this map was made', credit: 'Borders approximate · Coastlines: Natural Earth',
+  title: 'Ancient Crossroads', range: '3000 BC – AD 1900', about: 'How this map was made', credit: 'Borders approximate · Coastlines: Natural Earth',
   'aria.views': 'Map view', 'aria.layers': 'Layers', 'aria.map': 'Map of civilisations, routes and events', 'aria.zin': 'Zoom in', 'aria.zout': 'Zoom out',
   'aria.play': 'Play', 'aria.pause': 'Pause', 'aria.speed': 'Playback speed', 'aria.timeline': 'Timeline: drag to change the year', 'aria.lang': 'Language',
   close: 'Close', leaveTour: 'Leave tour', speed: '{n} yr/s',
@@ -40,10 +40,10 @@ const UI_EN = {
   'tour.stop': 'Stop {i} of {n} · {year}', 'tour.prev': 'Previous', 'tour.next': 'Next stop', 'tour.replay': 'Replay', 'tour.tip': 'Tour stop · {year}',
   'layer.cities': 'Cities', 'city.kind': 'City', 'city.ruler': 'Ruled by', 'city.estimate': 'rough estimate',
   'city.peak': 'Peak: {n} ({year})', 'city.chart': 'Population over time', 'city.notYet': 'Not yet a city in this year.', 'city.gone': 'Abandoned or destroyed by this year.',
-  'now.cities': 'Largest cities', 'now.noCities': 'No cities drawn for this year.',
+  'now.cities': 'Largest cities', 'city.formerly': 'formerly {name}', 'now.noCities': 'No cities drawn for this year.',
   'now.title': 'On the map in {year}', 'now.powers': '{n} powers', 'now.nothing': 'Nothing drawn for this year.', 'now.routes': 'Trade routes in use',
   'now.noRoutes': 'No long-distance routes drawn for this year.', 'now.events': 'Events in view', 'now.noEvents': 'No journeys, spreads or battles in view.',
-  share: 'Copy link', shared: 'Link copied', 'share.prompt': 'Copy this link:',
+  share: 'Copy link', shared: 'Link copied', 'share.prompt': 'Copy this link:', since: 'from {year}',
 };
 const LANGS = { en: 'English', ...Object.fromEntries(Object.entries(I18N).map(([k, v]) => [k, v.native])) };
 const LANG = (() => {
@@ -73,7 +73,10 @@ if (TR) {
   each(CIVS, TR.civs, 'civ', (c, [name, cap, note]) => { c.name = name; c.cap = [c.cap[0], cap]; c.note = note; });
   each(ROUTES, TR.routes, 'route', (r, [name, goods, note]) => { r.name = name; r.goods = goods; r.note = note; });
   each(EVENTS, TR.events, 'event', (e, [title, note]) => { e.title = title; e.note = note; });
-  each(CITIES, TR.cities, 'city', (c, [name, note]) => { c.name = name; c.note = note; });
+  each(CITIES, TR.cities, 'city', (c, [name, note, later]) => {
+    c.name = name; c.note = note;
+    if (c.later) { if (later && later.length === c.later.length) c.later.forEach((l, i) => { l[1] = later[i]; }); else missing.push(`city names ${c.id}`); }
+  });
   for (const e of EVENTS) for (const b of e.branches || []) for (const st of b) {
     if (TR.places[st[3]]) st[3] = TR.places[st[3]]; else missing.push(`place ${st[3]}`);
   }
@@ -123,13 +126,21 @@ for (const c of CIVS) {
   c.frames = c.shape.map(([y, rings]) => {
     const pts = rings.map((r) => r.map(pr));
     const area = d3.sum(pts, (r) => Math.abs(d3.polygonArea(r)));
-    return { y, pts, area, d: pts.map((r) => line(r)).join('') };
+    return { y, pts, area, d: pts.map((r) => line(r)).join(''), parts: pts.map((r) => ({ a: Math.abs(d3.polygonArea(r)), c: d3.polygonCentroid(r) })) };
   });
   c.peak = c.frames.reduce((a, b) => (b.area > a.area ? b : a));
   c.capPt = pr(c.cap[0]);
+  // The part holding the capital (else the largest) is labelled there; other parts, such as colonies, get labels of their own.
+  for (const f of c.frames) {
+    const home = f.pts.findIndex((r) => d3.polygonContains(r, c.capPt));
+    const k = home >= 0 ? home : d3.maxIndex(f.parts, (p) => p.a);
+    f.parts.forEach((p, i) => { p.home = i === k; });
+  }
 }
 const isActive = (c, y) => y >= c.from && (c.to >= MAX ? y <= MAX : y < c.to);
 const frameAt = (c, y) => { let f = c.frames[0]; for (const fr of c.frames) if (fr.y <= y) f = fr; return f; };
+// Years a civilisation lasted: to: Infinity means it still exists; ends after MAX are shown as they are.
+const civSpan = (c) => (c.to === Infinity ? msg('since', { year: fmtYear(c.from) }) : fmtSpan(c.from, c.to));
 const peakYear = (c) => Math.max(c.from, Math.min(c.peak.y === c.from ? Math.round((c.from + Math.min(c.to, MAX)) / 2) : c.peak.y, Math.min(c.to, MAX) - 1));
 
 for (const r of ROUTES) r.pts = r.paths.map((p) => p.map(pr));
@@ -166,6 +177,8 @@ function cityPop(c, y) {
   for (let i = 1; i < k.length; i++) if (y < k[i][0]) return k[i - 1][1] + (k[i][1] - k[i - 1][1]) * (y - k[i - 1][0]) / (k[i][0] - k[i - 1][0]);
   return k[k.length - 1][1];
 }
+// A city's name in a year: later: [[year, name], ...] lists renamings (Tenochtitlan became Mexico City in 1521).
+const cityName = (c, y) => (c.later || []).reduce((n, [ly, ln]) => (y >= ly ? ln : n), c.name);
 const cityR = (k) => 2.2 + 0.2 * Math.sqrt(k);
 // The state whose shape holds a city in a year (states before cultures, then the smallest shape).
 const rulerOf = (city, y) => CIVS.filter((c) => isActive(c, y) && frameAt(c, y).pts.some((r) => d3.polygonContains(r, city.p)))
@@ -241,9 +254,9 @@ function showTip(ev, html) {
   tip.style('left', Math.max(6, x) + 'px').style('top', Math.max(6, y) + 'px');
 }
 const hideTip = () => tip.attr('hidden', '');
-const civTip = (c) => `<b>${esc(c.name)}</b><span class="yrs">${fmtSpan(c.from, Math.min(c.to, MAX))}${c.kind === 'culture' ? ` · ${msg('culture')}` : ''}</span><br>${esc(sphereName[c.s])}`;
+const civTip = (c) => `<b>${esc(c.name)}</b><span class="yrs">${civSpan(c)}${c.kind === 'culture' ? ` · ${msg('culture')}` : ''}</span><br>${esc(sphereName[c.s])}`;
 const routeTip = (r) => `<b>${esc(r.name)}</b><span class="yrs">${fmtSpan(r.from, r.to)}</span><br>${esc(r.goods)}`;
-const cityTip = (c) => { const r = rulerOf(c, state.year); return `<b>${esc(c.name)}</b><span class="yrs">${fmtPeople(cityPop(c, state.year))}</span>${r ? `<br>${esc(r.name)}` : ''}`; };
+const cityTip = (c) => { const r = rulerOf(c, state.year); return `<b>${esc(cityName(c, state.year))}</b><span class="yrs">${fmtPeople(cityPop(c, state.year))}</span>${r ? `<br>${esc(r.name)}` : ''}`; };
 const evTip = (e) => `<b>${esc(e.title)}</b><span class="yrs">${evYears(e)}</span>`;
 
 // ---------- drawing ----------
@@ -384,19 +397,34 @@ function drawLabels() {
     if (d.c.id !== sel && boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
     boxes.push(bx); out.push(d);
   }
+  // Large parts of a civilisation away from its capital (colonies, mostly) get a smaller label of their own.
+  const subs = [];
+  for (const c of activeCivs) frameAt(c, state.year).parts.forEach((p, i) => {
+    const x = sx(p.c), y = sy(p.c);
+    if (!p.home && p.a * T.k * T.k > 2500 && x > -50 && x < w + 50 && y > -20 && y < h + 20) subs.push({ c, i, x, y, a: p.a });
+  });
+  const sout = [];
+  for (const d of subs.sort((a, b) => b.a - a.a)) {
+    const tw = textWidth(d.c.name, 10, d.c.kind === 'culture' ? 0.5 : 0.66) + 6;
+    const bx = [d.x - tw / 2, d.y - 11, d.x + tw / 2, d.y + 3];
+    if (boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
+    boxes.push(bx); sout.push(d);
+  }
+  labG.selectAll('text.sublab').data(sout, (d) => `${d.c.id}:${d.i}`).join('text').attr('class', (d) => `sublab${d.c.kind === 'culture' ? ' culture' : ''}`)
+    .attr('x', (d) => d.x).attr('y', (d) => d.y).text((d) => d.c.name);
   // City names fill the gaps, largest first; small towns only when zoomed in.
   const csel = state.sel && state.sel.type === 'city' ? state.sel.id : null;
   const cout = [];
   for (const d of [...activeCities].sort((a, b) => (b.c.id === csel) - (a.c.id === csel) || b.k - a.k)) {
     const x = sx(d.c.p), y = sy(d.c.p);
     if (x < -20 || x > w + 20 || y < -10 || y > h + 10 || (d.c.id !== csel && d.k * T.k * T.k < 30)) continue;
-    const lx = x + cityR(d.k) + 3, tw = textWidth(d.c.name, 11, 0.55);
+    const name = cityName(d.c, state.year), lx = x + cityR(d.k) + 3, tw = textWidth(name, 11, 0.55);
     const bx = [lx, y - 8, lx + tw, y + 5];
     if (d.c.id !== csel && boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
-    boxes.push(bx); cout.push({ c: d.c, x: lx, y });
+    boxes.push(bx); cout.push({ c: d.c, name, x: lx, y });
   }
   labG.selectAll('text.ctag').data(cout, (d) => d.c.id).join('text').attr('class', (d) => `ctag${d.c.id === csel ? ' sel' : ''}`)
-    .attr('x', (d) => d.x).attr('y', (d) => d.y + 4).text((d) => d.c.name);
+    .attr('x', (d) => d.x).attr('y', (d) => d.y + 4).text((d) => d.name);
   // Today's country names last, where nothing older is written.
   const tout = [];
   if (state.layers.today) for (const d of COUNTRIES) {
@@ -418,7 +446,7 @@ function drawOverlay() { drawRoutes(); drawEvents(); drawCities(); drawLabels();
 function drawMap() { bordersP.attr('display', state.layers.today ? null : 'none'); drawCivs(); drawOverlay(); }
 
 // ---------- header controls ----------
-const VIEW_BUTTONS = ['silk', 'med', 'ocean', 'east', 'world'];
+const VIEW_BUTTONS = ['silk', 'med', 'ocean', 'east', 'atlantic', 'world'];
 d3.select('#views').selectAll('button').data(VIEW_BUTTONS).join('button').attr('type', 'button').text((d) => VIEWS[d].name).on('click', (ev, d) => { markNav(); setView(d); });
 const LAYERS = [
   { id: 'civs', glyph: '<rect x="1" y="1" width="20" height="8" rx="2" fill="var(--c-ne)" fill-opacity=".45" stroke="var(--c-ne)"/>' },
@@ -552,7 +580,7 @@ function civHTML(c, y) {
   const link = (d, dir) => `<button class="chip" type="button" data-civ="${d.id}" title="${msg(dir === 'prev' ? 'cameBefore' : 'cameAfter')}"><i style="background:var(--c-${d.s})"></i><span style="color:var(--fg)">${dir === 'prev' ? '← ' : ''}${esc(d.name)}${dir === 'next' ? ' →' : ''}</span></button>`;
   const seq = name ? `<div class="succession"><span class="yrs">${esc(successionName(name))}:</span>${k > 0 ? link(line[k - 1], 'prev') : ''}${k < line.length - 1 ? link(line[k + 1], 'next') : ''}</div>` : '';
   return `<section class="card civcard"><div class="eyebrow"><span style="color:var(--c-${c.s})">● ${esc(sphereName[c.s])}${c.kind === 'culture' ? ` · ${msg('culture')}` : ''}</span>${closeBtn()}</div>
-    <h2>${esc(c.name)}</h2><div class="yrs">${fmtSpan(c.from, end)} · ${msg(c.kind === 'culture' ? 'centre' : 'capital', { name: esc(c.cap[1]) })}</div>
+    <h2>${esc(c.name)}</h2><div class="yrs">${civSpan(c)} · ${msg(c.kind === 'culture' ? 'centre' : 'capital', { name: esc(c.cap[1]) })}</div>
     ${seq}${img}<div class="group"><h3>${msg('inYear', { year: fmtYear(y) })}</h3>${now}</div><p class="note">${esc(c.note)}</p>${timeline}${wiki}</section>`;
 }
 const civChip = (c) => `<button class="chip${c.kind === 'culture' ? ' culture' : ''}" type="button" data-civ="${c.id}" style="color:var(--c-${c.s})"><i style="background:var(--c-${c.s})"></i><span style="color:var(--fg)">${esc(c.name)}</span></button>`;
@@ -589,10 +617,10 @@ function cityHTML(c, y) {
   const now = k >= 1
     ? `<dl class="facts"><dt>${msg('population')}</dt><dd>${fmtPeople(k)}<span class="src">${msg('city.estimate')}</span></dd>${r ? `<dt>${msg('city.ruler')}</dt><dd>${civChip(r)}</dd>` : ''}</dl>`
     : `<p class="status">${msg(y < c.from ? 'city.notYet' : 'city.gone')}</p>${goBtn(c.peak[0])}`;
-  return `<section class="card civcard"><div class="eyebrow"><span>${msg('city.kind')}</span>${closeBtn()}</div><h2>${esc(c.name)}</h2>
+  return `<section class="card civcard"><div class="eyebrow"><span>${msg('city.kind')}</span>${closeBtn()}</div><h2>${esc(cityName(c, y))}</h2>${cityName(c, y) !== c.name ? `<div class="yrs">${msg('city.formerly', { name: esc(c.name) })}</div>` : ''}
     ${img}<div class="group"><h3>${msg('inYear', { year: fmtYear(y) })}</h3>${now}</div>${popChart(c, y)}<p class="note">${esc(c.note)}</p>${wiki}</section>`;
 }
-const cityItem = (d) => `<li><button type="button" data-city="${d.c.id}"><svg class="glyph" viewBox="0 0 14 10"><circle cx="7" cy="5" r="${Math.min(4.5, cityR(d.k) / 2)}" class="city"/></svg><span>${esc(d.c.name)}</span><span class="yrs">${fmtPeople(d.k)}</span></button></li>`;
+const cityItem = (d) => `<li><button type="button" data-city="${d.c.id}"><svg class="glyph" viewBox="0 0 14 10"><circle cx="7" cy="5" r="${Math.min(4.5, cityR(d.k) / 2)}" class="city"/></svg><span>${esc(cityName(d.c, state.year))}</span><span class="yrs">${fmtPeople(d.k)}</span></button></li>`;
 
 function nowHTML() {
   const y = state.year;
@@ -652,7 +680,9 @@ svg.on('click', () => { if (state.sel) select(null); });
 // ---------- timeline ----------
 const tl = d3.select('#timeline');
 const TL = { left: 84, right: 12, top: 26, laneGap: 5, bar: 3, rowGap: 1 };
-let tx = d3.scaleLinear().domain([MIN, MAX]);
+// The timeline gives recent centuries more room: each stretch of years gets a share of the width.
+const TL_YEARS = [MIN, -1000, 500, 1500, MAX], TL_SHARE = [0, 0.22, 0.5, 0.78, 1];
+let tx = d3.scaleLinear().domain(TL_YEARS);
 const lanes = SPHERES.map((s) => {
   const civs = CIVS.filter((c) => c.s === s.id).sort((a, b) => a.from - b.from);
   const rowsEnd = [];
@@ -679,8 +709,8 @@ function layoutTimeline() {
   const narrow = w < 560;
   TL.left = narrow ? 8 : 84;
   tl.attr('height', TLH).attr('viewBox', `0 0 ${w} ${TLH}`);
-  tx = d3.scaleLinear().domain([MIN, MAX]).range([TL.left, w - TL.right]);
-  const ticks = d3.range(MIN, MAX + 1, w < 420 ? 1500 : narrow ? 1000 : 500);
+  tx = d3.scaleLinear().domain(TL_YEARS).range(TL_SHARE.map((f) => TL.left + f * (w - TL.left - TL.right)));
+  const ticks = w < 420 ? [MIN, 0, 1500, MAX] : narrow ? [MIN, -1000, 0, 1000, 1500, MAX] : [MIN, -2000, -1000, -500, 0, 500, 1000, 1500, 1700, MAX];
   tlAxis.selectAll('g').data(ticks).join((en) => { const g = en.append('g'); g.append('line'); g.append('text'); return g; })
     .attr('transform', (d) => `translate(${tx(d)},0)`)
     .call((g) => g.select('line').attr('y1', 14).attr('y2', TLH))
@@ -712,7 +742,7 @@ function drawTimelineMarks() {
 }
 function drawCursor() {
   const x = tx(state.year); const lab = fmtYear(state.year); const w = textWidth(lab, 11, 0.64) + 10;
-  const [lo, hi] = tx.range();
+  const r = tx.range(), lo = r[0], hi = r[r.length - 1];
   const bx = Math.max(lo, Math.min(hi - w, x - w / 2));
   tlCur.select('line').attr('x1', x).attr('x2', x).attr('y1', 14).attr('y2', TLH);
   tlCur.select('rect').attr('x', bx).attr('y', 0).attr('width', w).attr('height', 15);

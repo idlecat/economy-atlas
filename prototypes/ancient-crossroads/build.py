@@ -129,7 +129,7 @@ SITE_HEAD = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="An interactive map of civilisations from 3000 BC to AD 1500 and how they met: empires, Silk Road trade routes, journeys, battles and the spread of ideas.">
+<meta name="description" content="An interactive map of civilisations from 3000 BC to AD 1900 and how they met: empires, trade routes from the Silk Roads to the Suez Canal, journeys, battles and the spread of ideas.">
 <link rel="stylesheet" href="../vendor/fonts/ancient-crossroads.css">
 <style>body { margin: 0; } [hidden] { display: none !important; }</style>
 """
@@ -309,11 +309,16 @@ def fetch_wiki():
     return {cid: m for cid, m in meta.items() if cid in titles and m.get("title_asked") == titles[cid]}
 
 
-# Article images that would mislead: flags from centuries after the period shown, modern reconstructions, and
-# photos of today's city (skylines, modern buildings) for cities.
-SKIP_IMAGES = {"ottoman", "ethiopia", "inca"} | {f"city-{c}" for c in (
-    "alexandria", "anyang", "cairo", "calicut", "damascus", "guangzhou", "hangzhou", "kiev", "malacca", "palembang",
-    "paris", "quanzhou", "tyre")}
+# Article images that would mislead or say little: flags and coats of arms, maps (the page is a map), modern
+# reconstructions, and photos of today's city (skylines, modern buildings) for cities.
+SKIP_IMAGES = {"ottoman", "ethiopia", "inca", "britain", "spain", "portugal", "dutch", "habsburg", "sweden", "russia",
+               "prussia", "germany", "italy", "safavid", "afsharid", "qajar", "oman", "morocco", "kongo", "oyo", "sokoto",
+               "zulu", "merina", "congofree", "boer", "mahdist", "sikh", "durrani", "khiva", "kazakh", "dzungar", "qing",
+               "toungoo", "konbaung", "siam", "mataram", "aceh", "usa", "mexico", "brazil", "iroquois", "comanche"} | {
+    f"city-{c}" for c in (
+        "alexandria", "anyang", "cairo", "calicut", "damascus", "guangzhou", "hangzhou", "kiev", "malacca", "palembang",
+        "paris", "quanzhou", "tyre", "london", "lisbon", "naples", "moscow", "zanzibar", "edo", "osaka", "seoul",
+        "hongkong", "manila", "potosi", "salvador", "buenosaires")}
 
 
 def tidy(text):

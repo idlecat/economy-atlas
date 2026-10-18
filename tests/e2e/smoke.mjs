@@ -167,7 +167,9 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await page.dispatchEvent("#map circle.city:last-of-type", "click");
   await expect(page.$("#panel .popchart").then(Boolean), "city details open");
   await page.click("#panel [data-close]");
-  for (let i = 0; i < 12; i++) {
+  const stops = await page.$$eval("#panel .tour ol button[data-chapter]", (b) => b.length);
+  await expect(Promise.resolve(stops >= 17), "tour stops listed");
+  for (let i = 0; i < stops; i++) {
     where = `ancient ${lang} tour stop ${i + 1}`;
     await page.click(`#panel button[data-chapter="${i}"]`);
     await page.waitForTimeout(400);
@@ -184,6 +186,12 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-1250&sel=civ.shang`, { waitUntil: "load" });
   await page.waitForTimeout(500);
   await expect(page.$eval("#panel .pic img", (i) => i.complete && i.naturalWidth > 0 && /moment-shang/.test(i.src)), "the moment's picture is shown");
+
+  where = `ancient ${lang} 1900`;
+  await page.goto(`${BASE}/ancient/?lang=${lang}#year=1885&view=world&sel=civ.britain`, { waitUntil: "load" });
+  await page.waitForTimeout(500);
+  await expect(page.$$eval("#map text.sublab", (e) => e.length).then((n) => n > 2), "colonies labelled");
+  await expect(text("#panel .civcard h2").then((s) => s.length > 1), "a modern empire's card");
 
   where = `ancient ${lang} link`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities&show=today`, { waitUntil: "load" });
