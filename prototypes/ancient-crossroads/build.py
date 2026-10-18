@@ -21,8 +21,10 @@ import json
 import re
 import shutil
 import sys
+import time
 import urllib.parse
 import ssl
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -148,10 +150,17 @@ WIKI_API = "https://en.wikipedia.org/w/api.php"
 USER_AGENT = "AncientCrossroads/1.0 (https://github.com/idlecat/economy-atlas)"
 
 
-def get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, context=SSL_CONTEXT, timeout=60) as r:
-        return r.read()
+def get(url, tries=6):
+    """GET with backoff when Wikimedia asks to slow down (HTTP 429)."""
+    for n in range(tries):
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(req, context=SSL_CONTEXT, timeout=60) as r:
+                return r.read()
+        except urllib.error.HTTPError as e:
+            if e.code != 429 or n == tries - 1:
+                raise
+            time.sleep(5 * (n + 1))
 
 
 def api(base=WIKI_API, **params):
@@ -226,7 +235,8 @@ def plain(s):
 
 
 def fetch_wiki():
-    """Lead text, image and image credit for each article, cached in .cache/wiki/ (delete it to refresh)."""
+    """Lead text, image and image credit for each article, cached in .cache/wiki/ (delete it to refresh).
+    A title may name another image from the article instead of its lead image: 'Article#File:Name.jpg'."""
     cache = CACHE / "wiki"
     (cache / "img").mkdir(parents=True, exist_ok=True)
     meta_path = cache / "meta.json"
@@ -237,7 +247,7 @@ def fetch_wiki():
     for i in range(0, len(items), 20):  # extracts allow at most 20 pages per request
         batch = dict(items[i:i + 20])
         try:
-            q = api(titles="|".join(batch.values()), redirects=1, prop="extracts|pageimages|info", inprop="url",
+            q = api(titles="|".join({t.split("#File:")[0] for t in batch.values()}), redirects=1, prop="extracts|pageimages|info", inprop="url",
                     exintro=1, explaintext=1, exsentences=3, exlimit=20, piprop="thumbnail|name", pithumbsize=400)
         except Exception as e:  # noqa: BLE001 - the page works without Wikipedia details
             print(f"warning: Wikipedia request failed ({e}); details for {len(batch)} entries skipped")
@@ -248,7 +258,7 @@ def fetch_wiki():
                 alias[n["from"]] = n["to"]
         pages = {p["title"]: p for p in q["pages"]}
         for cid, t in batch.items():
-            name = t
+            name, _, file = t.partition("#File:")
             while name in alias:
                 name = alias[name]
             p = pages.get(name)
@@ -257,11 +267,13 @@ def fetch_wiki():
                 continue
             meta[cid] = {"title_asked": t, "title": p["title"], "url": p["fullurl"], "text": p.get("extract", "").strip(),
                          "thumb": p.get("thumbnail", {}).get("source"), "file": p.get("pageimage")}
+            if file:  # the thumbnail URL comes with the credit below
+                meta[cid].update(file=file.replace(" ", "_"), thumb=None)
     files = sorted({m["file"] for m in meta.values() if m.get("file") and "credit" not in m})
     for i in range(0, len(files), 50):
         try:
             q = api(titles="|".join("File:" + f for f in files[i:i + 50]), prop="imageinfo", iiprop="extmetadata|url",
-                    iiextmetadatafilter="Artist|LicenseShortName|ObjectName")
+                    iiextmetadatafilter="Artist|LicenseShortName|ObjectName", iiurlwidth=400)
         except Exception as e:  # noqa: BLE001
             print(f"warning: image credit request failed ({e})")
             continue
@@ -272,13 +284,17 @@ def fetch_wiki():
             md = ii.get("extmetadata", {})
             info[p["title"]] = {"artist": plain(md.get("Artist", {}).get("value"))[:120],
                                 "license": plain(md.get("LicenseShortName", {}).get("value")),
-                                "page": ii.get("descriptionurl", ""), "alt": plain(md.get("ObjectName", {}).get("value"))}
+                                "page": ii.get("descriptionurl", ""), "alt": plain(md.get("ObjectName", {}).get("value")),
+                                "thumb": ii.get("thumburl")}
         for m in meta.values():
             key = "File:" + (m.get("file") or "")
             key = alias.get(key, key)
             if key in info:
-                m["credit"] = info[key]
+                m["credit"] = {k: v for k, v in info[key].items() if k != "thumb"}
+                m["thumb"] = m.get("thumb") or info[key]["thumb"]
     for cid, m in meta.items():
+        if not m.get("thumb") and m.get("file"):
+            print(f"warning: image {m['file']} for {cid} not found")
         if m.get("thumb") and not m.get("img_file"):
             ext = m["thumb"].rsplit(".", 1)[-1].lower()
             path = cache / "img" / f"{cid}.{ext if ext in ('jpg', 'jpeg', 'png', 'gif', 'webp') else 'jpg'}"
