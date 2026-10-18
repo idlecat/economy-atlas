@@ -193,6 +193,12 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await expect(page.$$eval("#map text.sublab", (e) => e.length).then((n) => n > 2), "colonies labelled");
   await expect(text("#selcard .civcard h2").then((s) => s.length > 1), "a modern empire's card");
 
+  where = `ancient ${lang} event card`;
+  await page.goto(`${BASE}/ancient/?lang=${lang}#year=1825&view=atlantic&sel=event.ayacucho`, { waitUntil: "load" });
+  await page.waitForTimeout(500);
+  await expect(page.$eval("#selcard .wikilink a", (a) => a.href.includes("wikipedia.org")), "an event card links to Wikipedia");
+  await expect(page.$$eval("#selcard .chip", (e) => e.length).then((n) => n > 0), "an event card names the powers there");
+
   where = `ancient ${lang} link`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities&show=today`, { waitUntil: "load" });
   await page.waitForTimeout(800);

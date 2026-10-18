@@ -25,7 +25,7 @@ const UI_EN = {
   'lane.med': 'Europe', 'lane.ne': 'Near East', 'lane.af': 'Africa', 'lane.sa': 'South Asia', 'lane.st': 'Steppe', 'lane.ea': 'East Asia', 'lane.se': 'SE Asia', 'lane.am': 'Americas',
   culture: 'culture', capital: 'capital: {name}', centre: 'centre: {name}', circa: 'c. ', circaSuffix: ' (c.)',
   'route.land': 'Overland route', 'route.sea': 'Sea route', 'route.voyage': 'Voyages', 'route.short.land': 'land', 'route.short.sea': 'sea',
-  carried: 'Carried: {goods}', powersAlong: 'Powers along it in {year}', noneDrawn: 'None drawn', goTo: 'Go to {year}',
+  carried: 'Carried: {goods}', powersAlong: 'Powers along it in {year}', powersHere: 'Powers here in {year}', powersOnWay: 'Powers along the way', noneDrawn: 'None drawn', goTo: 'Go to {year}',
   'event.conflict': 'Battle or conquest', 'event.journey': 'Journey', 'event.spread': 'Spread',
   'status.notYet': 'Not yet founded: it begins in {year}, {n} from now.', 'status.gone': 'Gone by now: it ended in {year}, {n} earlier.',
   'status.founded': '{n} since it was founded', 'status.emerged': '{n} since it emerged', 'status.left': '; {n} left', 'status.end': '.',
@@ -488,12 +488,19 @@ function selectedHTML() {
     const r = ROUTES.find((d) => d.id === s.id);
     const on = routeActive(r, y);
     const along = on ? CIVS.filter((c) => isActive(c, y) && r.pts.flat().some((p) => inShape(c, y, p))) : [];
-    return `<section class="card"><div class="eyebrow"><span>${msg(`route.${r.kind}`)}</span>${closeBtn()}</div><h2>${esc(r.name)}</h2><div class="yrs">${fmtSpan(r.from, r.to)}</div><p style="margin-top:8px">${esc(r.note)}</p><p class="yrs">${msg('carried', { goods: esc(r.goods) })}</p>${on ? `<div class="group"><h3>${msg('powersAlong', { year: fmtYear(y) })}</h3><div class="chips">${along.map(civChip).join('') || `<span class="empty">${msg('noneDrawn')}</span>`}</div></div>` : goBtn(Math.round((r.from + r.to) / 2))}</section>`;
+    const info = wikiInfo(`route-${r.id}`);
+    return `<section class="card"><div class="eyebrow"><span>${msg(`route.${r.kind}`)}</span>${closeBtn()}</div><h2>${esc(r.name)}</h2><div class="yrs">${fmtSpan(r.from, r.to)}</div>${wikiPicture(info, r.name)}<p style="margin-top:8px">${esc(r.note)}</p><p class="yrs">${msg('carried', { goods: esc(r.goods) })}</p>${on ? `<div class="group"><h3>${msg('powersAlong', { year: fmtYear(y) })}</h3><div class="chips">${along.map(civChip).join('') || `<span class="empty">${msg('noneDrawn')}</span>`}</div></div>` : goBtn(Math.round((r.from + r.to) / 2))}${wikiHTML(info)}</section>`;
   }
   const e = EVENTS.find((d) => d.id === s.id);
-  const kindName = msg(`event.${e.kind}`);
-  const stops = e.kind === 'conflict' ? '' : `<p class="stops">${[...new Map(e.br.flat().map((st) => [st.label + st.y, st])).values()].sort((a, b) => a.y - b.y).map((st) => `${esc(st.label)} <span class="yrs">${fmtYear(st.y)}</span>`).join(' · ')}</p>`;
-  return `<section class="card"><div class="eyebrow"><span>${kindName}</span>${closeBtn()}</div><h2>${esc(e.title)}</h2><div class="yrs">${evYears(e)}</div><p style="margin-top:8px">${esc(e.note)}</p>${stops}${evVisible(e, y) ? '' : goBtn(Math.round(e.end))}</section>`;
+  const kindName = msg(`event.${e.kind}`), info = wikiInfo(`event-${e.id}`);
+  const stops = e.kind === 'conflict' ? [] : [...new Map(e.br.flat().map((st) => [st.label + st.y, st])).values()].sort((a, b) => a.y - b.y);
+  const stopsHTML = stops.length ? `<p class="stops">${stops.map((st) => `${esc(st.label)} <span class="yrs">${fmtYear(st.y)}</span>`).join(' · ')}</p>` : '';
+  // The powers drawn where a battle was fought, or at each stop of a journey or spread in the year it got there.
+  const there = e.kind === 'conflict'
+    ? CIVS.filter((c) => isActive(c, e.year) && inShape(c, e.year, e.pt))
+    : [...new Set(stops.flatMap((st) => CIVS.filter((c) => isActive(c, st.y) && inShape(c, st.y, st.p))))];
+  const powers = there.length ? `<div class="group"><h3>${e.kind === 'conflict' ? msg('powersHere', { year: fmtYear(e.year) }) : msg('powersOnWay')}</h3><div class="chips">${there.map(civChip).join('')}</div></div>` : '';
+  return `<section class="card"><div class="eyebrow"><span>${kindName}</span>${closeBtn()}</div><h2>${esc(e.title)}</h2><div class="yrs">${evYears(e)}</div>${wikiPicture(info, e.title)}<p style="margin-top:8px">${esc(e.note)}</p>${stopsHTML}${powers}${evVisible(e, y) ? '' : goBtn(Math.round(e.end))}${wikiHTML(info)}</section>`;
 }
 const closeBtn = () => `<button class="x" type="button" data-close aria-label="${msg('close')}">×</button>`;
 const goBtn = (y) => `<p><button class="btn" type="button" data-jump="${y}">${msg('goTo', { year: fmtYear(y) })}</button></p>`;
@@ -535,9 +542,16 @@ function goStep(s) {
 
 // A Wikipedia image with its credit; `what` (HTML) says what it shows.
 const picture = (info, alt, what) => `<figure class="pic"><img src="${esc(info.img)}" alt="${alt}" loading="lazy"><figcaption>${what}${info.credit ? `${msg('image', { artist: esc(info.credit.artist || msg('unknown')) })}${info.credit.license ? `, <a href="${esc(info.credit.page)}" target="_blank" rel="noopener">${esc(info.credit.license)}</a>` : ''}` : ''}</figcaption></figure>`;
+const wikiInfo = (key) => (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[key]) || null;
+const wikiPicture = (info, name) => info && info.img ? picture(info, esc(info.alt || name), '') : '';
+// Wikipedia's lead text and a link: the article in the page's language if there is one, else the English one.
+function wikiHTML(info) {
+  const art = info && (info[LANG] || info);
+  return art ? `<div class="group"><h3>${msg(art === info && TR ? 'fromWikiEn' : 'fromWiki')}</h3>${art.text ? `<p class="wiki">${esc(art.text)}</p>` : ''}<p class="wikilink"><a href="${esc(art.url)}" target="_blank" rel="noopener">${msg('readWiki', { title: esc(art.title) })}</a></p><p class="yrs">${msg('wikiLicence')}</p></div>` : '';
+}
 function civHTML(c, y) {
   const on = isActive(c, y); const end = Math.min(c.to, MAX); const yr = Math.round(y);
-  const info = (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[c.id]) || null;
+  const info = wikiInfo(c.id);
   const moments = (MOMENTS[c.id] || []).slice().sort((a, b) => a[0] - b[0]);
   const latest = moments.filter((m) => m[0] <= yr).pop();
   const momentYear = (m) => `${m[2] ? msg('circa') : ''}${fmtYear(m[0])}`;
@@ -564,17 +578,15 @@ function civHTML(c, y) {
   }
 
   // The picture of the latest moment if it has one (MOMENT_WIKI), else the civilisation's own.
-  const momentInfo = (m) => (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[`moment-${c.id}-${m[0]}`]) || null;
+  const momentInfo = (m) => wikiInfo(`moment-${c.id}-${m[0]}`);
   const mo = on && latest ? momentInfo(latest) : null;
   let img = '';
   if (mo && mo.img) {
     const art = mo[LANG] || mo;
     img = picture(mo, `${esc(latest[1])}`, `<a class="what" href="${esc(art.url)}" target="_blank" rel="noopener">${esc(art.title)}</a> · `);
-  } else if (info && info.img) img = picture(info, esc(info.alt || c.name), '');
+  } else img = wikiPicture(info, c.name);
   const timeline = moments.length ? `<div class="group"><h3>${msg('moments')}</h3><ol class="moments">${moments.map((m) => { const p = momentInfo(m); return `<li class="${m[0] > yr ? 'later' : ''}${m === latest && on ? ' now' : ''}"><button type="button" data-jump="${m[0]}"><span class="yrs">${momentYear(m)}</span><span>${esc(m[1])}</span>${p && p.img ? `<img class="mthumb" src="${esc(p.img)}" alt="" loading="lazy">` : ''}</button></li>`; }).join('')}</ol></div>` : '';
-  // The article in the page's language if there is one, else the English one.
-  const art = info && (info[LANG] || info);
-  const wiki = art ? `<div class="group"><h3>${msg(art === info && TR ? 'fromWikiEn' : 'fromWiki')}</h3>${art.text ? `<p class="wiki">${esc(art.text)}</p>` : ''}<p class="wikilink"><a href="${esc(art.url)}" target="_blank" rel="noopener">${msg('readWiki', { title: esc(art.title) })}</a></p><p class="yrs">${msg('wikiLicence')}</p></div>`
+  const wiki = info ? wikiHTML(info)
     : (WIKI[c.id] ? `<div class="group"><p class="wikilink"><a href="https://en.wikipedia.org/wiki/${encodeURIComponent(WIKI[c.id].replace(/ /g, '_'))}" target="_blank" rel="noopener">${msg('readMore')}</a></p></div>` : '');
 
   const line = succession(c), k = line.indexOf(c), name = Object.keys(SUCCESSIONS).find((n) => SUCCESSIONS[n].includes(c.id));
@@ -611,10 +623,8 @@ function popChart(c, y) {
 }
 function cityHTML(c, y) {
   const k = cityPop(c, y), r = k >= 1 ? rulerOf(c, y) : null;
-  const info = (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[`city-${c.id}`]) || null;
-  const art = info && (info[LANG] || info);
-  const img = info && info.img ? `<figure class="pic"><img src="${esc(info.img)}" alt="${esc(info.alt || c.name)}" loading="lazy"><figcaption>${info.credit ? `${msg('image', { artist: esc(info.credit.artist || msg('unknown')) })}${info.credit.license ? `, <a href="${esc(info.credit.page)}" target="_blank" rel="noopener">${esc(info.credit.license)}</a>` : ''}` : ''}</figcaption></figure>` : '';
-  const wiki = art ? `<div class="group"><h3>${msg(art === info && TR ? 'fromWikiEn' : 'fromWiki')}</h3>${art.text ? `<p class="wiki">${esc(art.text)}</p>` : ''}<p class="wikilink"><a href="${esc(art.url)}" target="_blank" rel="noopener">${msg('readWiki', { title: esc(art.title) })}</a></p><p class="yrs">${msg('wikiLicence')}</p></div>` : '';
+  const info = wikiInfo(`city-${c.id}`);
+  const img = wikiPicture(info, c.name), wiki = wikiHTML(info);
   const now = k >= 1
     ? `<dl class="facts"><dt>${msg('population')}</dt><dd>${fmtPeople(k)}<span class="src">${msg('city.estimate')}</span></dd>${r ? `<dt>${msg('city.ruler')}</dt><dd>${civChip(r)}</dd>` : ''}</dl>`
     : `<p class="status">${msg(y < c.from ? 'city.notYet' : 'city.gone')}</p>${goBtn(c.peak[0])}`;

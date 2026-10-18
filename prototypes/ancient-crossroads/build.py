@@ -216,13 +216,17 @@ def fetch_wiki_lang(meta, lang):
 
 
 def wiki_titles():
-    """English Wikipedia article titles: WIKI in details.js by civilisation id, MOMENT_WIKI as moment-<civ>-<year>,
-    and each city's wiki in cities.js as city-<id>."""
+    """English Wikipedia article titles: WIKI in details.js by civilisation id, ROUTE_WIKI and EVENT_WIKI as
+    route-<id> and event-<id>, MOMENT_WIKI as moment-<civ>-<year>, and each city's wiki in cities.js as city-<id>."""
     src = (HERE / "details.js").read_text()
     def block(name):
         start = src.index(f"const {name} = {{")
         return src[start:src.index("};", start)]
-    titles = dict(re.findall(r"""['"]?([\w-]+)['"]?: ['"]((?:[^'"\\]|\\.)+)['"]""", block("WIKI")))
+    def pairs(name):  # key: 'Title' or key: "Title's"
+        return [(k, t) for k, _, t in re.findall(r"""['"]?([\w-]+)['"]?: (['"])((?:(?!\2)[^\\]|\\.)+)\2""", block(name))]
+    titles = dict(pairs("WIKI"))
+    for kind in ("route", "event"):
+        titles.update((f"{kind}-{k}", t) for k, t in pairs(f"{kind.upper()}_WIKI"))
     for civ, year, _, title in re.findall(r"""'([\w-]+) (-?\d+)': (['"])(.*?)\3""", block("MOMENT_WIKI")):
         titles[f"moment-{civ}-{year}"] = title
     for cid, _, title in re.findall(r"""\{ id: '([\w-]+)'.*?wiki: (['"])(.*?)\2""", (HERE / "cities.js").read_text()):
@@ -309,8 +313,8 @@ def fetch_wiki():
     return {cid: m for cid, m in meta.items() if cid in titles and m.get("title_asked") == titles[cid]}
 
 
-# Article images that would mislead or say little: flags and coats of arms, maps (the page is a map), modern
-# reconstructions, and photos of today's city (skylines, modern buildings) for cities.
+# Article images that would mislead or say little: flags and coats of arms, maps and diagrams (the page is a map),
+# modern reconstructions and photos, and photos of today's city (skylines, modern buildings) for cities.
 SKIP_IMAGES = {"ottoman", "ethiopia", "inca", "britain", "spain", "portugal", "dutch", "habsburg", "sweden", "russia",
                "prussia", "germany", "italy", "safavid", "afsharid", "qajar", "oman", "morocco", "kongo", "oyo", "sokoto",
                "zulu", "merina", "congofree", "boer", "mahdist", "sikh", "durrani", "khiva", "kazakh", "dzungar", "qing",
@@ -318,7 +322,14 @@ SKIP_IMAGES = {"ottoman", "ethiopia", "inca", "britain", "spain", "portugal", "d
     f"city-{c}" for c in (
         "alexandria", "anyang", "cairo", "calicut", "damascus", "guangzhou", "hangzhou", "kiev", "malacca", "palembang",
         "paris", "quanzhou", "tyre", "london", "lisbon", "naples", "moscow", "zanzibar", "edo", "osaka", "seoul",
-        "hongkong", "manila", "potosi", "salvador", "buenosaires")}
+        "hongkong", "manila", "potosi", "salvador", "buenosaires")} | {
+    f"event-{e}" for e in (
+        "ainjalut", "anlushan", "armada", "bantu", "barsauma", "blackdeath", "buddhism", "carrhae", "carthdestroy",
+        "collapse", "greekcol", "hannibal", "japan", "kalinga", "norse", "numerals", "polynesia", "rebellion1857",
+        "romeenvoy", "silkworm", "smallpox", "talas", "telegraph")} | {
+    f"route-{r}" for r in (
+        "amber", "carrera", "hansa", "inca", "incense", "levant", "meluhha", "monsoon", "phoenician", "royal", "sahara",
+        "silk", "suez", "swahili", "teahorse")}
 
 
 def tidy(text):
@@ -389,7 +400,7 @@ def wiki_info(site, out_dir):
             entry["credit"] = {k: credit[k] for k in ("artist", "license", "page")}
             entry["alt"] = credit.get("alt") or ""
         result[cid] = entry
-    print(f"Wikipedia details for {len(result)} civilisations, cities and moments, {sum('img' in e for e in result.values())} with images")
+    print(f"Wikipedia details for {len(result)} civilisations, cities, routes, events and moments, {sum('img' in e for e in result.values())} with images")
     return result
 
 

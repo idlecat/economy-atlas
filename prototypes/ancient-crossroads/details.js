@@ -50,6 +50,48 @@ const WIKI = {
   comanche: 'Comancheria',
 };
 
+// Wikipedia articles for routes and events (ROUTES and EVENTS in data.js), fetched like WIKI; their cards show the
+// lead text, picture and a link.
+const ROUTE_WIKI = {
+  lapis: 'Lapis lazuli', meluhha: 'Meluhha', assyrian: 'Kültepe', bronzesea: 'Uluburun shipwreck',
+  phoenician: 'Phoenicia', incense: 'Incense trade route', royal: 'Royal Road', silk: 'Silk Road',
+  steppe: 'Pax Mongolica', monsoon: 'Maritime Silk Road', swahili: 'Swahili coast', amber: 'Amber Road',
+  sahara: 'Trans-Saharan trade', volga: 'Volga trade route', hansa: 'Hanseatic League', levant: 'Maritime republics',
+  teahorse: 'Tea Horse Road', zhenghe: 'Ming treasure voyages', inca: 'Inca road system', galleon: 'Manila galleon',
+  carrera: 'Spanish treasure fleet', slavetrade: 'Atlantic slave trade', cape: 'Portuguese India Armadas', kyakhta: 'Kyakhta trade',
+  canton: 'Canton System', suez: 'Suez Canal',
+};
+const EVENT_WIKI = {
+  chariot: 'Chariot', wheat: 'Wheat', kadesh: 'Battle of Kadesh', amarna: 'Amarna letters',
+  collapse: 'Late Bronze Age collapse', iron: 'Iron Age', alphabet: 'History of the alphabet',
+  coins: 'History of coins', greekcol: 'Greek colonisation', buddhism: 'Silk Road transmission of Buddhism',
+  achaeconq: 'Greco-Persian Wars', alexander: 'Wars of Alexander the Great', kalinga: 'Kalinga War',
+  hannibal: "Hannibal's crossing of the Alps", zhangqian: 'Zhang Qian', carthdestroy: 'Third Punic War',
+  carrhae: 'Battle of Carrhae', ganying: 'Gan Ying', romeenvoy: 'Sino-Roman relations',
+  christianity: 'History of Christianity', paper: 'History of paper', xuanzang: 'Xuanzang',
+  silkworm: 'Smuggling of silkworm eggs into the East Roman Empire', yarmouk: 'Battle of the Yarmuk',
+  islam: 'Spread of Islam', tours: 'Battle of Tours', talas: 'Battle of Talas', anlushan: 'An Lushan rebellion',
+  numerals: 'Hindu–Arabic numeral system', norse: 'Norse settlement of North America',
+  gunpowder: 'Gunpowder', manzikert: 'Battle of Manzikert', crusades: 'Siege of Jerusalem (1099)',
+  sack1204: 'Sack of Constantinople', otrar: 'Mongol invasion of the Khwarazmian Empire', mohi: 'Battle of Mohi',
+  baghdad: 'Siege of Baghdad', ainjalut: 'Battle of Ain Jalut', polo: 'Marco Polo', barsauma: 'Rabban Bar Sauma',
+  japan: 'Mongol invasions of Japan', battuta: 'Ibn Battuta', musa: 'Mansa Musa', blackdeath: 'Black Death',
+  timurdelhi: 'Sack of Delhi (1398)', polynesia: 'Austronesian peoples', bantu: 'Bantu expansion',
+  constantinople: 'Fall of Constantinople', columbus: 'Christopher Columbus', gama: 'Vasco da Gama',
+  chaldiran: 'Battle of Chaldiran', tenochtitlan: 'Spanish conquest of the Aztec Empire', panipat: 'First Battle of Panipat',
+  cajamarca: 'Battle of Cajamarca', talikota: 'Battle of Talikota', lepanto: 'Battle of Lepanto',
+  armada: 'Spanish Armada', tondibi: 'Battle of Tondibi', imjin: 'Imjin War', sekigahara: 'Battle of Sekigahara',
+  vienna: 'Battle of Vienna', poltava: 'Battle of Poltava', plassey: 'Battle of Plassey',
+  panipat3: 'Third Battle of Panipat', yorktown: 'Siege of Yorktown', waterloo: 'Battle of Waterloo',
+  ayacucho: 'Battle of Ayacucho', opium: 'First Opium War', taiping: 'Taiping Rebellion',
+  rebellion1857: 'Indian Rebellion of 1857', gettysburg: 'Battle of Gettysburg', sedan: 'Battle of Sedan',
+  isandlwana: 'Battle of Isandlwana', adwa: 'Battle of Adwa', omdurman: 'Battle of Omdurman',
+  magellan: 'Magellan expedition', ricci: 'Matteo Ricci', cook: 'James Cook',
+  humboldt: 'Alexander von Humboldt', lewisclark: 'Lewis and Clark Expedition', livingstone: 'David Livingstone',
+  iwakura: 'Iwakura Mission', smallpox: 'Smallpox', crops: 'Columbian exchange',
+  coffee: 'History of coffee', railways: 'History of rail transport', telegraph: 'Submarine communications cable',
+};
+
 // Dated key moments. Years match the shape changes on the map where there are any; 'c' marks approximate dates.
 const MOMENTS = {
   sumer: [[-3200, 'Writing (cuneiform) develops at Uruk', 'c'], [-2600, 'Royal tombs of Ur filled with gold and lapis', 'c'], [-2334, 'Sargon of Akkad conquers the Sumerian cities']],

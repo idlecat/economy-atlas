@@ -17,7 +17,7 @@ I18N.zh = {
     'lane.med': '欧洲', 'lane.ne': '近东', 'lane.af': '非洲', 'lane.sa': '南亚', 'lane.st': '草原', 'lane.ea': '东亚', 'lane.se': '东南亚', 'lane.am': '美洲',
     culture: '文化', capital: '都城：{name}', centre: '中心：{name}', circa: '约', circaSuffix: '（约）',
     'route.land': '陆路', 'route.sea': '海路', 'route.voyage': '远航', 'route.short.land': '陆路', 'route.short.sea': '海路',
-    carried: '货物：{goods}', powersAlong: '{year}沿线的政权', noneDrawn: '图上没有', goTo: '前往{year}',
+    carried: '货物：{goods}', powersAlong: '{year}沿线的政权', powersHere: '{year}此地的政权', powersOnWay: '沿途的政权', noneDrawn: '图上没有', goTo: '前往{year}',
     'event.conflict': '战役或征服', 'event.journey': '旅程', 'event.spread': '传播',
     'status.notYet': '尚未建立：{year}兴起，距今还有{n}。', 'status.gone': '已经消失：{year}结束，已过去{n}。',
     'status.founded': '建立已{n}', 'status.emerged': '兴起已{n}', 'status.left': '，距结束还有{n}', 'status.end': '。',
