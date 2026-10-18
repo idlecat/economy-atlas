@@ -60,15 +60,22 @@ jobs:
             uv run python -m pipeline build
           fi
       # A separate page at /ancient/ (prototypes/ancient-crossroads), built from its own sources.
-      # Its Natural Earth and Wikipedia downloads are cached; a new month's cache refetches them.
-      - uses: actions/cache@v4
+      # Its Natural Earth and Wikipedia downloads are cached: each run starts from the latest saved
+      # copy, the build fetches only what is missing, and the folder is saved again under a hash of
+      # its contents whenever that added something. Cached items are never refetched; delete the
+      # ancient- caches (Actions > Caches) to refresh them.
+      - uses: actions/cache/restore@v4
         with:
           path: prototypes/ancient-crossroads/.cache
-          key: ancient-${{ steps.keys.outputs.month }}
+          key: ancient-
           restore-keys: |
             ancient-
       - name: Build Ancient Crossroads page
         run: uv run --with pillow python prototypes/ancient-crossroads/build.py --site
+      - uses: actions/cache/save@v4
+        with:
+          path: prototypes/ancient-crossroads/.cache
+          key: ancient-${{ hashFiles('prototypes/ancient-crossroads/.cache/**') }}
       # Story texts quote figures from the data; a refresh that changes one stops the deploy here
       # (the live site keeps the previous build) and lists the sentences to update.
       - name: Check story figures
