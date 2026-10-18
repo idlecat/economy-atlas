@@ -13,7 +13,7 @@ I18N.zh = {
     'aria.views': '地图视角', 'aria.layers': '图层', 'aria.map': '文明、商路与事件地图', 'aria.zin': '放大', 'aria.zout': '缩小',
     'aria.play': '播放', 'aria.pause': '暂停', 'aria.speed': '播放速度', 'aria.timeline': '时间轴：拖动以改变年份', 'aria.lang': '语言',
     close: '关闭', leaveTour: '退出导览', speed: '{n}年/秒',
-    'layer.civs': '文明', 'layer.routes': '商路', 'layer.journeys': '旅程', 'layer.ideas': '思想与技术传播', 'layer.wars': '战役',
+    'layer.civs': '文明', 'layer.today': '今日国界', 'layer.routes': '商路', 'layer.journeys': '旅程', 'layer.ideas': '思想与技术传播', 'layer.wars': '战役',
     'lane.med': '欧洲', 'lane.ne': '近东', 'lane.af': '非洲', 'lane.sa': '南亚', 'lane.st': '草原', 'lane.ea': '东亚', 'lane.se': '东南亚', 'lane.am': '美洲',
     culture: '文化', capital: '都城：{name}', centre: '中心：{name}', circa: '约', circaSuffix: '（约）',
     'route.land': '陆路', 'route.sea': '海路', 'route.voyage': '远航', 'route.short.land': '陆路', 'route.short.sea': '海路',
@@ -50,7 +50,7 @@ I18N.zh = {
   </ul>
   <h3>资料来源</h3>
   <ul>
-    <li>海岸线、河流和湖泊：<a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>（公有领域），经由 world-atlas 数据包。</li>
+    <li>海岸线、河流、湖泊和今日国界：<a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>（公有领域），经由 world-atlas 数据包。今日国家名称与经济地图集一致。</li>
     <li>城市人口：粗略估计，主要依据钱德勒（Tertius Chandler）《城市发展四千年》（1987）和莫德尔斯基（George Modelski）《世界城市：公元前3000年至公元2000年》（2003），与后来研究不同之处参考了后来的研究。</li>
     <li>引用的古代文献：希罗多德《历史》；《厄立特里亚海航行记》；阿育王第十三号摩崖法敕；司马迁《史记》；裴哥罗梯《通商指南》；《后汉书》。</li>
     <li>延伸阅读：<a href="https://en.unesco.org/silkroad/" target="_blank" rel="noopener">联合国教科文组织丝绸之路项目</a>；韩森（Valerie Hansen）《丝绸之路新史》；彼得·弗兰科潘《丝绸之路：一部全新的世界史》；埃里克·克莱因《文明的崩塌：公元前1177年》；巴里·坎利夫《草原、沙漠与海洋》。</li>

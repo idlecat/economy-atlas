@@ -1,6 +1,6 @@
 """Build the Ancient Crossroads page from page.html, data.js, app.js and Natural Earth geography.
 
-Downloads coastlines, rivers and lakes from Natural Earth (public domain) into .cache/,
+Downloads coastlines, today's countries, rivers and lakes from Natural Earth (public domain) into .cache/,
 simplifies them, and inlines them with data.js, cities.js, details.js and app.js into page.html. For each
 civilisation it also fetches the lead text, image and image credit of its Wikipedia article
 (WIKI in details.js), and the lead text of the same article in each translation's language (i18n/<lang>.js),
@@ -15,6 +15,7 @@ The artifact loads D3 and fonts from CDNs. The site page uses site/vendor/ inste
 like the rest of the site, so it also works where CDNs are blocked.
 """
 import base64
+import csv
 import html
 import json
 import re
@@ -33,7 +34,7 @@ SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 HERE = Path(__file__).parent
 CACHE = HERE / ".cache"
 SOURCES = {
-    "land-50m.json": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-50m.json",
+    "countries-50m.json": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
     "rivers50.geojson": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_rivers_lake_centerlines.geojson",
     "lakes50.geojson": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_50m_lakes.geojson",
 }
@@ -81,7 +82,31 @@ def geography():
                     ring.append(ring[0])
                 if len(ring) >= 4:
                     lakes.append([ring])
-    return {"land": fetch("land-50m.json"), "rivers": rivers, "lakes": lakes}
+    return {"countries": countries(), "rivers": rivers, "lakes": lakes}
+
+
+def countries():
+    """Today's countries (the page also merges them into the land). Ids become the Economy Atlas entity ids
+    (config/entities.csv: the M49 code, or the `ne` column), and names come from the site (config/entities.csv,
+    site/i18n/<lang>.json), so they follow its naming. Shapes without an entity (e.g. Somaliland) keep no id."""
+    topo = fetch("countries-50m.json")
+    with open(HERE.parent.parent / "config" / "entities.csv", newline="") as f:
+        rows = [r for r in csv.DictReader(f) if not r["valid_to"]]
+    code = {r["m49"]: r["id"] for r in rows if r["m49"]} | {r["ne"]: r["id"] for r in rows if r["ne"]}
+    used = set()
+    for g in topo["objects"]["countries"]["geometries"]:
+        eid = code.get(g.get("id")) or code.get(g.get("properties", {}).get("name"))
+        g.pop("properties", None)
+        g.pop("id", None)
+        if eid:
+            g["id"] = eid
+            used.add(eid)
+    names = {"en": {r["id"]: r["name"] for r in rows if r["id"] in used}}
+    for lang in langs():
+        site = json.loads((HERE.parent.parent / "site" / "i18n" / f"{lang}.json").read_text())
+        names[lang] = {k: v for k, v in site["names"]["entities"].items() if k in used}
+    topo["names"] = names
+    return topo
 
 
 CDN_FONTS = """<link rel="preconnect" href="https://fonts.googleapis.com">

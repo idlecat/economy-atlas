@@ -181,11 +181,12 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await expect(text("#stampyear").then((s) => s !== before), "previous/next moment moves the year");
 
   where = `ancient ${lang} link`;
-  await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities`, { waitUntil: "load" });
+  await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities&show=today`, { waitUntil: "load" });
   await page.waitForTimeout(800);
   await expect(text("#stampyear").then((s) => s.includes("150")), "link sets the year");
   await expect(page.$("#panel .civcard").then(Boolean), "link selects a civilisation");
   await expect(page.$$eval("#map circle.city", (e) => e.length).then((n) => n === 0), "link hides a layer");
+  await expect(page.$$eval("#map text.today", (e) => e.length).then((n) => n > 3), "link shows today's countries");
   await expect(page.$eval('#views button[aria-pressed="true"]', (b) => b.__data__).then((v) => v === "east"), "link sets the view");
   await page.click("#panel [data-close]");
   await page.waitForTimeout(500);

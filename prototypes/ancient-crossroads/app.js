@@ -5,7 +5,8 @@ const proj = d3.geoNaturalEarth1().rotate([-20, 0]).fitExtent([[0, 0], [BW, BH]]
 const gpath = d3.geoPath(proj);
 const pr = (p) => proj(p);
 
-const state = { year: 100, playing: false, layers: { civs: true, cities: true, routes: true, journeys: true, ideas: true, wars: true }, sel: null, chapter: -1, view: 'silk' };
+const DEFAULT_LAYERS = { civs: true, cities: true, routes: true, journeys: true, ideas: true, wars: true, today: false };
+const state = { year: 100, playing: false, layers: { ...DEFAULT_LAYERS }, sel: null, chapter: -1, view: 'silk' };
 let T = d3.zoomIdentity;
 let pinnedAt = null; // map position read from the URL, kept until the reader pans or zooms (the map may still be moving there)
 
@@ -20,7 +21,7 @@ const UI_EN = {
   'aria.views': 'Map view', 'aria.layers': 'Layers', 'aria.map': 'Map of civilisations, routes and events', 'aria.zin': 'Zoom in', 'aria.zout': 'Zoom out',
   'aria.play': 'Play', 'aria.pause': 'Pause', 'aria.speed': 'Playback speed', 'aria.timeline': 'Timeline: drag to change the year', 'aria.lang': 'Language',
   close: 'Close', leaveTour: 'Leave tour', speed: '{n} yr/s',
-  'layer.civs': 'Civilisations', 'layer.routes': 'Trade routes', 'layer.journeys': 'Journeys', 'layer.ideas': 'Spread of ideas', 'layer.wars': 'Battles',
+  'layer.civs': 'Civilisations', 'layer.today': 'Today’s borders', 'layer.routes': 'Trade routes', 'layer.journeys': 'Journeys', 'layer.ideas': 'Spread of ideas', 'layer.wars': 'Battles',
   'lane.med': 'Europe', 'lane.ne': 'Near East', 'lane.af': 'Africa', 'lane.sa': 'South Asia', 'lane.st': 'Steppe', 'lane.ea': 'East Asia', 'lane.se': 'SE Asia', 'lane.am': 'Americas',
   culture: 'culture', capital: 'capital: {name}', centre: 'centre: {name}', circa: 'c. ', circaSuffix: ' (c.)',
   'route.land': 'Overland route', 'route.sea': 'Sea route', 'route.voyage': 'Voyages', 'route.short.land': 'land', 'route.short.sea': 'sea',
@@ -87,6 +88,7 @@ if (TR) {
   }
   for (const k of Object.keys(SUCCESSIONS)) if (!TR.successions[k]) missing.push(`succession ${k}`);
   for (const k of Object.keys(UI_EN)) if (!(k in TR.ui)) missing.push(`ui ${k}`);
+  for (const k of Object.keys(GEO.countries.names.en)) if (!GEO.countries.names[LANG]?.[k]) missing.push(`country ${k}`);
   if (missing.length) console.warn(`${LANG}: ${missing.length} missing translations`, missing);
 }
 window.__i18nMissing = missing;
@@ -113,6 +115,7 @@ d3.select('#lang').on('change', function () {
   location.href = u.href;
 });
 const sphereName = Object.fromEntries(SPHERES.map((s) => [s.id, s.name]));
+const countryNames = GEO.countries.names[LANG] ?? GEO.countries.names.en;
 
 // ---------- prepare data ----------
 const line = d3.line().curve(d3.curveCatmullRomClosed.alpha(0.5));
@@ -148,6 +151,13 @@ for (const e of EVENTS) {
   e.start = Math.min(...ys); e.end = Math.max(...ys);
   e.win = [e.start - 1, e.end + (e.linger || 60)];
 }
+// Today's countries, labelled at the centre of their largest piece (base projection units).
+const countryObj = GEO.countries.objects.countries;
+const COUNTRIES = topojson.feature(GEO.countries, countryObj).features.filter((f) => f.id && f.geometry).map((f) => {
+  const polys = f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates.map((c) => ({ type: 'Polygon', coordinates: c })) : [f.geometry];
+  const big = d3.greatest(polys, (g) => gpath.area(g));
+  return { id: f.id, name: countryNames[f.id] ?? GEO.countries.names.en[f.id], p: gpath.centroid(big), area: gpath.area(big) };
+}).sort((a, b) => b.area - a.area);
 for (const c of CITIES) { c.p = pr(c.at); c.from = c.pop[0][0]; c.peak = c.pop.reduce((a, b) => (b[1] > a[1] ? b : a)); }
 // Population (thousands) at a year: interpolated between keyframes, 0 before the first, the last value after the last.
 function cityPop(c, y) {
@@ -166,7 +176,7 @@ const evYears = (e) => (e.kind === 'conflict' ? fmtYear(e.year) : (Math.round(e.
 
 // ---------- map scaffold ----------
 const svg = d3.select('#map');
-const land = topojson.feature(GEO.land, GEO.land.objects.land);
+const land = topojson.merge(GEO.countries, countryObj.geometries);
 const defs = svg.append('defs');
 defs.append('clipPath').attr('id', 'landclip').attr('clipPathUnits', 'userSpaceOnUse').append('path').attr('d', gpath(land));
 const zg = svg.append('g');
@@ -175,6 +185,7 @@ zg.append('path').attr('class', 'landp').attr('d', gpath(land));
 const civG = zg.append('g').attr('clip-path', 'url(#landclip)');
 zg.append('path').attr('class', 'lakes').attr('d', gpath({ type: 'MultiPolygon', coordinates: GEO.lakes }));
 zg.append('path').attr('class', 'rivers').attr('d', gpath({ type: 'MultiLineString', coordinates: GEO.rivers }));
+const bordersP = zg.append('path').attr('class', 'borders').attr('d', gpath(topojson.mesh(GEO.countries, countryObj, (a, b) => a !== b)));
 const ov = svg.append('g');
 const routeG = ov.append('g'), evG = ov.append('g'), cityG = ov.append('g'), labG = ov.append('g'), warG = ov.append('g');
 
@@ -386,6 +397,17 @@ function drawLabels() {
   }
   labG.selectAll('text.ctag').data(cout, (d) => d.c.id).join('text').attr('class', (d) => `ctag${d.c.id === csel ? ' sel' : ''}`)
     .attr('x', (d) => d.x).attr('y', (d) => d.y + 4).text((d) => d.c.name);
+  // Today's country names last, where nothing older is written.
+  const tout = [];
+  if (state.layers.today) for (const d of COUNTRIES) {
+    const x = sx(d.p), y = sy(d.p);
+    if (x < -40 || x > w + 40 || y < -10 || y > h + 10 || d.area * T.k * T.k < 700) continue;
+    const tw = textWidth(d.name, 10.5, 0.5) + 4;
+    const bx = [x - tw / 2, y - 9, x + tw / 2, y + 3];
+    if (boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
+    boxes.push(bx); tout.push({ d, x, y });
+  }
+  labG.selectAll('text.today').data(tout, (t) => t.d.id).join('text').attr('class', 'today').attr('x', (t) => t.x).attr('y', (t) => t.y).text((t) => t.d.name);
   labG.selectAll('circle.capdot').data(out, (d) => d.c.id).join('circle').attr('class', 'capdot').attr('r', 2.6)
     .attr('cx', (d) => d.x).attr('cy', (d) => d.y).style('fill', (d) => `var(--c-${d.c.s})`);
   labG.selectAll('text.lab').data(out, (d) => d.c.id).join('text').attr('class', (d) => `lab${d.c.kind === 'culture' ? ' culture' : ''}`)
@@ -393,7 +415,7 @@ function drawLabels() {
 }
 
 function drawOverlay() { drawRoutes(); drawEvents(); drawCities(); drawLabels(); }
-function drawMap() { drawCivs(); drawOverlay(); }
+function drawMap() { bordersP.attr('display', state.layers.today ? null : 'none'); drawCivs(); drawOverlay(); }
 
 // ---------- header controls ----------
 const VIEW_BUTTONS = ['silk', 'med', 'ocean', 'east', 'world'];
@@ -405,6 +427,7 @@ const LAYERS = [
   { id: 'journeys', glyph: '<path d="M1,8Q11,-2 21,6" fill="none" stroke="var(--journey)" stroke-width="1.6" stroke-dasharray="4 2.5"/><circle cx="21" cy="6" r="2.4" fill="var(--journey)"/>' },
   { id: 'ideas', glyph: '<path d="M1,8Q11,-2 21,6" fill="none" stroke="var(--idea)" stroke-width="1.8"/><circle cx="1" cy="8" r="2.4" fill="var(--idea)"/><circle cx="21" cy="6" r="2.4" fill="var(--idea)"/>' },
   { id: 'wars', glyph: '<path transform="translate(11,5)" d="M0,-5L1.5,-1.5L5,0L1.5,1.5L0,5L-1.5,1.5L-5,0L-1.5,-1.5Z" fill="var(--war)"/>' },
+  { id: 'today', glyph: '<path d="M1,9L7,3L13,7L21,1" fill="none" stroke="var(--fg)" stroke-opacity=".6" stroke-width="1.2" stroke-dasharray="3 1.5"/>' },
 ];
 d3.select('#layers').selectAll('button').data(LAYERS).join('button').attr('type', 'button').attr('class', 'layer')
   .html((d) => `<svg viewBox="0 0 22 10" aria-hidden="true">${d.glyph}</svg>${msg(`layer.${d.id}`)}`)
@@ -759,7 +782,7 @@ document.addEventListener('keydown', (ev) => {
 // ---------- address ----------
 // The URL hash holds what is on screen, so a link can be shared and the browser's back and forward buttons work:
 // year (negative for BC), view (a named view) or at (lon,lat,zoom after panning), sel (type.id), tour (stop
-// index) and hide (layers turned off). Navigation (selecting, jumping, tour stops, dragging the timeline,
+// index), hide (layers turned off) and show (layers turned on that are off by default). Navigation (selecting, jumping, tour stops, dragging the timeline,
 // playing) adds a history entry; continuous changes such as playback and zooming update the current one.
 const SEL_LISTS = { civ: CIVS, city: CITIES, route: ROUTES, event: EVENTS };
 function encodeHash() {
@@ -769,8 +792,9 @@ function encodeHash() {
   else p.set('at', (pinnedAt ?? mapPosition()).map((v, i) => +v.toFixed(i < 2 ? 2 : 3)).join(','));
   if (state.sel) p.set('sel', `${state.sel.type}.${state.sel.id}`);
   if (state.chapter >= 0) p.set('tour', state.chapter + 1);
-  const off = LAYERS.filter((l) => !state.layers[l.id]).map((l) => l.id);
-  if (off.length) p.set('hide', off.join(','));
+  const changed = (on) => LAYERS.filter((l) => DEFAULT_LAYERS[l.id] === !on && state.layers[l.id] === on).map((l) => l.id).join(',');
+  if (changed(false)) p.set('hide', changed(false));
+  if (changed(true)) p.set('show', changed(true));
   return '#' + p.toString().replace(/%2C/g, ',');
 }
 let navPush = false, urlTimer = null, applying = false;
@@ -787,8 +811,8 @@ function flushURL() {
 function applyHash(animate) {
   const p = new URLSearchParams(location.hash.slice(1));
   applying = true; stop();
-  const hide = new Set((p.get('hide') || '').split(','));
-  for (const l of LAYERS) state.layers[l.id] = !hide.has(l.id);
+  const hide = new Set((p.get('hide') || '').split(',')), show = new Set((p.get('show') || '').split(','));
+  for (const l of LAYERS) state.layers[l.id] = show.has(l.id) || (DEFAULT_LAYERS[l.id] && !hide.has(l.id));
   d3.selectAll('#layers button').attr('aria-pressed', (d) => String(state.layers[d.id]));
   const ch = +p.get('tour') - 1;
   state.chapter = ch >= 0 && ch < CHAPTERS.length ? Math.floor(ch) : -1;
