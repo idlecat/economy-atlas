@@ -179,6 +179,20 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await page.click("#panel .stepper button:not(:disabled)");
   await page.waitForTimeout(300);
   await expect(text("#stampyear").then((s) => s !== before), "previous/next moment moves the year");
+
+  where = `ancient ${lang} link`;
+  await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities`, { waitUntil: "load" });
+  await page.waitForTimeout(800);
+  await expect(text("#stampyear").then((s) => s.includes("150")), "link sets the year");
+  await expect(page.$("#panel .civcard").then(Boolean), "link selects a civilisation");
+  await expect(page.$$eval("#map circle.city", (e) => e.length).then((n) => n === 0), "link hides a layer");
+  await expect(page.$eval('#views button[aria-pressed="true"]', (b) => b.__data__).then((v) => v === "east"), "link sets the view");
+  await page.click("#panel [data-close]");
+  await page.waitForTimeout(500);
+  await expect(page.evaluate(() => !location.hash.includes("sel=")), "closing updates the URL");
+  await page.goBack();
+  await page.waitForTimeout(500);
+  await expect(page.$("#panel .civcard").then(Boolean), "back restores the selection");
 }
 if (!fs.existsSync(new URL("ancient/index.html", SITE))) console.log("== ancient crossroads: not built, skipped");
 

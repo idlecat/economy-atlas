@@ -35,6 +35,7 @@ I18N.zh = {
     'now.cities': '最大的城市', 'now.noCities': '这一年没有画出城市。',
     'now.title': '{year}的地图', 'now.powers': '{n}个政权', 'now.nothing': '这一年图上没有内容。', 'now.routes': '使用中的商路',
     'now.noRoutes': '这一年没有画出长途商路。', 'now.events': '当前的事件', 'now.noEvents': '当前没有旅程、传播或战役。',
+    share: '复制链接', shared: '链接已复制', 'share.prompt': '复制这个链接：',
   },
   about: `<h2>这张地图是怎么做的</h2>
   <p>这里的每一条边界、商路和日期都是参考标准历史地图集和工具书手工绘制的简化草图。它展示的是大致格局，而不是精确的疆界。</p>

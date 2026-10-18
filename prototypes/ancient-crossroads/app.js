@@ -7,6 +7,7 @@ const pr = (p) => proj(p);
 
 const state = { year: 100, playing: false, layers: { civs: true, cities: true, routes: true, journeys: true, ideas: true, wars: true }, sel: null, chapter: -1, view: 'silk' };
 let T = d3.zoomIdentity;
+let pinnedAt = null; // map position read from the URL, kept until the reader pans or zooms (the map may still be moving there)
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -41,6 +42,7 @@ const UI_EN = {
   'now.cities': 'Largest cities', 'now.noCities': 'No cities drawn for this year.',
   'now.title': 'On the map in {year}', 'now.powers': '{n} powers', 'now.nothing': 'Nothing drawn for this year.', 'now.routes': 'Trade routes in use',
   'now.noRoutes': 'No long-distance routes drawn for this year.', 'now.events': 'Events in view', 'now.noEvents': 'No journeys, spreads or battles in view.',
+  share: 'Copy link', shared: 'Link copied', 'share.prompt': 'Copy this link:',
 };
 const LANGS = { en: 'English', ...Object.fromEntries(Object.entries(I18N).map(([k, v]) => [k, v.native])) };
 const LANG = (() => {
@@ -105,6 +107,7 @@ d3.select('#lang').attr('aria-label', msg('aria.lang')).selectAll('option').data
   .attr('value', (d) => d[0]).property('selected', (d) => d[0] === LANG).text((d) => d[1]);
 d3.select('#lang').on('change', function () {
   try { localStorage.setItem('lang', this.value); } catch { /* storage blocked */ }
+  flushURL();
   const u = new URL(location.href);
   if (this.value === 'en') u.searchParams.delete('lang'); else u.searchParams.set('lang', this.value);
   location.href = u.href;
@@ -175,7 +178,9 @@ zg.append('path').attr('class', 'rivers').attr('d', gpath({ type: 'MultiLineStri
 const ov = svg.append('g');
 const routeG = ov.append('g'), evG = ov.append('g'), cityG = ov.append('g'), labG = ov.append('g'), warG = ov.append('g');
 
-const zoom = d3.zoom().scaleExtent([0.8, 16]).on('zoom', (ev) => { T = ev.transform; zg.attr('transform', T); drawOverlay(); });
+const zoom = d3.zoom().scaleExtent([0.8, 16])
+  .on('zoom', (ev) => { T = ev.transform; zg.attr('transform', T); drawOverlay(); if (ev.sourceEvent) customView(); })
+  .on('end', () => scheduleURL());
 svg.call(zoom).on('dblclick.zoom', null);
 const size = () => { const n = svg.node(); return [n.clientWidth || 800, n.clientHeight || 500]; };
 function viewTransform(name) {
@@ -188,14 +193,30 @@ function viewTransform(name) {
   const k = Math.min(w / (bx[1] - bx[0]), h / (by[1] - by[0])) * 0.96;
   return d3.zoomIdentity.translate(w / 2 - k * (bx[0] + bx[1]) / 2, h / 2 - k * (by[0] + by[1]) / 2).scale(k);
 }
-function setView(name, animate = true) {
+function setView(name, animate = true, t = viewTransform(name)) {
   state.view = name;
-  const t = viewTransform(name);
   (animate ? svg.transition().duration(900).ease(d3.easeCubicInOut) : svg).call(zoom.transform, t);
   d3.selectAll('#views button').attr('aria-pressed', (d) => String(d === name));
 }
-d3.select('#zin').on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1.6));
-d3.select('#zout').on('click', () => svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.6));
+// After the reader pans or zooms, the map no longer shows a named view; the URL then keeps its centre and zoom.
+function customView() {
+  pinnedAt = null;
+  if (state.view === null) return;
+  state.view = null;
+  d3.selectAll('#views button').attr('aria-pressed', 'false');
+}
+// Centre and zoom relative to the world view, so a shared position looks alike on other screen sizes.
+function mapPosition() {
+  const [w, h] = size();
+  const [lon, lat] = proj.invert(T.invert([w / 2, h / 2]));
+  return [lon, lat, T.k / viewTransform('world').k];
+}
+function positionTransform([lon, lat, z]) {
+  const [w, h] = size(), k = z * viewTransform('world').k, [px, py] = pr([lon, lat]);
+  return d3.zoomIdentity.translate(w / 2 - k * px, h / 2 - k * py).scale(k);
+}
+d3.select('#zin').on('click', () => { customView(); svg.transition().duration(300).call(zoom.scaleBy, 1.6); });
+d3.select('#zout').on('click', () => { customView(); svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.6); });
 
 // ---------- tooltip ----------
 const tip = d3.select('#tip');
@@ -376,7 +397,7 @@ function drawMap() { drawCivs(); drawOverlay(); }
 
 // ---------- header controls ----------
 const VIEW_BUTTONS = ['silk', 'med', 'ocean', 'east', 'world'];
-d3.select('#views').selectAll('button').data(VIEW_BUTTONS).join('button').attr('type', 'button').text((d) => VIEWS[d].name).on('click', (ev, d) => setView(d));
+d3.select('#views').selectAll('button').data(VIEW_BUTTONS).join('button').attr('type', 'button').text((d) => VIEWS[d].name).on('click', (ev, d) => { markNav(); setView(d); });
 const LAYERS = [
   { id: 'civs', glyph: '<rect x="1" y="1" width="20" height="8" rx="2" fill="var(--c-ne)" fill-opacity=".45" stroke="var(--c-ne)"/>' },
   { id: 'cities', glyph: '<circle cx="6" cy="5" r="4" class="city"/><circle cx="16" cy="6" r="2.6" class="city"/>' },
@@ -388,7 +409,7 @@ const LAYERS = [
 d3.select('#layers').selectAll('button').data(LAYERS).join('button').attr('type', 'button').attr('class', 'layer')
   .html((d) => `<svg viewBox="0 0 22 10" aria-hidden="true">${d.glyph}</svg>${msg(`layer.${d.id}`)}`)
   .attr('aria-pressed', (d) => String(state.layers[d.id]))
-  .on('click', function (ev, d) { state.layers[d.id] = !state.layers[d.id]; d3.select(this).attr('aria-pressed', String(state.layers[d.id])); drawMap(); renderPanel(); });
+  .on('click', function (ev, d) { state.layers[d.id] = !state.layers[d.id]; d3.select(this).attr('aria-pressed', String(state.layers[d.id])); drawMap(); renderPanel(); scheduleURL(); });
 
 const about = document.getElementById('about');
 d3.select('#aboutbtn').on('click', () => about.showModal());
@@ -455,7 +476,7 @@ function civStep(c, dir) {
 }
 // Moves the year to a step and, if the step belongs to another member of the succession, selects that member.
 function goStep(s) {
-  stop();
+  stop(); markNav();
   if (state.sel?.type !== 'civ' || state.sel.id !== s.c.id) state.sel = { type: 'civ', id: s.c.id };
   setYear(s.y);
 }
@@ -570,7 +591,7 @@ panel.on('click', (ev) => {
   const ds = b.dataset;
   if (ds.chapter !== undefined) playChapter(+ds.chapter);
   else if (ds.replay !== undefined) playChapter(+ds.replay);
-  else if (ds.endtour !== undefined) { state.chapter = -1; renderPanel(true); drawTimelineMarks(); }
+  else if (ds.endtour !== undefined) { markNav(); state.chapter = -1; renderPanel(true); drawTimelineMarks(); scheduleURL(); }
   else if (ds.close !== undefined) select(null);
   else if (ds.civ) select({ type: 'civ', id: ds.civ });
   else if (ds.route) select({ type: 'route', id: ds.route });
@@ -580,7 +601,7 @@ panel.on('click', (ev) => {
     if (!evVisible(e, state.year)) setYear(e.kind === 'conflict' ? e.year + 1 : e.end);
     select({ type: 'event', id: ds.event });
   } else if (ds.stepCiv) goStep({ y: +ds.jump, c: CIVS.find((d) => d.id === ds.stepCiv) });
-  else if (ds.jump) { stop(); setYear(+ds.jump); }
+  else if (ds.jump) { stop(); markNav(); setYear(+ds.jump); }
 });
 panel.on('mouseover', (ev) => {
   const b = ev.target.closest('button[data-civ]');
@@ -589,8 +610,9 @@ panel.on('mouseover', (ev) => {
 panel.on('mouseout', () => drawCivs());
 
 function select(s) {
+  markNav();
   state.sel = s && state.sel && state.sel.type === s.type && state.sel.id === s.id ? null : s;
-  drawMap(); renderPanel(true); drawTimelineMarks();
+  drawMap(); renderPanel(true); drawTimelineMarks(); scheduleURL();
   if (state.sel) { panel.node().scrollTop = 0; if (matchMedia('(max-width: 860px)').matches) panel.node().scrollIntoView({ block: 'start' }); }
 }
 svg.on('click', () => { if (state.sel) select(null); });
@@ -665,7 +687,7 @@ function drawCursor() {
   tlCur.select('text').attr('x', bx + w / 2).attr('y', 11).text(lab);
 }
 let dragging = false, downX = 0;
-tl.on('pointerdown', (ev) => { dragging = true; downX = ev.clientX; tl.node().setPointerCapture(ev.pointerId); stop(); scrub(ev); });
+tl.on('pointerdown', (ev) => { markNav(); dragging = true; downX = ev.clientX; tl.node().setPointerCapture(ev.pointerId); stop(); scrub(ev); });
 tl.on('pointermove', (ev) => { if (dragging) scrub(ev); });
 tl.on('pointerup', (ev) => {
   dragging = false;
@@ -686,12 +708,13 @@ function setYear(y) {
   d3.select('#stampyear').text(fmtYear(state.year));
   const ch = state.chapter >= 0 ? CHAPTERS[state.chapter] : null;
   d3.select('#stampsub').text(ch && Math.abs(ch.year - state.year) < 1 ? ch.title : '');
-  drawMap(); drawCursor(); drawTimelineMarks(); renderPanel();
+  drawMap(); drawCursor(); drawTimelineMarks(); renderPanel(); scheduleURL();
 }
 let raf = null, last = 0;
 const playBtn = d3.select('#play');
 const PLAY = '<svg viewBox="0 0 16 16"><path d="M3 1.5v13l11-6.5z"/></svg>', PAUSE = '<svg viewBox="0 0 16 16"><path d="M3 1.5h3.5v13H3zM9.5 1.5H13v13H9.5z"/></svg>';
 function play() {
+  markNav();
   if (state.year >= MAX) setYear(MIN);
   state.playing = true; playBtn.html(PAUSE).attr('aria-label', msg('aria.pause')); last = performance.now();
   const step = (now) => {
@@ -703,12 +726,12 @@ function play() {
   };
   raf = requestAnimationFrame(step);
 }
-function stop() { state.playing = false; cancelAnimationFrame(raf); cancelAnimationFrame(tweenRaf); playBtn.html(PLAY).attr('aria-label', msg('aria.play')); }
+function stop() { state.playing = false; cancelAnimationFrame(raf); cancelAnimationFrame(tweenRaf); playBtn.html(PLAY).attr('aria-label', msg('aria.play')); scheduleURL(); }
 playBtn.on('click', () => (state.playing ? stop() : play()));
 let tweenRaf = null;
 function playChapter(i) {
   if (i < 0 || i >= CHAPTERS.length) return;
-  stop();
+  stop(); markNav();
   state.chapter = i; state.sel = null;
   const c = CHAPTERS[i];
   setView(c.view);
@@ -733,11 +756,66 @@ document.addEventListener('keydown', (ev) => {
   } else if (ev.key === ' ' && !ev.target.closest('button')) { state.playing ? stop() : play(); ev.preventDefault(); }
 });
 
+// ---------- address ----------
+// The URL hash holds what is on screen, so a link can be shared and the browser's back and forward buttons work:
+// year (negative for BC), view (a named view) or at (lon,lat,zoom after panning), sel (type.id), tour (stop
+// index) and hide (layers turned off). Navigation (selecting, jumping, tour stops, dragging the timeline,
+// playing) adds a history entry; continuous changes such as playback and zooming update the current one.
+const SEL_LISTS = { civ: CIVS, city: CITIES, route: ROUTES, event: EVENTS };
+function encodeHash() {
+  const p = new URLSearchParams();
+  p.set('year', Math.round(state.year));
+  if (state.view) p.set('view', state.view);
+  else p.set('at', (pinnedAt ?? mapPosition()).map((v, i) => +v.toFixed(i < 2 ? 2 : 3)).join(','));
+  if (state.sel) p.set('sel', `${state.sel.type}.${state.sel.id}`);
+  if (state.chapter >= 0) p.set('tour', state.chapter + 1);
+  const off = LAYERS.filter((l) => !state.layers[l.id]).map((l) => l.id);
+  if (off.length) p.set('hide', off.join(','));
+  return '#' + p.toString().replace(/%2C/g, ',');
+}
+let navPush = false, urlTimer = null, applying = false;
+const markNav = () => { if (!applying) navPush = true; };
+// Not while playing (stop() writes it), since browsers limit how often the history may be changed.
+function scheduleURL() { if (!applying && !state.playing && !urlTimer) urlTimer = setTimeout(flushURL, 250); }
+function flushURL() {
+  clearTimeout(urlTimer); urlTimer = null;
+  const hash = encodeHash(), push = navPush;
+  navPush = false;
+  if (hash === location.hash) return;
+  try { history[push ? 'pushState' : 'replaceState'](null, '', hash); } catch { /* history blocked, e.g. in a sandboxed frame */ }
+}
+function applyHash(animate) {
+  const p = new URLSearchParams(location.hash.slice(1));
+  applying = true; stop();
+  const hide = new Set((p.get('hide') || '').split(','));
+  for (const l of LAYERS) state.layers[l.id] = !hide.has(l.id);
+  d3.selectAll('#layers button').attr('aria-pressed', (d) => String(state.layers[d.id]));
+  const ch = +p.get('tour') - 1;
+  state.chapter = ch >= 0 && ch < CHAPTERS.length ? Math.floor(ch) : -1;
+  const [type, id] = (p.get('sel') || '').split('.');
+  state.sel = SEL_LISTS[type]?.some((d) => d.id === id) ? { type, id } : null;
+  const at = (p.get('at') || '').split(',').map(Number);
+  const chapter = CHAPTERS[state.chapter];
+  if (at.length === 3 && at.every(Number.isFinite) && at[2] > 0) { pinnedAt = at; setView(null, animate, positionTransform(at)); }
+  else { pinnedAt = null; const v = p.get('view'); setView(VIEWS[v] ? v : chapter ? chapter.view : 'silk', animate); }
+  const y = p.get('year');
+  setYear(y !== null && y !== '' && Number.isFinite(+y) ? Math.round(+y) : chapter ? chapter.year : 100);
+  renderPanel(true); drawTimelineMarks();
+  applying = false;
+}
+window.addEventListener('popstate', () => { clearTimeout(urlTimer); urlTimer = null; navPush = false; applyHash(true); });
+
+const shareBtn = d3.select('#share');
+shareBtn.on('click', async () => {
+  flushURL();
+  try { await navigator.clipboard.writeText(location.href); } catch { window.prompt(msg('share.prompt'), location.href); return; }
+  shareBtn.text(msg('shared'));
+  setTimeout(() => shareBtn.text(msg('share')), 1600);
+});
+
 // ---------- boot ----------
 let resizeT;
-new ResizeObserver(() => { clearTimeout(resizeT); resizeT = setTimeout(() => { layoutTimeline(); setView(state.view, false); }, 60); }).observe(document.body);
+new ResizeObserver(() => { clearTimeout(resizeT); resizeT = setTimeout(() => { layoutTimeline(); if (state.view) setView(state.view, false); }, 60); }).observe(document.body);
 layoutTimeline();
-setView('silk', false);
-setYear(state.year);
-renderPanel(true);
+applyHash(false);
 })();
