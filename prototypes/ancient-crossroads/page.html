@@ -128,6 +128,9 @@ header { grid-area: head; display: flex; flex-wrap: wrap; align-items: center; g
 #tip b { display: block; font-weight: 700; }
 #tip .yrs { font: 12px var(--f-data); color: var(--muted); }
 
+/* The selected item's card floats over the map's top right, left of the zoom buttons. */
+#selcard { position: absolute; top: 10px; right: calc(50px + env(safe-area-inset-right, 0px)); z-index: 4; width: min(380px, calc(100% - 64px)); max-height: calc(100% - 20px); overflow-y: auto; overscroll-behavior: contain; border-radius: 10px; }
+#selcard .card { box-shadow: 0 6px 24px rgb(0 0 0 / .28); }
 aside { grid-area: panel; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 2px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; box-shadow: var(--shadow); }
 .eyebrow { font: 500 12px/1 var(--f-data); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -233,6 +236,7 @@ dialog a { color: var(--accent); }
   html { height: auto; }
   #mapwrap { height: 58svh; min-height: 320px; }
   aside { overflow: visible; }
+  #selcard { left: 8px; right: 46px; width: auto; max-height: calc(100% - 16px); top: 8px; }
   .stamp b { font-size: 34px; }
   .brand h1 { font-size: 22px; }
 }
@@ -251,6 +255,7 @@ dialog a { color: var(--accent); }
   <div class="stamp"><b id="stampyear">AD 100</b><small id="stampsub"></small></div>
   <div class="zoomctl"><button type="button" id="zin" aria-label="Zoom in" data-i18n-aria="aria.zin">+</button><button type="button" id="zout" aria-label="Zoom out" data-i18n-aria="aria.zout">−</button></div>
   <div class="credit" data-i18n="credit">Borders approximate · Coastlines: Natural Earth</div>
+  <div id="selcard" hidden></div>
   <div id="tip" hidden></div>
 </div>
 

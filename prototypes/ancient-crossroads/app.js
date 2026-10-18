@@ -468,6 +468,7 @@ d3.select('#aboutclose').on('click', () => about.close());
 
 // ---------- panel ----------
 const panel = d3.select('#panel');
+const selcard = d3.select('#selcard');
 const glyphFor = (kind) => ({
   land: '<svg class="glyph" viewBox="0 0 14 10"><path d="M0,5H14" stroke="var(--gold)" stroke-width="2.2" stroke-dasharray="4 2"/></svg>',
   sea: '<svg class="glyph" viewBox="0 0 14 10"><path d="M1,5H13" stroke="var(--searoute)" stroke-width="2.2" stroke-dasharray="1 3" stroke-linecap="round"/></svg>',
@@ -642,11 +643,15 @@ function renderPanel(force) {
   const key = [y, state.chapter, state.sel && state.sel.type + state.sel.id, Object.values(state.layers).join()].join('|');
   if (!force && key === panelKey) return;
   panelKey = key;
-  const st = panel.node().scrollTop;
-  panel.html(selectedHTML() + tourHTML() + nowHTML());
-  panel.node().scrollTop = st;
+  const st = panel.node().scrollTop, sst = selcard.node().scrollTop;
+  const sel = selectedHTML();
+  selcard.html(sel).property('hidden', !sel);
+  panel.html(tourHTML() + nowHTML());
+  panel.node().scrollTop = st; selcard.node().scrollTop = sst;
 }
-panel.on('click', (ev) => {
+panel.on('click', onPanelClick);
+selcard.on('click', onPanelClick);
+function onPanelClick(ev) {
   const b = ev.target.closest('button'); if (!b) return;
   const ds = b.dataset;
   if (ds.chapter !== undefined) playChapter(+ds.chapter);
@@ -662,18 +667,20 @@ panel.on('click', (ev) => {
     select({ type: 'event', id: ds.event });
   } else if (ds.stepCiv) goStep({ y: +ds.jump, c: CIVS.find((d) => d.id === ds.stepCiv) });
   else if (ds.jump) { stop(); markNav(); setYear(+ds.jump); }
-});
-panel.on('mouseover', (ev) => {
-  const b = ev.target.closest('button[data-civ]');
-  civG.selectAll('path.civ').classed('sel', (d) => !!b && d.c.id === b.dataset.civ);
-});
-panel.on('mouseout', () => drawCivs());
+}
+for (const el of [panel, selcard]) {
+  el.on('mouseover', (ev) => {
+    const b = ev.target.closest('button[data-civ]');
+    civG.selectAll('path.civ').classed('sel', (d) => !!b && d.c.id === b.dataset.civ);
+  });
+  el.on('mouseout', () => drawCivs());
+}
 
 function select(s) {
   markNav();
   state.sel = s && state.sel && state.sel.type === s.type && state.sel.id === s.id ? null : s;
   drawMap(); renderPanel(true); drawTimelineMarks(); scheduleURL();
-  if (state.sel) { panel.node().scrollTop = 0; if (matchMedia('(max-width: 860px)').matches) panel.node().scrollIntoView({ block: 'start' }); }
+  if (state.sel) selcard.node().scrollTop = 0;
 }
 svg.on('click', () => { if (state.sel) select(null); });
 
@@ -815,7 +822,8 @@ document.addEventListener('keydown', (ev) => {
     const s = civStep(CIVS.find((d) => d.id === state.sel.id), ev.key === '[' ? 'prev' : 'next');
     if (s) goStep(s);
     ev.preventDefault();
-  } else if (ev.key === ' ' && !ev.target.closest('button')) { state.playing ? stop() : play(); ev.preventDefault(); }
+  } else if (ev.key === 'Escape' && state.sel) select(null);
+  else if (ev.key === ' ' && !ev.target.closest('button')) { state.playing ? stop() : play(); ev.preventDefault(); }
 });
 
 // ---------- address ----------

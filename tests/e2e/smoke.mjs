@@ -165,8 +165,8 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await expect(page.$$eval("#map g.route", (e) => e.length).then((n) => n > 2), "routes drawn");
   await expect(page.$$eval("#map circle.city", (e) => e.length).then((n) => n > 10), "cities drawn");
   await page.dispatchEvent("#map circle.city:last-of-type", "click");
-  await expect(page.$("#panel .popchart").then(Boolean), "city details open");
-  await page.click("#panel [data-close]");
+  await expect(page.$("#selcard .popchart").then(Boolean), "city details open");
+  await page.click("#selcard [data-close]");
   const stops = await page.$$eval("#panel .tour ol button[data-chapter]", (b) => b.length);
   await expect(Promise.resolve(stops >= 17), "tour stops listed");
   for (let i = 0; i < stops; i++) {
@@ -176,37 +176,37 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
     await expect(text("#panel .tour h2").then((s) => s.length > 1), "tour stop title");
   }
   await page.dispatchEvent("#map path.civ", "click"); // routes drawn on top would intercept a real click
-  await expect(page.$("#panel [data-close]").then(Boolean), "civilisation details open");
+  await expect(page.$("#selcard [data-close]").then(Boolean), "civilisation details open");
   const before = await text("#stampyear");
-  await page.click("#panel .stepper button:not(:disabled)");
+  await page.click("#selcard .stepper button:not(:disabled)");
   await page.waitForTimeout(300);
   await expect(text("#stampyear").then((s) => s !== before), "previous/next moment moves the year");
 
   where = `ancient ${lang} moment picture`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-1250&sel=civ.shang`, { waitUntil: "load" });
   await page.waitForTimeout(500);
-  await expect(page.$eval("#panel .pic img", (i) => i.complete && i.naturalWidth > 0 && /moment-shang/.test(i.src)), "the moment's picture is shown");
+  await expect(page.$eval("#selcard .pic img", (i) => i.complete && i.naturalWidth > 0 && /moment-shang/.test(i.src)), "the moment's picture is shown");
 
   where = `ancient ${lang} 1900`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=1885&view=world&sel=civ.britain`, { waitUntil: "load" });
   await page.waitForTimeout(500);
   await expect(page.$$eval("#map text.sublab", (e) => e.length).then((n) => n > 2), "colonies labelled");
-  await expect(text("#panel .civcard h2").then((s) => s.length > 1), "a modern empire's card");
+  await expect(text("#selcard .civcard h2").then((s) => s.length > 1), "a modern empire's card");
 
   where = `ancient ${lang} link`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities&show=today`, { waitUntil: "load" });
   await page.waitForTimeout(800);
   await expect(text("#stampyear").then((s) => s.includes("150")), "link sets the year");
-  await expect(page.$("#panel .civcard").then(Boolean), "link selects a civilisation");
+  await expect(page.$("#selcard .civcard").then(Boolean), "link selects a civilisation");
   await expect(page.$$eval("#map circle.city", (e) => e.length).then((n) => n === 0), "link hides a layer");
   await expect(page.$$eval("#map text.today", (e) => e.length).then((n) => n > 3), "link shows today's countries");
   await expect(page.$eval('#views button[aria-pressed="true"]', (b) => b.__data__).then((v) => v === "east"), "link sets the view");
-  await page.click("#panel [data-close]");
+  await page.click("#selcard [data-close]");
   await page.waitForTimeout(500);
   await expect(page.evaluate(() => !location.hash.includes("sel=")), "closing updates the URL");
   await page.goBack();
   await page.waitForTimeout(500);
-  await expect(page.$("#panel .civcard").then(Boolean), "back restores the selection");
+  await expect(page.$("#selcard .civcard").then(Boolean), "back restores the selection");
 }
 if (!fs.existsSync(new URL("ancient/index.html", SITE))) console.log("== ancient crossroads: not built, skipped");
 
