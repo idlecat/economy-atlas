@@ -207,10 +207,15 @@ def fetch_wiki_lang(meta, lang):
 
 
 def wiki_titles():
-    """English Wikipedia article titles: WIKI in details.js by civilisation id, and each city's wiki in cities.js as city-<id>."""
+    """English Wikipedia article titles: WIKI in details.js by civilisation id, MOMENT_WIKI as moment-<civ>-<year>,
+    and each city's wiki in cities.js as city-<id>."""
     src = (HERE / "details.js").read_text()
-    block = src[src.index("const WIKI = {"):src.index("};", src.index("const WIKI = {"))]
-    titles = dict(re.findall(r"""['"]?([\w-]+)['"]?: ['"]((?:[^'"\\]|\\.)+)['"]""", block))
+    def block(name):
+        start = src.index(f"const {name} = {{")
+        return src[start:src.index("};", start)]
+    titles = dict(re.findall(r"""['"]?([\w-]+)['"]?: ['"]((?:[^'"\\]|\\.)+)['"]""", block("WIKI")))
+    for civ, year, _, title in re.findall(r"""'([\w-]+) (-?\d+)': (['"])(.*?)\3""", block("MOMENT_WIKI")):
+        titles[f"moment-{civ}-{year}"] = title
     for cid, _, title in re.findall(r"""\{ id: '([\w-]+)'.*?wiki: (['"])(.*?)\2""", (HERE / "cities.js").read_text()):
         titles[f"city-{cid}"] = title
     return titles
@@ -338,11 +343,14 @@ def wiki_info(site, out_dir):
         (out_dir / "img").mkdir(parents=True)
     result = {}
     for cid, m in sorted(meta.items()):
-        entry = {"title": m["title"], "url": m["url"], "text": tidy(m["text"])}
+        moment = cid.startswith("moment-")  # only the picture and a link to the article
+        entry = {"title": m["title"], "url": m["url"], **({} if moment else {"text": tidy(m["text"])})}
         for lang in langs():
             if m.get(lang):
                 tr = m[lang]
-                entry[lang] = {"title": tr["title"], "url": tr["url"], "text": tidy_cjk(tr["text"]) if lang in ("zh", "ja") else tidy(tr["text"])}
+                entry[lang] = {"title": tr["title"], "url": tr["url"]}
+                if not moment:
+                    entry[lang]["text"] = tidy_cjk(tr["text"]) if lang in ("zh", "ja") else tidy(tr["text"])
         credit = m.get("credit")
         # only images whose licence is known
         if m.get("img_file") and credit and credit.get("license") and cid not in SKIP_IMAGES:
@@ -360,7 +368,7 @@ def wiki_info(site, out_dir):
             entry["credit"] = {k: credit[k] for k in ("artist", "license", "page")}
             entry["alt"] = credit.get("alt") or ""
         result[cid] = entry
-    print(f"Wikipedia details for {len(result)} civilisations and cities, {sum('img' in e for e in result.values())} with images")
+    print(f"Wikipedia details for {len(result)} civilisations, cities and moments, {sum('img' in e for e in result.values())} with images")
     return result
 
 

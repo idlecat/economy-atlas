@@ -180,6 +180,11 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await page.waitForTimeout(300);
   await expect(text("#stampyear").then((s) => s !== before), "previous/next moment moves the year");
 
+  where = `ancient ${lang} moment picture`;
+  await page.goto(`${BASE}/ancient/?lang=${lang}#year=-1250&sel=civ.shang`, { waitUntil: "load" });
+  await page.waitForTimeout(500);
+  await expect(page.$eval("#panel .pic img", (i) => i.complete && i.naturalWidth > 0 && /moment-shang/.test(i.src)), "the moment's picture is shown");
+
   where = `ancient ${lang} link`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities&show=today`, { waitUntil: "load" });
   await page.waitForTimeout(800);

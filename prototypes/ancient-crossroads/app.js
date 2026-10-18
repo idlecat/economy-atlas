@@ -504,6 +504,8 @@ function goStep(s) {
   setYear(s.y);
 }
 
+// A Wikipedia image with its credit; `what` (HTML) says what it shows.
+const picture = (info, alt, what) => `<figure class="pic"><img src="${esc(info.img)}" alt="${alt}" loading="lazy"><figcaption>${what}${info.credit ? `${msg('image', { artist: esc(info.credit.artist || msg('unknown')) })}${info.credit.license ? `, <a href="${esc(info.credit.page)}" target="_blank" rel="noopener">${esc(info.credit.license)}</a>` : ''}` : ''}</figcaption></figure>`;
 function civHTML(c, y) {
   const on = isActive(c, y); const end = Math.min(c.to, MAX); const yr = Math.round(y);
   const info = (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[c.id]) || null;
@@ -532,8 +534,15 @@ function civHTML(c, y) {
     now += goBtn(peakYear(c));
   }
 
-  const img = info && info.img ? `<figure class="pic"><img src="${esc(info.img)}" alt="${esc(info.alt || c.name)}" loading="lazy"><figcaption>${info.credit ? `${msg('image', { artist: esc(info.credit.artist || msg('unknown')) })}${info.credit.license ? `, <a href="${esc(info.credit.page)}" target="_blank" rel="noopener">${esc(info.credit.license)}</a>` : ''}` : ''}</figcaption></figure>` : '';
-  const timeline = moments.length ? `<div class="group"><h3>${msg('moments')}</h3><ol class="moments">${moments.map((m) => `<li class="${m[0] > yr ? 'later' : ''}${m === latest && on ? ' now' : ''}"><button type="button" data-jump="${m[0]}"><span class="yrs">${momentYear(m)}</span><span>${esc(m[1])}</span></button></li>`).join('')}</ol></div>` : '';
+  // The picture of the latest moment if it has one (MOMENT_WIKI), else the civilisation's own.
+  const momentInfo = (m) => (typeof WIKI_INFO !== 'undefined' && WIKI_INFO[`moment-${c.id}-${m[0]}`]) || null;
+  const mo = on && latest ? momentInfo(latest) : null;
+  let img = '';
+  if (mo && mo.img) {
+    const art = mo[LANG] || mo;
+    img = picture(mo, `${esc(latest[1])}`, `<a class="what" href="${esc(art.url)}" target="_blank" rel="noopener">${esc(art.title)}</a> · `);
+  } else if (info && info.img) img = picture(info, esc(info.alt || c.name), '');
+  const timeline = moments.length ? `<div class="group"><h3>${msg('moments')}</h3><ol class="moments">${moments.map((m) => { const p = momentInfo(m); return `<li class="${m[0] > yr ? 'later' : ''}${m === latest && on ? ' now' : ''}"><button type="button" data-jump="${m[0]}"><span class="yrs">${momentYear(m)}</span><span>${esc(m[1])}</span>${p && p.img ? `<img class="mthumb" src="${esc(p.img)}" alt="" loading="lazy">` : ''}</button></li>`; }).join('')}</ol></div>` : '';
   // The article in the page's language if there is one, else the English one.
   const art = info && (info[LANG] || info);
   const wiki = art ? `<div class="group"><h3>${msg(art === info && TR ? 'fromWikiEn' : 'fromWiki')}</h3>${art.text ? `<p class="wiki">${esc(art.text)}</p>` : ''}<p class="wikilink"><a href="${esc(art.url)}" target="_blank" rel="noopener">${msg('readWiki', { title: esc(art.title) })}</a></p><p class="yrs">${msg('wikiLicence')}</p></div>`

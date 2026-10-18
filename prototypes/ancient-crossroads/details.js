@@ -121,6 +121,60 @@ const MOMENTS = {
   greek: [[-776, 'First Olympic Games (traditional)'], [-750, 'Colonies founded overseas', 'c'], [-508, 'Democracy in Athens'], [-480, 'Persians defeated at Salamis'], [-431, 'Peloponnesian War begins'], [-338, 'Macedon defeats Athens and Thebes']],
 };
 
+// Pictures for key moments: the English Wikipedia article (by 'civilisation year', the moment's year) whose lead
+// image shows the moment, e.g. an oracle bone for the Shang capital at Yin. The card shows the picture of the
+// latest moment instead of the civilisation's own image. build.py fetches them like WIKI. Only pictures from the
+// time or of the place: no maps or battle plans (the map shows those) and no modern statues of ancient people.
+const MOMENT_WIKI = {
+  'sumer -3200': 'Cuneiform', 'sumer -2600': 'Royal Cemetery at Ur', 'sumer -2334': 'Sargon of Akkad',
+  'akkad -2334': 'Sargon of Akkad', 'akkad -2254': 'Victory Stele of Naram-Sin', 'ur3 -2112': 'Ziggurat of Ur',
+  'babylon1 -1760': 'Code of Hammurabi', 'hittite -1650': 'Hattusa', 'hittite -1274': 'Battle of Kadesh',
+  'hittite -1259': 'Egyptian–Hittite peace treaty', 'assyria3 -740': 'Tiglath-Pileser III',
+  'assyria3 -650': 'Library of Ashurbanipal', 'assyria3 -612': 'Battle of Nineveh (612 BC)',
+  'babylon2 -600': 'Ishtar Gate', 'babylon2 -587': 'Siege of Jerusalem (587 BC)', 'babylon2 -539': 'Cyrus Cylinder',
+  'achaemenid -550': 'Cyrus the Great', 'achaemenid -500': 'Behistun Inscription', 'achaemenid -330': 'Persepolis',
+  'macedon -359': 'Philip II of Macedon', 'macedon -333': 'Battle of Issus', 'seleucid -312': 'Seleucus I Nicator',
+  'seleucid -301': 'Battle of Ipsus', 'parthia -247': 'Arsaces I of Parthia', 'sasanian 224': 'Ardashir I',
+  'sasanian 260': 'Battle of Edessa', 'sasanian 531': 'Khosrow I', 'sasanian 636': 'Battle of al-Qadisiyyah',
+  'rome -50': 'Gallic Wars', 'rome -27': 'Augustus', 'rome 106': "Trajan's Column",
+  'rome 212': 'Constitutio Antoniniana', 'rome 330': 'Constantine the Great', 'wrome 410': 'Sack of Rome (410)',
+  'wrome 476': 'Romulus Augustulus', 'byzantium 537': 'Hagia Sophia', 'byzantium 555': 'Justinian I',
+  'byzantium 1025': 'Basil II', 'byzantium 1071': 'Battle of Manzikert', 'byzantium 1204': 'Sack of Constantinople',
+  'byzantium 1453': 'Fall of Constantinople', 'visigoth 585': 'Liuvigild', 'franks 768': 'Charlemagne',
+  'franks 843': 'Treaty of Verdun', 'hre 962': 'Otto the Great', 'hre 1077': 'Road to Canossa',
+  'hre 1356': 'Golden Bull of 1356', 'france 987': 'Hugh Capet', 'france 1214': 'Battle of Bouvines',
+  'france 1337': "Hundred Years' War", 'france 1429': 'Joan of Arc', 'iberia 1212': 'Battle of Las Navas de Tolosa',
+  'iberia 1479': 'Catholic Monarchs', 'iberia 1492': 'Fall of Granada', 'rus 988': "Christianization of Kievan Rus'",
+  'rus 1050': 'Yaroslav the Wise', 'rus 1240': 'Siege of Kiev (1240)', 'moscow 1380': 'Battle of Kulikovo',
+  'moscow 1480': 'Great Stand on the Ugra River', 'ottoman 1299': 'Osman I', 'ottoman 1389': 'Battle of Kosovo',
+  'ottoman 1402': 'Battle of Ankara', 'ottoman 1453': 'Mehmed II', 'rashidun 636': 'Battle of the Yarmuk',
+  'umayyad 691': 'Dome of the Rock', 'abbasid 762': 'Round city of Baghdad', 'abbasid 786': 'Harun al-Rashid',
+  'abbasid 1258': 'Siege of Baghdad (1258)', 'fatimid 969': 'Al-Azhar Mosque', 'fatimid 1171': 'Saladin',
+  'ghaznavid 1030': 'Mahmud of Ghazni', 'seljuk 1071': 'Battle of Manzikert', 'seljuk 1092': 'Malik-Shah I',
+  'timurid 1370': 'Timur', 'timurid 1398': 'Sack of Delhi (1398)', 'timurid 1450': 'Ulugh Beg Observatory',
+  'egypt-ok -3100': 'Narmer Palette', 'egypt-ok -2630': 'Pyramid of Djoser', 'egypt-ok -2560': 'Great Pyramid of Giza',
+  'egypt-mk -2055': 'Mentuhotep II', 'egypt-mk -1870': 'Senusret III', 'egypt-nk -1460': 'Thutmose III',
+  'egypt-nk -1350': 'Amarna letters', 'egypt-nk -1274': 'Battle of Kadesh', 'egypt-nk -1177': 'Sea Peoples',
+  'ptolemaic -280': 'Lighthouse of Alexandria', 'ptolemaic -196': 'Rosetta Stone', 'ptolemaic -30': 'Cleopatra',
+  'kush -730': 'Piye', 'kush -300': 'Meroë', 'mali 1324': 'Mansa Musa', 'almoravid 1086': 'Battle of Sagrajas',
+  'almoravid 1212': 'Battle of Las Navas de Tolosa', 'indus -2600': 'Mohenjo-daro', 'indus -2300': 'Indus script',
+  'maurya -260': 'Edicts of Ashoka', 'gupta 400': 'Iron pillar of Delhi', 'gupta 427': 'Nalanda mahavihara',
+  'chola 1010': 'Brihadisvara Temple, Thanjavur', 'delhi 1206': 'Qutb Minar', 'delhi 1398': 'Sack of Delhi (1398)',
+  'kushan 127': 'Kanishka', 'huns 451': 'Battle of the Catalaunian Plains', 'gokturk 690': 'Orkhon inscriptions',
+  'mongol 1206': 'Genghis Khan', 'mongol 1241': 'Battle of Legnica', 'mongol 1258': 'Siege of Baghdad (1258)',
+  'golden 1346': 'Siege of Caffa', 'golden 1380': 'Battle of Kulikovo', 'han -138': 'Zhang Qian', 'han 105': 'Cai Lun',
+  'tang 618': 'Emperor Gaozu of Tang', 'tang 690': 'Wu Zetian', 'tang 868': 'Diamond Sutra',
+  'song 960': 'Emperor Taizu of Song', 'song 1024': 'Jiaozi (currency)', 'tibet 641': 'Princess Wencheng',
+  'korea 1377': 'Jikji', 'korea 1392': 'Taejo of Joseon', 'korea 1446': 'Hunminjeongeum', 'japan 794': 'Heian-kyō',
+  'japan 1185': 'Minamoto no Yoritomo', 'khmer 1150': 'Angkor Wat', 'khmer 1181': 'Angkor Thom',
+  'daiviet 1288': 'Battle of Bạch Đằng (1288)', 'maya -300': 'El Mirador', 'maya 250': 'Tikal',
+  'maya 950': 'Chichen Itza', 'aztec 1325': 'Tenochtitlan', 'aztec 1487': 'Templo Mayor', 'inca 1438': 'Pachacuti',
+  'inca 1470': 'Chan Chan', 'shang -1250': 'Oracle bone', 'ezhou -551': 'Confucius', 'qin -221': 'Qin Shi Huang',
+  'qin -210': 'Terracotta Army', 'sui 581': 'Emperor Wen of Sui', 'ming 1368': 'Hongwu Emperor',
+  'ming 1421': 'Forbidden City', 'yuan 1271': 'Kublai Khan', 'ilkhanate 1295': 'Ghazan', 'aksum 330': 'Ezana of Axum',
+  'teotihuacan 200': 'Pyramid of the Sun', 'greek -776': 'Ancient Olympic Games', 'greek -508': 'Athenian democracy',
+};
+
 // Population figures, only where there are census counts or well-known scholarly estimates.
 const POP = {
   han: [[2, '57.7 million', 'Han census of AD 2 (registered population)']],
