@@ -11,7 +11,7 @@ I18N.zh = {
   ui: {
     title: '古代十字路口', range: '公元前3000年–公元1900年', about: '这张地图是怎么做的', credit: '边界为大致范围 · 海岸线：Natural Earth',
     'aria.views': '地图视角', 'aria.layers': '图层', 'aria.map': '文明、商路与事件地图', 'aria.zin': '放大', 'aria.zout': '缩小',
-    'aria.play': '播放', 'aria.pause': '暂停', 'aria.speed': '播放速度', 'aria.timeline': '时间轴：拖动以改变年份', 'aria.lang': '语言',
+    'aria.play': '播放', 'aria.pause': '暂停', 'aria.speed': '播放速度', 'aria.timeline': '时间轴：拖动以改变年份', 'aria.tlFold': '收起时间轴', 'aria.tlUnfold': '展开时间轴', 'aria.lang': '语言',
     close: '关闭', leaveTour: '退出导览', speed: '{n}年/秒',
     'layer.civs': '文明', 'layer.today': '今日国界', 'layer.routes': '商路', 'layer.journeys': '旅程', 'layer.ideas': '思想与技术传播', 'layer.wars': '战役',
     'lane.med': '欧洲', 'lane.ne': '近东', 'lane.af': '非洲', 'lane.sa': '南亚', 'lane.st': '草原', 'lane.ea': '东亚', 'lane.se': '东南亚', 'lane.am': '美洲',

@@ -19,7 +19,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const UI_EN = {
   title: 'Ancient Crossroads', range: '3000 BC – AD 1900', about: 'How this map was made', credit: 'Borders approximate · Coastlines: Natural Earth',
   'aria.views': 'Map view', 'aria.layers': 'Layers', 'aria.map': 'Map of civilisations, routes and events', 'aria.zin': 'Zoom in', 'aria.zout': 'Zoom out',
-  'aria.play': 'Play', 'aria.pause': 'Pause', 'aria.speed': 'Playback speed', 'aria.timeline': 'Timeline: drag to change the year', 'aria.lang': 'Language',
+  'aria.play': 'Play', 'aria.pause': 'Pause', 'aria.speed': 'Playback speed', 'aria.timeline': 'Timeline: drag to change the year', 'aria.tlFold': 'Fold the timeline', 'aria.tlUnfold': 'Unfold the timeline', 'aria.lang': 'Language',
   close: 'Close', leaveTour: 'Leave tour', speed: '{n} yr/s',
   'layer.civs': 'Civilisations', 'layer.today': 'Today’s borders', 'layer.routes': 'Trade routes', 'layer.journeys': 'Journeys', 'layer.ideas': 'Spread of ideas', 'layer.wars': 'Battles',
   'lane.med': 'Europe', 'lane.ne': 'Near East', 'lane.af': 'Africa', 'lane.sa': 'South Asia', 'lane.st': 'Steppe', 'lane.ea': 'East Asia', 'lane.se': 'SE Asia', 'lane.am': 'Americas',
@@ -185,6 +185,36 @@ const rulerOf = (city, y) => CIVS.filter((c) => isActive(c, y) && frameAt(c, y).
   .sort((a, b) => (a.kind === 'culture') - (b.kind === 'culture') || frameAt(a, y).area - frameAt(b, y).area)[0];
 const evVisible = (e, y) => y >= e.win[0] && y <= e.win[1];
 const evLayer = (e) => (e.kind === 'conflict' ? 'wars' : e.kind === 'journey' ? 'journeys' : 'ideas');
+const civsAt = (p, y) => CIVS.filter((c) => isActive(c, y) && inShape(c, y, p));
+// The powers a route ran through in a year; where a battle was fought; at each stop of a journey or spread when it got there.
+const routePowers = (r, y) => CIVS.filter((c) => isActive(c, y) && r.pts.flat().some((p) => inShape(c, y, p)));
+const evStops = (e) => (e.kind === 'conflict' ? [] : [...new Map(e.br.flat().map((st) => [st.label + st.y, st])).values()].sort((a, b) => a.y - b.y));
+const eventPowers = (e) => (e.kind === 'conflict' ? civsAt(e.pt, e.year) : [...new Set(evStops(e).flatMap((st) => civsAt(st.p, st.y)))]);
+// While something is selected, the map dims everything except it and what its card links it to in the year shown:
+// a civilisation's routes, events and cities; the powers along a route or at an event; a city's ruler.
+let relKey = '', rel = null;
+function related() {
+  const s = state.sel;
+  if (!s) return null;
+  const y = Math.round(state.year), key = `${s.type}.${s.id}|${y}`;
+  if (key === relKey) return rel;
+  const r = { civ: new Set(), route: new Set(), event: new Set(), city: new Set() };
+  r[s.type].add(s.id);
+  const add = (type, list) => list.forEach((d) => r[type].add(d.id));
+  if (s.type === 'civ') {
+    const c = CIVS.find((d) => d.id === s.id);
+    if (isActive(c, y)) {
+      add('route', ROUTES.filter((rt) => routeActive(rt, y) && rt.pts.flat().some((p) => inShape(c, y, p))));
+      add('event', EVENTS.filter((e) => evVisible(e, y) && (e.kind === 'conflict' ? inShape(c, y, e.pt) : e.br.flat().some((st) => st.y <= y && inShape(c, y, st.p)))));
+      add('city', CITIES.filter((d) => inShape(c, y, d.p)));
+    }
+  } else if (s.type === 'route') add('civ', routePowers(ROUTES.find((d) => d.id === s.id), y));
+  else if (s.type === 'event') add('civ', eventPowers(EVENTS.find((d) => d.id === s.id)));
+  else { const ru = rulerOf(CITIES.find((d) => d.id === s.id), y); if (ru) r.civ.add(ru.id); }
+  relKey = key; rel = r;
+  return r;
+}
+const dimmed = (type, id) => { const r = related(); return !!r && !r[type].has(id); };
 const evYears = (e) => (e.kind === 'conflict' ? fmtYear(e.year) : (Math.round(e.start) === Math.round(e.end) ? fmtYear(e.start) : fmtSpan(Math.round(e.start), Math.round(e.end)))) + (e.c ? msg('circaSuffix') : '');
 
 // ---------- map scaffold ----------
@@ -264,6 +294,7 @@ const sx = (p) => T.applyX(p[0]), sy = (p) => T.applyY(p[1]);
 const sp = (p) => [sx(p), sy(p)];
 const openLine = d3.line().curve(d3.curveCatmullRom.alpha(0.5));
 let activeCivs = [];
+const FADE = 0.2; // opacity of what is dimmed while something is selected (CSS .fade for the rest)
 
 function drawCivs() {
   const y = state.year;
@@ -273,7 +304,7 @@ function drawCivs() {
   civG.selectAll('path.civ').data(rows, (d) => d.c.id).join(
     (en) => en.append('path').on('mousemove', (ev, d) => showTip(ev, civTip(d.c))).on('mouseleave', hideTip).on('click', (ev, d) => { ev.stopPropagation(); select({ type: 'civ', id: d.c.id }); }),
   )
-    .attr('class', (d) => `civ${d.c.kind === 'culture' ? ' culture' : ''}${sel ? (d.c.id === sel ? ' sel' : ' dim') : ''}`)
+    .attr('class', (d) => `civ${d.c.kind === 'culture' ? ' culture' : ''}${d.c.id === sel ? ' sel' : dimmed('civ', d.c.id) ? ' dim' : ''}`)
     .attr('d', (d) => d.f.d)
     .style('fill', (d) => `var(--c-${d.c.s})`).style('stroke', (d) => `var(--c-${d.c.s})`)
     .style('opacity', (d) => {
@@ -293,7 +324,7 @@ function drawRoutes() {
     const g = en.append('g');
     g.on('mousemove', (ev, d) => showTip(ev, routeTip(d))).on('mouseleave', hideTip).on('click', (ev, d) => { ev.stopPropagation(); select({ type: 'route', id: d.id }); });
     return g;
-  }).attr('class', (d) => `route ${d.kind}${sel ? (d.id === sel ? ' sel' : ' fade') : ''}`);
+  }).attr('class', (d) => `route ${d.kind}${d.id === sel ? ' sel' : dimmed('route', d.id) ? ' fade' : ''}`);
   g.each(function (r) {
     const w = 0.8 + levelAt(r, y) * 0.9;
     const ds = r.pts.map((pts) => openLine(pts.map(sp)));
@@ -335,7 +366,7 @@ function drawEvents() {
   const g = evG.selectAll('g.ev').data(paths, (d) => d.id).join((en) => en.append('g')
     .on('mousemove', (ev, d) => showTip(ev, evTip(d))).on('mouseleave', hideTip).on('click', (ev, d) => { ev.stopPropagation(); select({ type: 'event', id: d.id }); }))
     .attr('class', (d) => `ev ${d.kind}${d.id === sel ? ' sel' : ''}`)
-    .style('opacity', (d) => (y > d.end ? Math.max(0.35, 1 - (y - d.end) / (d.win[1] - d.end) * 0.65) : 1));
+    .style('opacity', (d) => (y > d.end ? Math.max(0.35, 1 - (y - d.end) / (d.win[1] - d.end) * 0.65) : 1) * (dimmed('event', d.id) ? FADE : 1));
   g.each(function (e) {
     const s = d3.select(this);
     const tr = e.mode === 'points' ? null : e.br.map((b) => trail(b, y));
@@ -366,9 +397,9 @@ function drawEvents() {
     return g;
   });
   w.attr('transform', (d) => `translate(${sx(d.pt)},${sy(d.pt)})`)
-    .style('opacity', (d) => (y < d.year ? 0.5 : Math.max(0.3, 1 - (y - d.year) / 40)));
+    .style('opacity', (d) => (y < d.year ? 0.5 : Math.max(0.3, 1 - (y - d.year) / 40)) * (dimmed('event', d.id) ? FADE : 1));
   w.select('circle.ring').attr('r', (d) => (y >= d.year && y - d.year < 12 ? 8 + (y - d.year) : 0)).style('opacity', (d) => Math.max(0, 1 - (y - d.year) / 12));
-  w.select('text').attr('x', 8).attr('y', -6).text((d) => (y - d.year < 15 || d.id === sel ? `${d.title} ${fmtYear(d.year)}` : ''));
+  w.select('text').attr('x', 8).attr('y', -6).text((d) => ((y - d.year < 15 && !dimmed('event', d.id)) || d.id === sel ? `${d.title} ${fmtYear(d.year)}` : ''));
 }
 
 let activeCities = [];
@@ -378,7 +409,7 @@ function drawCities() {
   const sel = state.sel && state.sel.type === 'city' ? state.sel.id : null;
   cityG.selectAll('circle.city').data(activeCities, (d) => d.c.id).join((en) => en.append('circle')
     .on('mousemove', (ev, d) => showTip(ev, cityTip(d.c))).on('mouseleave', hideTip).on('click', (ev, d) => { ev.stopPropagation(); select({ type: 'city', id: d.c.id }); }))
-    .attr('class', (d) => `city${d.c.id === sel ? ' sel' : ''}`).attr('r', (d) => cityR(d.k)).attr('cx', (d) => sx(d.c.p)).attr('cy', (d) => sy(d.c.p)).order();
+    .attr('class', (d) => `city${d.c.id === sel ? ' sel' : dimmed('city', d.c.id) ? ' fade' : ''}`).attr('r', (d) => cityR(d.k)).attr('cx', (d) => sx(d.c.p)).attr('cy', (d) => sy(d.c.p)).order();
 }
 
 function drawLabels() {
@@ -410,7 +441,7 @@ function drawLabels() {
     if (boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
     boxes.push(bx); sout.push(d);
   }
-  labG.selectAll('text.sublab').data(sout, (d) => `${d.c.id}:${d.i}`).join('text').attr('class', (d) => `sublab${d.c.kind === 'culture' ? ' culture' : ''}`)
+  labG.selectAll('text.sublab').data(sout, (d) => `${d.c.id}:${d.i}`).join('text').attr('class', (d) => `sublab${d.c.kind === 'culture' ? ' culture' : ''}${dimmed('civ', d.c.id) ? ' fade' : ''}`)
     .attr('x', (d) => d.x).attr('y', (d) => d.y).text((d) => d.c.name);
   // City names fill the gaps, largest first; small towns only when zoomed in.
   const csel = state.sel && state.sel.type === 'city' ? state.sel.id : null;
@@ -423,7 +454,7 @@ function drawLabels() {
     if (d.c.id !== csel && boxes.some((b) => bx[0] < b[2] && bx[2] > b[0] && bx[1] < b[3] && bx[3] > b[1])) continue;
     boxes.push(bx); cout.push({ c: d.c, name, x: lx, y });
   }
-  labG.selectAll('text.ctag').data(cout, (d) => d.c.id).join('text').attr('class', (d) => `ctag${d.c.id === csel ? ' sel' : ''}`)
+  labG.selectAll('text.ctag').data(cout, (d) => d.c.id).join('text').attr('class', (d) => `ctag${d.c.id === csel ? ' sel' : dimmed('city', d.c.id) ? ' fade' : ''}`)
     .attr('x', (d) => d.x).attr('y', (d) => d.y + 4).text((d) => d.name);
   // Today's country names last, where nothing older is written.
   const tout = [];
@@ -436,9 +467,9 @@ function drawLabels() {
     boxes.push(bx); tout.push({ d, x, y });
   }
   labG.selectAll('text.today').data(tout, (t) => t.d.id).join('text').attr('class', 'today').attr('x', (t) => t.x).attr('y', (t) => t.y).text((t) => t.d.name);
-  labG.selectAll('circle.capdot').data(out, (d) => d.c.id).join('circle').attr('class', 'capdot').attr('r', 2.6)
+  labG.selectAll('circle.capdot').data(out, (d) => d.c.id).join('circle').attr('class', (d) => `capdot${dimmed('civ', d.c.id) ? ' fade' : ''}`).attr('r', 2.6)
     .attr('cx', (d) => d.x).attr('cy', (d) => d.y).style('fill', (d) => `var(--c-${d.c.s})`);
-  labG.selectAll('text.lab').data(out, (d) => d.c.id).join('text').attr('class', (d) => `lab${d.c.kind === 'culture' ? ' culture' : ''}`)
+  labG.selectAll('text.lab').data(out, (d) => d.c.id).join('text').attr('class', (d) => `lab${d.c.kind === 'culture' ? ' culture' : ''}${dimmed('civ', d.c.id) ? ' fade' : ''}`)
     .attr('x', (d) => d.x).attr('y', (d) => d.y - 6).style('font-size', (d) => d.size + 'px').text((d) => d.c.name);
 }
 
@@ -487,18 +518,15 @@ function selectedHTML() {
   if (s.type === 'route') {
     const r = ROUTES.find((d) => d.id === s.id);
     const on = routeActive(r, y);
-    const along = on ? CIVS.filter((c) => isActive(c, y) && r.pts.flat().some((p) => inShape(c, y, p))) : [];
+    const along = on ? routePowers(r, y) : [];
     const info = wikiInfo(`route-${r.id}`);
     return `<section class="card"><div class="eyebrow"><span>${msg(`route.${r.kind}`)}</span>${closeBtn()}</div><h2>${esc(r.name)}</h2><div class="yrs">${fmtSpan(r.from, r.to)}</div>${wikiPicture(info, r.name)}<p style="margin-top:8px">${esc(r.note)}</p><p class="yrs">${msg('carried', { goods: esc(r.goods) })}</p>${on ? `<div class="group"><h3>${msg('powersAlong', { year: fmtYear(y) })}</h3><div class="chips">${along.map(civChip).join('') || `<span class="empty">${msg('noneDrawn')}</span>`}</div></div>` : goBtn(Math.round((r.from + r.to) / 2))}${wikiHTML(info)}</section>`;
   }
   const e = EVENTS.find((d) => d.id === s.id);
   const kindName = msg(`event.${e.kind}`), info = wikiInfo(`event-${e.id}`);
-  const stops = e.kind === 'conflict' ? [] : [...new Map(e.br.flat().map((st) => [st.label + st.y, st])).values()].sort((a, b) => a.y - b.y);
+  const stops = evStops(e);
   const stopsHTML = stops.length ? `<p class="stops">${stops.map((st) => `${esc(st.label)} <span class="yrs">${fmtYear(st.y)}</span>`).join(' · ')}</p>` : '';
-  // The powers drawn where a battle was fought, or at each stop of a journey or spread in the year it got there.
-  const there = e.kind === 'conflict'
-    ? CIVS.filter((c) => isActive(c, e.year) && inShape(c, e.year, e.pt))
-    : [...new Set(stops.flatMap((st) => CIVS.filter((c) => isActive(c, st.y) && inShape(c, st.y, st.p))))];
+  const there = eventPowers(e);
   const powers = there.length ? `<div class="group"><h3>${e.kind === 'conflict' ? msg('powersHere', { year: fmtYear(e.year) }) : msg('powersOnWay')}</h3><div class="chips">${there.map(civChip).join('')}</div></div>` : '';
   return `<section class="card"><div class="eyebrow"><span>${kindName}</span>${closeBtn()}</div><h2>${esc(e.title)}</h2><div class="yrs">${evYears(e)}</div>${wikiPicture(info, e.title)}<p style="margin-top:8px">${esc(e.note)}</p>${stopsHTML}${powers}${evVisible(e, y) ? '' : goBtn(Math.round(e.end))}${wikiHTML(info)}</section>`;
 }
@@ -700,7 +728,36 @@ function select(s) {
   markNav();
   state.sel = s && state.sel && state.sel.type === s.type && state.sel.id === s.id ? null : s;
   drawMap(); renderPanel(true); drawTimelineMarks(); scheduleURL();
-  if (state.sel) selcard.node().scrollTop = 0;
+  if (state.sel) { selcard.node().scrollTop = 0; focusOn(state.sel); }
+}
+// Pans and zooms so the selection fills the part of the map its card leaves free (left of it, or below it on narrow
+// screens). Nothing moves if it is already in view at a reasonable size.
+function focusOn(s) {
+  const y = state.year;
+  let pts;
+  if (s.type === 'civ') { const c = CIVS.find((d) => d.id === s.id); if (isActive(c, y)) pts = frameAt(c, y).pts.flat(); }
+  else if (s.type === 'city') pts = [CITIES.find((d) => d.id === s.id).p];
+  else if (s.type === 'route') pts = ROUTES.find((d) => d.id === s.id).pts.flat();
+  else { const e = EVENTS.find((d) => d.id === s.id); pts = e.kind === 'conflict' ? [e.pt] : e.br.flat().map((st) => st.p); }
+  if (!pts || !pts.length) return;
+  const [w, h] = size(), pad = 28;
+  let [fx0, fy0, fx1, fy1] = [0, 0, w, h];
+  if (!selcard.property('hidden')) {
+    const m = wrap.getBoundingClientRect(), c = selcard.node().getBoundingClientRect();
+    if (c.left - m.left > w * 0.4) fx1 = c.left - m.left;
+    else if (m.bottom - c.bottom > h * 0.3) fy0 = c.bottom - m.top;
+  }
+  fx0 += pad; fy0 += pad; fx1 -= pad; fy1 -= pad + 40; // and clear of the year in the bottom corner
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const kw = viewTransform('world').k, point = x1 - x0 < 1e-6 && y1 - y0 < 1e-6;
+  const k = Math.max(kw * 0.9, Math.min(kw * (point ? 3 : 4), 0.8 * Math.min((fx1 - fx0) / Math.max(x1 - x0, 1e-9), (fy1 - fy0) / Math.max(y1 - y0, 1e-9))));
+  const inView = T.applyX(x0) >= fx0 && T.applyX(x1) <= fx1 && T.applyY(y0) >= fy0 && T.applyY(y1) <= fy1;
+  if (inView && T.k >= k / 2.5 && T.k <= k * 1.5) return;
+  const t = d3.zoomIdentity.translate((fx0 + fx1) / 2 - k * (x0 + x1) / 2, (fy0 + fy1) / 2 - k * (y0 + y1) / 2).scale(k);
+  customView();
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  (reduce ? svg : svg.transition().duration(800).ease(d3.easeCubicInOut)).call(zoom.transform, t);
 }
 svg.on('click', () => { if (state.sel) select(null); });
 
@@ -722,7 +779,16 @@ const lanes = SPHERES.map((s) => {
 });
 let y0 = TL.top;
 for (const l of lanes) { l.y = y0; l.h = Math.max(12, l.rows * (TL.bar + TL.rowGap)); y0 += l.h + TL.laneGap; }
-const TLH = y0 + 4;
+const TLH_FULL = y0 + 4;
+let TLH = TLH_FULL;
+// The timeline folds down to its axis (still draggable) to give the map more room; remembered per viewer.
+let tlFolded = false;
+try { tlFolded = localStorage.getItem('ancientTimelineFolded') === '1'; } catch { /* storage blocked */ }
+const tlFoldBtn = d3.select('#tlfold').on('click', () => {
+  tlFolded = !tlFolded;
+  try { localStorage.setItem('ancientTimelineFolded', tlFolded ? '1' : '0'); } catch { /* storage blocked */ }
+  layoutTimeline();
+});
 const tlAxis = tl.append('g').attr('class', 'tl-axis');
 const tlLanes = tl.append('g');
 const tlMarks = tl.append('g');
@@ -735,6 +801,10 @@ function layoutTimeline() {
   const w = tl.node().clientWidth || 800;
   const narrow = w < 560;
   TL.left = narrow ? 8 : 84;
+  TLH = tlFolded ? TL.top + 8 : TLH_FULL;
+  d3.select('#timewrap').classed('folded', tlFolded);
+  tlLanes.attr('display', tlFolded ? 'none' : null);
+  tlFoldBtn.attr('aria-expanded', String(!tlFolded)).attr('aria-label', msg(tlFolded ? 'aria.tlUnfold' : 'aria.tlFold')).attr('title', msg(tlFolded ? 'aria.tlUnfold' : 'aria.tlFold'));
   tl.attr('height', TLH).attr('viewBox', `0 0 ${w} ${TLH}`);
   tx = d3.scaleLinear().domain(TL_YEARS).range(TL_SHARE.map((f) => TL.left + f * (w - TL.left - TL.right)));
   const ticks = w < 420 ? [MIN, 0, 1500, MAX] : narrow ? [MIN, -1000, 0, 1000, 1500, MAX] : [MIN, -2000, -1000, -500, 0, 500, 1000, 1500, 1700, MAX];
@@ -906,7 +976,8 @@ shareBtn.on('click', async () => {
 
 // ---------- boot ----------
 let resizeT;
-new ResizeObserver(() => { clearTimeout(resizeT); resizeT = setTimeout(() => { layoutTimeline(); if (state.view) setView(state.view, false); }, 60); }).observe(document.body);
+const resizeObs = new ResizeObserver(() => { clearTimeout(resizeT); resizeT = setTimeout(() => { layoutTimeline(); if (state.view) setView(state.view, false); }, 60); });
+resizeObs.observe(wrap); resizeObs.observe(document.body);
 layoutTimeline();
 applyHash(false);
 })();

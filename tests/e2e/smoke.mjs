@@ -198,6 +198,13 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await page.waitForTimeout(500);
   await expect(page.$eval("#selcard .wikilink a", (a) => a.href.includes("wikipedia.org")), "an event card links to Wikipedia");
   await expect(page.$$eval("#selcard .chip", (e) => e.length).then((n) => n > 0), "an event card names the powers there");
+  await page.click("#selcard .chip");
+  await page.waitForTimeout(1000);
+  await expect(page.$$eval("#map .fade, #map path.civ.dim", (e) => e.length).then((n) => n > 0), "a selection dims the rest of the map");
+  await page.click("#tlfold");
+  await page.waitForTimeout(300);
+  await expect(page.$eval("#timeline", (s) => s.getBoundingClientRect().height < 60), "the timeline folds");
+  await page.click("#tlfold");
 
   where = `ancient ${lang} link`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities&show=today`, { waitUntil: "load" });

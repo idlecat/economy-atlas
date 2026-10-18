@@ -76,7 +76,9 @@ header { grid-area: head; display: flex; flex-wrap: wrap; align-items: center; g
 .route.voyage .ln { stroke-dasharray: 9 4 2 4; }
 .route .hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
 .route.sel .ln { filter: drop-shadow(0 0 4px var(--gold)); }
-.route.fade { opacity: .25; }
+.route.fade { opacity: .2; }
+.city.fade, .ctag.fade, .capdot.fade, .sublab.fade { opacity: .2; }
+.lab.fade { opacity: .45; }
 @media (prefers-reduced-motion: no-preference) {
   .route .ln { animation: flow 1.6s linear infinite; }
   .route.sea .ln, .route.voyage .ln { animation-duration: 2.6s; }
@@ -200,6 +202,12 @@ aside { grid-area: panel; min-height: 0; overflow-y: auto; display: flex; flex-d
 .tctl { display: grid; gap: 6px; justify-items: center; padding-top: 14px; }
 #play { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--fg); color: var(--bg); display: grid; place-items: center; }
 #play svg { width: 16px; height: 16px; fill: currentColor; }
+#tlfold { width: 28px; height: 22px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--muted); display: grid; place-items: center; padding: 0; }
+#tlfold svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform: rotate(180deg); }
+#timewrap.folded #tlfold svg { transform: none; }
+#timewrap.folded .tctl { grid-auto-flow: column; align-items: center; padding-top: 0; }
+#timewrap.folded #play { width: 32px; height: 32px; }
+#timewrap.folded #play svg { width: 12px; height: 12px; }
 #speed, #lang { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; font: 12px var(--f-data); padding: 2px 6px; }
 #timeline { width: 100%; display: block; cursor: ew-resize; touch-action: none; user-select: none; }
 .tl-axis text { font: 11px var(--f-data); fill: var(--muted); }
@@ -239,7 +247,7 @@ dialog a { color: var(--accent); }
   html { height: auto; }
   #mapwrap { height: 58svh; min-height: 320px; }
   aside { overflow: visible; }
-  #selcard { left: 8px; right: 46px; width: auto; max-height: calc(100% - 16px); top: 8px; }
+  #selcard { left: 8px; right: 46px; width: auto; max-height: 52%; top: 8px; }
   .stamp b { font-size: 34px; }
   .brand h1 { font-size: 22px; }
 }
@@ -266,6 +274,7 @@ dialog a { color: var(--accent); }
   <div class="tctl">
     <button id="play" type="button" aria-label="Play" data-i18n-aria="aria.play"><svg viewBox="0 0 16 16"><path d="M3 1.5v13l11-6.5z"/></svg></button>
     <select id="speed" aria-label="Playback speed" data-i18n-aria="aria.speed"><option value="25">25 yr/s</option><option value="60" selected>60 yr/s</option><option value="150">150 yr/s</option></select>
+    <button id="tlfold" type="button" aria-expanded="true"><svg viewBox="0 0 16 16"><path d="M3.5 10l4.5-4.5 4.5 4.5"/></svg></button>
   </div>
   <svg id="timeline" aria-label="Timeline: drag to change the year" data-i18n-aria="aria.timeline"></svg>
 </div>
