@@ -600,13 +600,23 @@ const civChip = (c) => `<button class="chip${c.kind === 'culture' ? ' culture' :
 const routeItem = (r) => `<li><button type="button" data-route="${r.id}">${glyphFor(r.kind)}<span>${esc(r.name)}</span><span class="yrs">${msg(r.kind === 'land' ? 'route.short.land' : 'route.short.sea')}</span></button></li>`;
 const eventItem = (e) => `<li><button type="button" data-event="${e.id}">${glyphFor(e.kind)}<span>${esc(e.title)}</span><span class="yrs">${e.kind === 'conflict' ? fmtYear(e.year) : fmtYear(e.start)}</span></button></li>`;
 
+// A tour stop's card stays at the top of the panel, and shrinks to its title and buttons while the content below
+// is scrolled up under it (the panel scrolls on wide screens, the page on narrow ones).
+let tourMin = false;
+function foldTour() {
+  const el = panel.node(), down = el.scrollTop || -el.getBoundingClientRect().top;
+  const min = tourMin ? down > 0 : down > 30; // hysteresis, so the change in height doesn't flip it back
+  if (min !== tourMin) { tourMin = min; panel.select('.tour.stop').classed('min', min); }
+}
+panel.on('scroll', foldTour);
+window.addEventListener('scroll', foldTour, { passive: true });
 function tourHTML() {
   const i = state.chapter;
   if (i < 0) {
     return `<section class="card tour"><div class="eyebrow"><span>${msg('tour.eyebrow', { n: CHAPTERS.length })}</span></div><h2>${msg('tour.title')}</h2><p>${msg('tour.intro')}</p><ol>${CHAPTERS.map((c, j) => `<li><button type="button" data-chapter="${j}"><span class="yrs">${fmtYear(c.year)}</span><span>${esc(c.title)}</span></button></li>`).join('')}</ol></section>`;
   }
   const c = CHAPTERS[i];
-  return `<section class="card tour"><div class="eyebrow"><span>${msg('tour.stop', { i: i + 1, n: CHAPTERS.length, year: fmtYear(c.year) })}</span><button class="x" type="button" data-endtour aria-label="${msg('leaveTour')}">×</button></div><h2>${esc(c.title)}</h2><p>${esc(c.text)}</p><div class="tournav"><button class="btn" type="button" data-chapter="${i - 1}" ${i === 0 ? 'disabled' : ''}>${msg('tour.prev')}</button><button class="btn primary" type="button" data-chapter="${i + 1}" ${i === CHAPTERS.length - 1 ? 'disabled' : ''}>${msg('tour.next')}</button><button class="btn" type="button" data-replay="${i}">${msg('tour.replay')}</button></div></section>`;
+  return `<section class="card tour stop${tourMin ? ' min' : ''}"><div class="eyebrow"><span>${msg('tour.stop', { i: i + 1, n: CHAPTERS.length, year: fmtYear(c.year) })}</span><button class="x" type="button" data-endtour aria-label="${msg('leaveTour')}">×</button></div><h2>${esc(c.title)}</h2><p>${esc(c.text)}</p><div class="tournav"><button class="btn" type="button" data-chapter="${i - 1}" ${i === 0 ? 'disabled' : ''}>${msg('tour.prev')}</button><button class="btn primary" type="button" data-chapter="${i + 1}" ${i === CHAPTERS.length - 1 ? 'disabled' : ''}>${msg('tour.next')}</button><button class="btn" type="button" data-replay="${i}">${msg('tour.replay')}</button></div></section>`;
 }
 
 // A small chart of a city's population over time, with the selected year marked.

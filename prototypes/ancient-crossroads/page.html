@@ -141,6 +141,9 @@ aside { grid-area: panel; min-height: 0; overflow-y: auto; display: flex; flex-d
 .tour li button { width: 100%; display: grid; grid-template-columns: 74px 1fr; gap: 8px; text-align: left; border: 0; background: none; padding: 5px 6px; border-radius: 6px; align-items: baseline; }
 .tour li button:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .tour li .yrs { font-size: 12px; }
+.tour.stop { position: sticky; top: 0; z-index: 2; flex: none; }
+.tour.stop > p { max-height: 14em; overflow: hidden; transition: max-height .25s, opacity .2s; }
+.tour.min > p { max-height: 0; opacity: 0; margin: 0; }
 .tournav { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .btn { border: 1px solid var(--line); background: var(--bg); border-radius: 7px; padding: 5px 12px; font-size: 14px; }
 .btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
