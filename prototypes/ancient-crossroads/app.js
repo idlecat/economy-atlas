@@ -5,7 +5,7 @@ const proj = d3.geoNaturalEarth1().rotate([-20, 0]).fitExtent([[0, 0], [BW, BH]]
 const gpath = d3.geoPath(proj);
 const pr = (p) => proj(p);
 
-const DEFAULT_LAYERS = { civs: true, cities: true, routes: true, journeys: true, ideas: true, wars: true, today: false };
+const DEFAULT_LAYERS = { civs: true, cities: true, routes: true, journeys: true, ideas: true, wars: true, wonders: true, people: true, today: false };
 const state = { year: 100, playing: false, layers: { ...DEFAULT_LAYERS }, sel: null, chapter: -1, view: 'silk' };
 let T = d3.zoomIdentity;
 let pinnedAt = null; // map position read from the URL, kept until the reader pans or zooms (the map may still be moving there)
@@ -43,6 +43,11 @@ const UI_EN = {
   'now.cities': 'Largest cities', 'city.formerly': 'formerly {name}', 'now.noCities': 'No cities drawn for this year.',
   'now.title': 'On the map in {year}', 'now.powers': '{n} powers', 'now.nothing': 'Nothing drawn for this year.', 'now.routes': 'Trade routes in use',
   'now.noRoutes': 'No long-distance routes drawn for this year.', 'now.events': 'Events in view', 'now.noEvents': 'No journeys, spreads or battles in view.',
+  'layer.wonders': 'Wonders', 'layer.people': 'People', 'wonder.kind': 'Wonder', 'wonder.builtBy': 'Built under', 'wonder.ruledBy': 'In {year} ruled by',
+  'wonder.notYet': 'Not built yet: finished in {year}, {n} from now.', 'wonder.lost': 'Lost: destroyed in {year}, {n} earlier.', 'wonder.age': 'Standing for {n}.',
+  'person.ruler': 'Ruler', 'person.faith': 'Faith', 'person.thinker': 'Thinker', 'person.science': 'Science and invention', 'person.arts': 'Arts and letters',
+  'person.notYet': 'Not yet born: born in {year}.', 'person.died': 'Died in {year}, {n} earlier.', 'person.age': 'Aged {n} in {year}.',
+  'person.lived': 'Lived under', 'now.people': 'People of the age', 'now.wonders': 'Wonders standing ({n})',
   share: 'Copy link', shared: 'Link copied', 'share.prompt': 'Copy this link:', since: 'from {year}',
 };
 const LANGS = { en: 'English', ...Object.fromEntries(Object.entries(I18N).map(([k, v]) => [k, v.native])) };
@@ -77,6 +82,8 @@ if (TR) {
     c.name = name; c.note = note;
     if (c.later) { if (later && later.length === c.later.length) c.later.forEach((l, i) => { l[1] = later[i]; }); else missing.push(`city names ${c.id}`); }
   });
+  each(WONDERS, TR.wonders, 'wonder', (w, [name, note]) => { w.name = name; w.note = note; });
+  each(PEOPLE, TR.persons, 'person', (p, [name, note]) => { p.name = name; p.note = note; });
   for (const e of EVENTS) for (const b of e.branches || []) for (const st of b) {
     if (TR.places[st[3]]) st[3] = TR.places[st[3]]; else missing.push(`place ${st[3]}`);
   }
@@ -170,6 +177,12 @@ const COUNTRIES = topojson.feature(GEO.countries, countryObj).features.filter((f
   return { id: f.id, name: countryNames[f.id] ?? GEO.countries.names.en[f.id], p: gpath.centroid(big), area: gpath.area(big) };
 }).sort((a, b) => b.area - a.area);
 for (const c of CITIES) { c.p = pr(c.at); c.from = c.pop[0][0]; c.peak = c.pop.reduce((a, b) => (b[1] > a[1] ? b : a)); }
+// Wonders stand from when they were finished until lost; people are drawn from about age 20 until they die.
+for (const w of WONDERS) w.p = pr(w.at);
+for (const p of PEOPLE) { p.p = pr(p.at); p.from = Math.min(p.born + 20, p.died - 5); p.to = p.died; }
+const wonderOn = (w, y) => y >= w.from && (w.to == null || y < w.to);
+const personOn = (p, y) => y >= p.from && y <= p.to;
+const fmtWhen = (y, c) => `${c ? msg('circa') : ''}${fmtYear(y)}`;
 // Population (thousands) at a year: interpolated between keyframes, 0 before the first, the last value after the last.
 function cityPop(c, y) {
   const k = c.pop;
@@ -198,7 +211,7 @@ function related() {
   if (!s) return null;
   const y = Math.round(state.year), key = `${s.type}.${s.id}|${y}`;
   if (key === relKey) return rel;
-  const r = { civ: new Set(), route: new Set(), event: new Set(), city: new Set() };
+  const r = { civ: new Set(), route: new Set(), event: new Set(), city: new Set(), wonder: new Set(), person: new Set() };
   r[s.type].add(s.id);
   const add = (type, list) => list.forEach((d) => r[type].add(d.id));
   if (s.type === 'civ') {
@@ -207,9 +220,12 @@ function related() {
       add('route', ROUTES.filter((rt) => routeActive(rt, y) && rt.pts.flat().some((p) => inShape(c, y, p))));
       add('event', EVENTS.filter((e) => evVisible(e, y) && (e.kind === 'conflict' ? inShape(c, y, e.pt) : e.br.flat().some((st) => st.y <= y && inShape(c, y, st.p)))));
       add('city', CITIES.filter((d) => inShape(c, y, d.p)));
+      add('wonder', WONDERS.filter((w) => wonderOn(w, y) && inShape(c, y, w.p)));
+      add('person', PEOPLE.filter((p) => personOn(p, y) && inShape(c, y, p.p)));
     }
   } else if (s.type === 'route') add('civ', routePowers(ROUTES.find((d) => d.id === s.id), y));
   else if (s.type === 'event') add('civ', eventPowers(EVENTS.find((d) => d.id === s.id)));
+  else if (s.type === 'wonder' || s.type === 'person') add('civ', civsAt((s.type === 'wonder' ? WONDERS : PEOPLE).find((d) => d.id === s.id).p, y));
   else { const ru = rulerOf(CITIES.find((d) => d.id === s.id), y); if (ru) r.civ.add(ru.id); }
   relKey = key; rel = r;
   return r;
@@ -230,7 +246,7 @@ zg.append('path').attr('class', 'lakes').attr('d', gpath({ type: 'MultiPolygon',
 zg.append('path').attr('class', 'rivers').attr('d', gpath({ type: 'MultiLineString', coordinates: GEO.rivers }));
 const bordersP = zg.append('path').attr('class', 'borders').attr('d', gpath(topojson.mesh(GEO.countries, countryObj, (a, b) => a !== b)));
 const ov = svg.append('g');
-const routeG = ov.append('g'), evG = ov.append('g'), cityG = ov.append('g'), labG = ov.append('g'), warG = ov.append('g');
+const routeG = ov.append('g'), evG = ov.append('g'), cityG = ov.append('g'), labG = ov.append('g'), wonderG = ov.append('g'), personG = ov.append('g'), warG = ov.append('g');
 
 const zoom = d3.zoom().scaleExtent([0.8, 16])
   .on('zoom', (ev) => { T = ev.transform; zg.attr('transform', T); drawOverlay(); if (ev.sourceEvent) customView(); })
@@ -288,6 +304,10 @@ const civTip = (c) => `<b>${esc(c.name)}</b><span class="yrs">${civSpan(c)}${c.k
 const routeTip = (r) => `<b>${esc(r.name)}</b><span class="yrs">${fmtSpan(r.from, r.to)}</span><br>${esc(r.goods)}`;
 const cityTip = (c) => { const r = rulerOf(c, state.year); return `<b>${esc(cityName(c, state.year))}</b><span class="yrs">${fmtPeople(cityPop(c, state.year))}</span>${r ? `<br>${esc(r.name)}` : ''}`; };
 const evTip = (e) => `<b>${esc(e.title)}</b><span class="yrs">${evYears(e)}</span>`;
+const wonderTip = (w) => `<b>${esc(w.name)}</b><span class="yrs">${wonderSpan(w)}</span>`;
+const personTip = (p) => `<b>${esc(p.name)}</b><span class="yrs">${lifeSpan(p)}</span><br>${msg(`person.${p.kind}`)}`;
+const wonderSpan = (w) => (w.to == null ? fmtWhen(w.from, w.c) : `${fmtWhen(w.from, w.c)} – ${fmtYear(w.to)}`);
+const lifeSpan = (p) => `${p.c ? msg('circa') : ''}${fmtSpan(p.born, p.died)}`;
 
 // ---------- drawing ----------
 const sx = (p) => T.applyX(p[0]), sy = (p) => T.applyY(p[1]);
@@ -473,12 +493,55 @@ function drawLabels() {
     .attr('x', (d) => d.x).attr('y', (d) => d.y - 6).style('font-size', (d) => d.size + 'px').text((d) => d.c.name);
 }
 
-function drawOverlay() { drawRoutes(); drawEvents(); drawCities(); drawLabels(); }
+// Markers that would sit on top of one another (people in the same city, wonders of Rome) are nudged apart.
+function dodge(list) {
+  const placed = [];
+  for (const d of list) {
+    d.x = sx(d.p); d.y = sy(d.p);
+    while (placed.some((q) => Math.abs(q.x - d.x) < 11 && Math.abs(q.y - d.y) < 11)) d.x += 12;
+    placed.push(d);
+  }
+  return list;
+}
+function drawWonders() {
+  const y = state.year, sel = state.sel && state.sel.type === 'wonder' ? state.sel.id : null;
+  const zoomed = T.k / viewTransform('world').k >= 6; // names of older wonders only when zoomed well in
+  // Where wonders overlap at this zoom, only the newest is drawn (or the selected one); old ones are drawn smaller.
+  const placed = [], list = [];
+  if (state.layers.wonders) for (const w of WONDERS.filter((w) => wonderOn(w, y)).sort((a, b) => (b.id === sel) - (a.id === sel) || b.from - a.from)) {
+    w.x = sx(w.p); w.y = sy(w.p);
+    if (w.id !== sel && placed.some((q) => Math.abs(q.x - w.x) < 10 && Math.abs(q.y - w.y) < 10)) continue;
+    placed.push(w); list.push(w);
+  }
+  const g = wonderG.selectAll('g.wonder').data(list, (d) => d.id).join((en) => {
+    const g = en.append('g').html(`${WONDER_MARK}<text class="tag" x="8" y="4"></text>`);
+    g.on('mousemove', (ev, d) => showTip(ev, wonderTip(d))).on('mouseleave', hideTip).on('click', (ev, d) => { ev.stopPropagation(); select({ type: 'wonder', id: d.id }); });
+    return g;
+  });
+  const old = (d) => d.id !== sel && y - d.from > 300;
+  g.attr('class', (d) => `wonder${d.id === sel ? ' sel' : dimmed('wonder', d.id) ? ' fade' : old(d) ? ' old' : ''}`).attr('transform', (d) => `translate(${d.x},${d.y})${old(d) ? 'scale(.75)' : ''}`).order();
+  g.select('text').text((d) => (d.id === sel || (!dimmed('wonder', d.id) && (zoomed || y - d.from < 60)) ? d.name : ''));
+}
+function drawPeople() {
+  const y = state.year, sel = state.sel && state.sel.type === 'person' ? state.sel.id : null;
+  const list = dodge(state.layers.people ? PEOPLE.filter((p) => personOn(p, y)) : []);
+  const g = personG.selectAll('g.person').data(list, (d) => d.id).join((en) => {
+    const g = en.append('g').html(`${PERSON_MARK}<text class="tag" x="8" y="4"></text>`);
+    g.on('mousemove', (ev, d) => showTip(ev, personTip(d))).on('mouseleave', hideTip).on('click', (ev, d) => { ev.stopPropagation(); select({ type: 'person', id: d.id }); });
+    return g;
+  });
+  g.attr('class', (d) => `person${d.id === sel ? ' sel' : dimmed('person', d.id) ? ' fade' : ''}`).attr('transform', (d) => `translate(${d.x},${d.y})`);
+  g.select('text').text((d) => (d.id === sel || !dimmed('person', d.id) ? d.name : ''));
+}
+function drawOverlay() { drawRoutes(); drawEvents(); drawCities(); drawLabels(); drawWonders(); drawPeople(); }
 function drawMap() { bordersP.attr('display', state.layers.today ? null : 'none'); drawCivs(); drawOverlay(); }
 
 // ---------- header controls ----------
 const VIEW_BUTTONS = ['silk', 'med', 'ocean', 'east', 'atlantic', 'world'];
 d3.select('#views').selectAll('button').data(VIEW_BUTTONS).join('button').attr('type', 'button').text((d) => VIEWS[d].name).on('click', (ev, d) => { markNav(); setView(d); });
+// Map markers for wonders (a temple front) and people (a bust), centred on 0,0.
+const WONDER_MARK = '<rect class="wbox" x="-5.5" y="-5.5" width="11" height="11" rx="2.5"/><path class="wico" d="M-3.6,-1.2L0,-3.8L3.6,-1.2ZM-3,-0.4H-1.8V2.6H-3ZM-0.6,-0.4H0.6V2.6H-0.6ZM1.8,-0.4H3V2.6H1.8ZM-3.8,3H3.8V3.9H-3.8Z"/>';
+const PERSON_MARK = '<circle class="pbox" r="5.6"/><circle class="pico" cy="-1.6" r="1.7"/><path class="pico" d="M-3.3,3.6Q-3.1,0.4 0,0.4Q3.1,0.4 3.3,3.6Z"/>';
 const LAYERS = [
   { id: 'civs', glyph: '<rect x="1" y="1" width="20" height="8" rx="2" fill="var(--c-ne)" fill-opacity=".45" stroke="var(--c-ne)"/>' },
   { id: 'cities', glyph: '<circle cx="6" cy="5" r="4" class="city"/><circle cx="16" cy="6" r="2.6" class="city"/>' },
@@ -486,6 +549,8 @@ const LAYERS = [
   { id: 'journeys', glyph: '<path d="M1,8Q11,-2 21,6" fill="none" stroke="var(--journey)" stroke-width="1.6" stroke-dasharray="4 2.5"/><circle cx="21" cy="6" r="2.4" fill="var(--journey)"/>' },
   { id: 'ideas', glyph: '<path d="M1,8Q11,-2 21,6" fill="none" stroke="var(--idea)" stroke-width="1.8"/><circle cx="1" cy="8" r="2.4" fill="var(--idea)"/><circle cx="21" cy="6" r="2.4" fill="var(--idea)"/>' },
   { id: 'wars', glyph: '<path transform="translate(11,5)" d="M0,-5L1.5,-1.5L5,0L1.5,1.5L0,5L-1.5,1.5L-5,0L-1.5,-1.5Z" fill="var(--war)"/>' },
+  { id: 'wonders', glyph: `<g transform="translate(11,5)">${WONDER_MARK}</g>` },
+  { id: 'people', glyph: `<g transform="translate(11,5)">${PERSON_MARK}</g>` },
   { id: 'today', glyph: '<path d="M1,9L7,3L13,7L21,1" fill="none" stroke="var(--fg)" stroke-opacity=".6" stroke-width="1.2" stroke-dasharray="3 1.5"/>' },
 ];
 d3.select('#layers').selectAll('button').data(LAYERS).join('button').attr('type', 'button').attr('class', 'layer')
@@ -507,6 +572,8 @@ const glyphFor = (kind) => ({
   conflict: '<svg class="glyph" viewBox="-7 -5 14 10"><path d="M0,-5L1.5,-1.5L5,0L1.5,1.5L0,5L-1.5,1.5L-5,0L-1.5,-1.5Z" fill="var(--war)"/></svg>',
   journey: '<svg class="glyph" viewBox="0 0 14 10"><path d="M1,8Q7,0 13,6" fill="none" stroke="var(--journey)" stroke-width="1.6" stroke-dasharray="3 2"/></svg>',
   spread: '<svg class="glyph" viewBox="0 0 14 10"><path d="M1,8Q7,0 13,6" fill="none" stroke="var(--idea)" stroke-width="1.8"/></svg>',
+  wonder: `<svg class="glyph" viewBox="-7 -6 14 12">${WONDER_MARK}</svg>`,
+  person: `<svg class="glyph" viewBox="-7 -6 14 12">${PERSON_MARK}</svg>`,
 }[kind]);
 const inShape = (c, y, p) => frameAt(c, y).pts.some((r) => d3.polygonContains(r, p));
 
@@ -515,6 +582,8 @@ function selectedHTML() {
   if (!s) return '';
   if (s.type === 'civ') return civHTML(CIVS.find((d) => d.id === s.id), y);
   if (s.type === 'city') return cityHTML(CITIES.find((d) => d.id === s.id), y);
+  if (s.type === 'wonder') return wonderHTML(WONDERS.find((d) => d.id === s.id), y);
+  if (s.type === 'person') return personHTML(PEOPLE.find((d) => d.id === s.id), y);
   if (s.type === 'route') {
     const r = ROUTES.find((d) => d.id === s.id);
     const on = routeActive(r, y);
@@ -597,7 +666,8 @@ function civHTML(c, y) {
   if (on) {
     const rts = ROUTES.filter((r) => routeActive(r, y) && r.pts.flat().some((p) => inShape(c, y, p)));
     const evs = EVENTS.filter((e) => evVisible(e, y) && (e.kind === 'conflict' ? inShape(c, y, e.pt) : e.br.flat().some((st) => st.y <= y && inShape(c, y, st.p))));
-    if (rts.length || evs.length) now += `<div class="group"><h3>${msg('connections')}</h3><ul class="list">${rts.map(routeItem).join('')}${evs.map(eventItem).join('')}</ul></div>`;
+    const wds = WONDERS.filter((w) => wonderOn(w, y) && inShape(c, y, w.p)).sort((a, b) => b.from - a.from), ppl = PEOPLE.filter((p) => personOn(p, y) && inShape(c, y, p.p));
+    if (rts.length || evs.length || wds.length || ppl.length) now += `<div class="group"><h3>${msg('connections')}</h3><ul class="list">${ppl.map(personItem).join('')}${wds.map(wonderItem).join('')}${rts.map(routeItem).join('')}${evs.map(eventItem).join('')}</ul></div>`;
     const others = SPHERES.filter((sp) => sp.id !== c.s).map((sp) => CIVS.filter((d) => d.s === sp.id && d.kind !== 'culture' && isActive(d, y))
       .sort((a, b) => frameAt(b, y).area - frameAt(a, y).area)[0]).filter(Boolean);
     if (others.length) now += `<div class="group"><h3>${msg('elsewhere')}</h3><div class="chips">${others.map(civChip).join('')}</div></div>`;
@@ -669,6 +739,33 @@ function cityHTML(c, y) {
   return `<section class="card civcard"><div class="eyebrow"><span>${msg('city.kind')}</span>${closeBtn()}</div><h2>${esc(cityName(c, y))}</h2>${cityName(c, y) !== c.name ? `<div class="yrs">${msg('city.formerly', { name: esc(c.name) })}</div>` : ''}
     ${img}<div class="group"><h3>${msg('inYear', { year: fmtYear(y) })}</h3>${now}</div>${popChart(c, y)}<p class="note">${esc(c.note)}</p>${wiki}</section>`;
 }
+// The powers drawn at a wonder when it was finished and in the year shown.
+function wonderHTML(w, y) {
+  const yr = Math.round(y), info = wikiInfo(`wonder-${w.id}`);
+  const status = yr < w.from ? msg('wonder.notYet', { year: fmtWhen(w.from, w.c), n: plural(yearsBetween(yr, w.from)) })
+    : w.to != null && yr >= w.to ? msg('wonder.lost', { year: fmtYear(w.to), n: plural(yearsBetween(w.to, yr)) })
+    : msg('wonder.age', { n: plural(yearsBetween(w.from, yr)) });
+  const builders = civsAt(w.p, w.from), now = wonderOn(w, yr) ? civsAt(w.p, yr) : [];
+  const same = now.length === builders.length && now.every((c) => builders.includes(c));
+  return `<section class="card"><div class="eyebrow"><span>${msg('wonder.kind')}</span>${closeBtn()}</div><h2>${esc(w.name)}</h2><div class="yrs">${wonderSpan(w)}</div>
+    ${wikiPicture(info, w.name)}<p class="status" style="margin-top:8px">${status}</p>
+    ${builders.length ? `<div class="group"><h3>${msg('wonder.builtBy')}</h3><div class="chips">${builders.map(civChip).join('')}</div></div>` : ''}
+    ${now.length && !same ? `<div class="group"><h3>${msg('wonder.ruledBy', { year: fmtYear(yr) })}</h3><div class="chips">${now.map(civChip).join('')}</div></div>` : ''}
+    <p class="note">${esc(w.note)}</p>${wonderOn(w, yr) ? '' : goBtn(w.from)}${wikiHTML(info)}</section>`;
+}
+function personHTML(p, y) {
+  const yr = Math.round(y), info = wikiInfo(`person-${p.id}`);
+  const status = yr < p.born ? msg('person.notYet', { year: fmtWhen(p.born, p.c) })
+    : yr > p.died ? msg('person.died', { year: fmtWhen(p.died, p.c), n: plural(yearsBetween(p.died, yr)) })
+    : msg('person.age', { n: yearsBetween(p.born, yr), year: fmtYear(yr) });
+  const under = civsAt(p.p, Math.max(p.from, Math.min(p.to, yr)));
+  return `<section class="card"><div class="eyebrow"><span>${msg(`person.${p.kind}`)}</span>${closeBtn()}</div><h2>${esc(p.name)}</h2><div class="yrs">${lifeSpan(p)}</div>
+    ${wikiPicture(info, p.name)}<p class="status" style="margin-top:8px">${status}</p>
+    ${under.length ? `<div class="group"><h3>${msg('person.lived')}</h3><div class="chips">${under.map(civChip).join('')}</div></div>` : ''}
+    <p class="note">${esc(p.note)}</p>${personOn(p, yr) ? '' : goBtn(Math.round((p.from + p.to) / 2))}${wikiHTML(info)}</section>`;
+}
+const wonderItem = (w) => `<li><button type="button" data-wonder="${w.id}">${glyphFor('wonder')}<span>${esc(w.name)}</span><span class="yrs">${fmtWhen(w.from, w.c)}</span></button></li>`;
+const personItem = (p) => `<li><button type="button" data-person="${p.id}">${glyphFor('person')}<span>${esc(p.name)}</span><span class="yrs">${msg(`person.${p.kind}`)}</span></button></li>`;
 const cityItem = (d) => `<li><button type="button" data-city="${d.c.id}"><svg class="glyph" viewBox="0 0 14 10"><circle cx="7" cy="5" r="${Math.min(4.5, cityR(d.k) / 2)}" class="city"/></svg><span>${esc(cityName(d.c, state.year))}</span><span class="yrs">${fmtPeople(d.k)}</span></button></li>`;
 
 function nowHTML() {
@@ -678,8 +775,11 @@ function nowHTML() {
   const rts = ROUTES.filter((r) => routeActive(r, y));
   const evs = EVENTS.filter((e) => evVisible(e, y) && state.layers[evLayer(e)]).sort((a, b) => b.start - a.start);
   const bigCities = CITIES.map((c) => ({ c, k: cityPop(c, y) })).filter((d) => d.k >= 1).sort((a, b) => b.k - a.k).slice(0, 8);
+  const ppl = PEOPLE.filter((p) => personOn(p, y)), wds = WONDERS.filter((w) => wonderOn(w, y)).sort((a, b) => b.from - a.from);
   return `<section class="card"><div class="eyebrow"><span>${msg('now.title', { year: fmtYear(y) })}</span><span>${msg('now.powers', { n: civs.length })}</span></div>
     ${groups.map(([s, l]) => `<div class="group"><h3>${esc(s.name)}</h3><div class="chips">${l.map(civChip).join('')}</div></div>`).join('') || `<p class="empty">${msg('now.nothing')}</p>`}
+    ${state.layers.people && ppl.length ? `<div class="group"><h3>${msg('now.people')}</h3><ul class="list">${ppl.map(personItem).join('')}</ul></div>` : ''}
+    ${state.layers.wonders && wds.length ? `<div class="group"><h3>${msg('now.wonders', { n: wds.length })}</h3><ul class="list">${wds.slice(0, 8).map(wonderItem).join('')}</ul></div>` : ''}
     ${state.layers.cities ? `<div class="group"><h3>${msg('now.cities')}</h3>${bigCities.length ? `<ul class="list">${bigCities.map(cityItem).join('')}</ul>` : `<p class="empty">${msg('now.noCities')}</p>`}</div>` : ''}
     <div class="group"><h3>${msg('now.routes')}</h3>${rts.length ? `<ul class="list">${rts.map(routeItem).join('')}</ul>` : `<p class="empty">${msg('now.noRoutes')}</p>`}</div>
     <div class="group"><h3>${msg('now.events')}</h3>${evs.length ? `<ul class="list">${evs.map(eventItem).join('')}</ul>` : `<p class="empty">${msg('now.noEvents')}</p>`}</div></section>`;
@@ -709,6 +809,8 @@ function onPanelClick(ev) {
   else if (ds.civ) select({ type: 'civ', id: ds.civ });
   else if (ds.route) select({ type: 'route', id: ds.route });
   else if (ds.city) select({ type: 'city', id: ds.city });
+  else if (ds.wonder) select({ type: 'wonder', id: ds.wonder });
+  else if (ds.person) select({ type: 'person', id: ds.person });
   else if (ds.event) {
     const e = EVENTS.find((d) => d.id === ds.event);
     if (!evVisible(e, state.year)) setYear(e.kind === 'conflict' ? e.year + 1 : e.end);
@@ -737,6 +839,8 @@ function focusOn(s) {
   let pts;
   if (s.type === 'civ') { const c = CIVS.find((d) => d.id === s.id); if (isActive(c, y)) pts = frameAt(c, y).pts.flat(); }
   else if (s.type === 'city') pts = [CITIES.find((d) => d.id === s.id).p];
+  else if (s.type === 'wonder') pts = [WONDERS.find((d) => d.id === s.id).p];
+  else if (s.type === 'person') pts = [PEOPLE.find((d) => d.id === s.id).p];
   else if (s.type === 'route') pts = ROUTES.find((d) => d.id === s.id).pts.flat();
   else { const e = EVENTS.find((d) => d.id === s.id); pts = e.kind === 'conflict' ? [e.pt] : e.br.flat().map((st) => st.p); }
   if (!pts || !pts.length) return;
@@ -921,7 +1025,7 @@ document.addEventListener('keydown', (ev) => {
 // year (negative for BC), view (a named view) or at (lon,lat,zoom after panning), sel (type.id), tour (stop
 // index), hide (layers turned off) and show (layers turned on that are off by default). Navigation (selecting, jumping, tour stops, dragging the timeline,
 // playing) adds a history entry; continuous changes such as playback and zooming update the current one.
-const SEL_LISTS = { civ: CIVS, city: CITIES, route: ROUTES, event: EVENTS };
+const SEL_LISTS = { civ: CIVS, city: CITIES, route: ROUTES, event: EVENTS, wonder: WONDERS, person: PEOPLE };
 function encodeHash() {
   const p = new URLSearchParams();
   p.set('year', Math.round(state.year));

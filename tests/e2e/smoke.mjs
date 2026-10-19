@@ -206,6 +206,16 @@ if (fs.existsSync(new URL("ancient/index.html", SITE))) for (const lang of LANGS
   await expect(page.$eval("#timeline", (s) => s.getBoundingClientRect().height < 60), "the timeline folds");
   await page.click("#tlfold");
 
+  where = `ancient ${lang} wonders and people`;
+  await page.goto(`${BASE}/ancient/?lang=${lang}#year=-350&view=med&sel=person.aristotle`, { waitUntil: "load" });
+  await page.waitForTimeout(500);
+  await expect(page.$$eval("#map g.wonder", (e) => e.length).then((n) => n > 3), "wonders drawn");
+  await expect(page.$$eval("#map g.person", (e) => e.length).then((n) => n > 0), "people drawn");
+  await expect(page.$eval("#selcard .wikilink a", (a) => a.href.includes("wikipedia.org")), "a person's card links to Wikipedia");
+  await page.click('#panel button[data-wonder="parthenon"]');
+  await page.waitForTimeout(500);
+  await expect(page.$("#selcard h2").then(Boolean), "a wonder's card opens");
+
   where = `ancient ${lang} link`;
   await page.goto(`${BASE}/ancient/?lang=${lang}#year=-150&view=east&sel=civ.han&hide=cities&show=today`, { waitUntil: "load" });
   await page.waitForTimeout(800);

@@ -8,7 +8,7 @@
 :root {
   --sea: #cfdce6; --land: #efede8; --coast: #b4bec6; --grat: rgba(40, 70, 100, .08);
   --bg: #f6f6f3; --surface: #ffffff; --line: #dadfe3; --fg: #1b2230; --muted: #5d6878; --faint: #8b95a3;
-  --accent: #23508f; --gold: #a8740c; --searoute: #2a6c98; --journey: #3b2f22; --idea: #7a3fa0; --war: #c2361b;
+  --accent: #23508f; --gold: #a8740c; --searoute: #2a6c98; --journey: #3b2f22; --idea: #7a3fa0; --war: #c2361b; --wonder: #8a5a0b; --person: #a23a6e;
   --c-med: #3c6fd0; --c-ne: #b9800f; --c-af: #c4532e; --c-sa: #2e8a52; --c-st: #7a59bf; --c-ea: #c23852; --c-se: #148686; --c-am: #a9478f;
   --civ-op: .34; --civ-edge-op: .8; --casing: rgba(255, 255, 255, .85); --shadow: 0 1px 2px rgba(20, 30, 50, .08), 0 6px 20px rgba(20, 30, 50, .07);
   --f-display: "Marcellus", "Trajan Pro", Georgia, serif;
@@ -18,14 +18,14 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --sea: #0a1424; --land: #1d2530; --coast: #34404f; --grat: rgba(150, 180, 220, .06);
   --bg: #0c111a; --surface: #131a25; --line: #263142; --fg: #e8e4da; --muted: #9aa4b2; --faint: #6d7889;
-  --accent: #8fb4ff; --gold: #f0bf4c; --searoute: #8cc9f0; --journey: #f3ead7; --idea: #d6a4ff; --war: #ff6a48;
+  --accent: #8fb4ff; --gold: #f0bf4c; --searoute: #8cc9f0; --journey: #f3ead7; --idea: #d6a4ff; --war: #ff6a48; --wonder: #e8c070; --person: #f08cbf;
   --c-med: #6c98f2; --c-ne: #e3a93a; --c-af: #e5774f; --c-sa: #5cc183; --c-st: #a98be8; --c-ea: #ee6a80; --c-se: #3cc4c0; --c-am: #db80c6;
   --civ-op: .36; --civ-edge-op: .85; --casing: rgba(6, 12, 22, .85); --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .3);
   color-scheme: dark; } }
 :root[data-theme="dark"] {
   --sea: #0a1424; --land: #1d2530; --coast: #34404f; --grat: rgba(150, 180, 220, .06);
   --bg: #0c111a; --surface: #131a25; --line: #263142; --fg: #e8e4da; --muted: #9aa4b2; --faint: #6d7889;
-  --accent: #8fb4ff; --gold: #f0bf4c; --searoute: #8cc9f0; --journey: #f3ead7; --idea: #d6a4ff; --war: #ff6a48;
+  --accent: #8fb4ff; --gold: #f0bf4c; --searoute: #8cc9f0; --journey: #f3ead7; --idea: #d6a4ff; --war: #ff6a48; --wonder: #e8c070; --person: #f08cbf;
   --c-med: #6c98f2; --c-ne: #e3a93a; --c-af: #e5774f; --c-sa: #5cc183; --c-st: #a98be8; --c-ea: #ee6a80; --c-se: #3cc4c0; --c-am: #db80c6;
   --civ-op: .36; --civ-edge-op: .85; --casing: rgba(6, 12, 22, .85); --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .3);
   color-scheme: dark; }
@@ -119,6 +119,14 @@ header { grid-area: head; display: flex; flex-wrap: wrap; align-items: center; g
 .pc-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
 .facts dd .chip { margin-top: 1px; }
 .capdot { stroke: var(--casing); stroke-width: 1; pointer-events: none; }
+.wonder, .person { cursor: pointer; }
+.wbox { fill: var(--surface); stroke: var(--wonder); stroke-width: 1.3; }
+.wico { fill: var(--wonder); }
+.pbox { fill: var(--person); stroke: var(--casing); stroke-width: 1.2; }
+.pico { fill: var(--surface); }
+.wonder.sel .wbox, .person.sel .pbox { stroke: var(--accent); stroke-width: 2.4; }
+.wonder.fade, .person.fade { opacity: .25; }
+.wonder.old { opacity: .7; }
 
 .stamp { position: absolute; left: 14px; bottom: 10px; pointer-events: none; display: grid; gap: 2px; }
 .stamp b { font: 400 46px/1 var(--f-display); letter-spacing: .03em; color: var(--fg); text-shadow: 0 0 12px var(--sea), 0 0 3px var(--sea); font-variant-numeric: tabular-nums; }
@@ -290,6 +298,7 @@ dialog a { color: var(--accent); }
     <li><b>Coloured areas</b> are states and empires. Paler areas with thin edges are cultures or groups of cities that were never one state. Colours group civilisations by region, so successors share a hue.</li>
     <li>Ancient frontiers were zones, not lines, and many areas were claimed rather than ruled. Shapes change only at a few key dates.</li>
     <li>After 1500 all the European empires share Europe's colour; their colonies are labelled with the empire's name. Colonial borders, too, are drawn roughly, and much of the land they enclose was claimed long before it was controlled.</li>
+    <li><b>Wonders</b> (a temple front) appear when they were finished and stay until they were destroyed; where they overlap, the newest is drawn, and those standing for over 300 years are drawn smaller. <b>People</b> (a bust) are shown from about age 20 until they died, where they did their main work. Both are a personal selection of the most influential, in the spirit of the wonders and great people of strategy games, not a complete list.</li>
     <li>The timeline below the map is not to scale: recent centuries get more room than the distant past.</li>
     <li><b>Gold dashes</b> are overland trade corridors and <b>blue dots</b> are sea lanes. They show general routes, not exact roads, and their thickness gives a rough sense of how busy they were.</li>
     <li><b>Circles</b> are major cities, sized by their estimated population in the year shown. City populations before modern times are rough guesses, often based on the area inside the walls, and many are disputed; treat them as orders of magnitude.</li>

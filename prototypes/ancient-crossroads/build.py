@@ -1,7 +1,7 @@
 """Build the Ancient Crossroads page from page.html, data.js, app.js and Natural Earth geography.
 
 Downloads coastlines, today's countries, rivers and lakes from Natural Earth (public domain) into .cache/,
-simplifies them, and inlines them with data.js, cities.js, details.js and app.js into page.html. For each
+simplifies them, and inlines them with data.js, cities.js, wonders.js, details.js and app.js into page.html. For each
 civilisation it also fetches the lead text, image and image credit of its Wikipedia article
 (WIKI in details.js), and the lead text of the same article in each translation's language (i18n/<lang>.js),
 into .cache/wiki/; the page itself never contacts Wikipedia.
@@ -217,7 +217,8 @@ def fetch_wiki_lang(meta, lang):
 
 def wiki_titles():
     """English Wikipedia article titles: WIKI in details.js by civilisation id, ROUTE_WIKI and EVENT_WIKI as
-    route-<id> and event-<id>, MOMENT_WIKI as moment-<civ>-<year>, and each city's wiki in cities.js as city-<id>."""
+    route-<id> and event-<id>, MOMENT_WIKI as moment-<civ>-<year>, each city's wiki in cities.js as city-<id>, and
+    each wonder's and person's wiki in wonders.js as wonder-<id> and person-<id>."""
     src = (HERE / "details.js").read_text()
     def block(name):
         start = src.index(f"const {name} = {{")
@@ -231,6 +232,10 @@ def wiki_titles():
         titles[f"moment-{civ}-{year}"] = title
     for cid, _, title in re.findall(r"""\{ id: '([\w-]+)'.*?wiki: (['"])(.*?)\2""", (HERE / "cities.js").read_text()):
         titles[f"city-{cid}"] = title
+    wonders, people = (HERE / "wonders.js").read_text().split("const PEOPLE")
+    for kind, text in (("wonder", wonders), ("person", people)):
+        for wid, _, title in re.findall(r"""\{ id: '([\w-]+)'.*?wiki: (['"])(.*?)\2""", text):
+            titles[f"{kind}-{wid}"] = title
     return titles
 
 
@@ -329,7 +334,8 @@ SKIP_IMAGES = {"ottoman", "ethiopia", "inca", "britain", "spain", "portugal", "d
         "romeenvoy", "silkworm", "smallpox", "talas", "telegraph")} | {
     f"route-{r}" for r in (
         "amber", "carrera", "hansa", "inca", "incense", "levant", "meluhha", "monsoon", "phoenician", "royal", "sahara",
-        "silk", "suez", "swahili", "teahorse")}
+        "silk", "suez", "swahili", "teahorse")} | {"wonder-artemis", "wonder-mausoleum", "wonder-templomayor", "wonder-porcelain",
+    "person-aryabhata", "person-gutenberg", "person-khwarizmi", "person-ibnkhaldun"}
 
 
 def tidy(text):
@@ -416,7 +422,7 @@ def main():
     out.parent.mkdir(exist_ok=True)
     info = json.dumps(wiki_info(site, out.parent), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     page = (page.replace("/*GEO*/", json.dumps(geography(), separators=(",", ":")))
-            .replace("/*DATA*/", (HERE / "data.js").read_text() + (HERE / "cities.js").read_text())
+            .replace("/*DATA*/", "".join((HERE / f).read_text() for f in ("data.js", "cities.js", "wonders.js")))
             .replace("/*DETAILS*/", (HERE / "details.js").read_text())
             .replace("/*I18N*/", "\n".join((HERE / "i18n" / f"{lang}.js").read_text() for lang in langs()))
             .replace("/*WIKI_INFO*/", info)
